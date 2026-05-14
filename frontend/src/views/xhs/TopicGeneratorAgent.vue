@@ -45,6 +45,7 @@
         <button class="generate-btn" :disabled="!canGenerate || loading" @click="generate">
           {{ loading ? '正在生成选题...' : '生成今日选题' }}
         </button>
+        <p v-if="error" class="error-text">{{ error }}</p>
       </div>
 
       <div v-if="topics.length" class="result-list">
@@ -74,10 +75,12 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/api/request'
 
 const router = useRouter()
 const loading = ref(false)
 const topics = ref([])
+const error = ref('')
 
 const methods = [
   { value: 'formula', label: '爆款公式法' },
@@ -95,25 +98,15 @@ const canGenerate = computed(() => form.industry && form.audience)
 
 const generate = async () => {
   loading.value = true
-  await new Promise(r => setTimeout(r, 600))
-  const formulas = ['数字+结果型', '人群+痛点型', '悬念+揭秘型', '对比+反差型', '教程+步骤型', '清单+合集型', '避坑+警示型', '情绪共鸣型', '时效+热点型', '利益+福利型', '身份+认证型', '场景+解决方案型']
-  const examples = {
-    beauty: ['做了 5 年美容师，这 4 个坑千万别踩', '敏感肌千万别再乱用护肤品了', '做完前 vs 做完后，同事问我是不是去整容了'],
-    fashion: ['微胖女孩必看的 5 个显瘦穿搭法则', '小个子女生这样穿，显高 10cm 不是梦', '优衣库 vs ZARA，同价位谁更值得买？'],
-    food: ['本地人带路，这 3 家苍蝇馆子绝了', '人均 50 吃出米其林的感觉，这家店藏得太深', '千万别在饭点来这家店，排队 2 小时起'],
-    education: ['带过 300 个学生，总结出这 5 个提分技巧', '初二家长注意：这 3 个习惯不改，初三很难逆袭', '报班 3 万 vs 自学，成绩差距竟然...'],
-    home: ['装修过来人血泪总结：这 8 个地方别省钱', '花 2 万改造老破小，效果堪比换新房', '宜家这 5 件神器，让小家越住越大']
+  error.value = ''
+  try {
+    const response = await request.post('/xhs/topic-generator', { ...form })
+    topics.value = response.topics || []
+  } catch (err) {
+    error.value = err.message || '生成选题失败'
+  } finally {
+    loading.value = false
   }
-  const data = (examples[form.industry] || examples.beauty).slice(0, 5).map((title, i) => ({
-    id: i + 1,
-    title,
-    formula: formulas[Math.floor(Math.random() * formulas.length)],
-    tags: ['搜索', '互动', '收藏'],
-    searchVolume: Math.floor(Math.random() * 50000) + 10000,
-    competition: ['低', '中', '高'][Math.floor(Math.random() * 3)]
-  }))
-  topics.value = data
-  loading.value = false
 }
 
 const useTopic = (topic) => {
@@ -123,4 +116,5 @@ const useTopic = (topic) => {
 
 <style scoped>
 @import '../agent-common.css';
+.error-text { color: #dc2626; margin-top: 12px; }
 </style>

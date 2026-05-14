@@ -1,4 +1,5 @@
 import axios from 'axios'
+import router from '@/router'
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -21,8 +22,6 @@ request.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      // 使用 router 跳转而非直接 location.href
-      const router = (await import('@/router')).default
       if (router) {
         router.push('/login')
       } else {

@@ -8,7 +8,7 @@
             <span>100+知识库</span>
             <span>让老板多赚三倍钱的 AI 助理</span>
           </h1>
-          <p class="hero-desc">本站已有会员 <strong class="hero-member-inline">{{ displayMemberCount }}</strong></p>
+          <p class="hero-desc">本站会员持续增长中</p>
           <div class="hero-actions">
             <router-link to="/tools" class="btn btn-primary btn-lg">功能分类</router-link>
             <router-link to="/membership" class="btn btn-secondary btn-lg">会员介绍</router-link>
@@ -17,7 +17,7 @@
 
         <div class="hero-panel card">
           <div class="member-total">
-            <strong class="member-total-number">{{ displayMemberCount }}</strong>
+            <strong class="member-total-number">持续增长</strong>
             <span class="member-total-label">本站会员统计</span>
           </div>
           <div class="hero-metrics">
@@ -118,7 +118,6 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
 import {
   allTools,
   capabilityCount,
@@ -128,22 +127,6 @@ import {
   pricingPlans,
   pillarMeta
 } from '@/constants/toolCatalog'
-
-const targetMemberCount = 867
-const displayMemberCount = ref(0)
-
-onMounted(() => {
-  const duration = 1400
-  const start = performance.now()
-
-  const tick = now => {
-    const progress = Math.min((now - start) / duration, 1)
-    displayMemberCount.value = Math.round(targetMemberCount * (1 - Math.pow(1 - progress, 3)))
-    if (progress < 1) window.requestAnimationFrame(tick)
-  }
-
-  window.requestAnimationFrame(tick)
-})
 
 function getToolCountByPillar(pillarKey) {
   if (pillarMeta[pillarKey]?.count) return pillarMeta[pillarKey].count

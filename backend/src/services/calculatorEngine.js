@@ -1,6 +1,10 @@
 // Calculator engine: pure math computation for all A-class tools
 // No LLM calls needed - all calculations are deterministic
 
+import { getKBContextWithMeta } from './kbService.js'
+
+const CALCULATOR_KB_CONTEXT_LIMIT = 700
+
 // Safe division: returns 0 when denominator is 0 to avoid Infinity/NaN
 function safeDiv(numerator, denominator) {
   return denominator === 0 ? 0 : numerator / denominator
@@ -21,6 +25,59 @@ function renderSuggestion(suggestion) {
 
 function renderSuggestions(suggestions) {
   return Array.isArray(suggestions) ? suggestions.map(renderSuggestion) : []
+}
+
+function buildKnowledgeReferenceSection(kbResult) {
+  if (!kbResult?.context) return null
+
+  const lines = kbResult.context
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith('【知识库：'))
+    .filter(line => !line.startsWith('#'))
+
+  const items = []
+  for (const line of lines) {
+    const cleaned = line.replace(/^[-*]\s*/, '').trim()
+    if (cleaned.length < 12) continue
+    items.push(cleaned.length > 120 ? `${cleaned.slice(0, 120)}...` : cleaned)
+    if (items.length >= 3) break
+  }
+
+  if (!items.length) return null
+
+  return {
+    title: '知识库参考',
+    items
+  }
+}
+
+function enhanceWithKnowledge(result, toolCode, formData, memberLevel) {
+  const kbResult = getKBContextWithMeta(toolCode, memberLevel, formData, {
+    retrievalMode: 'mapping_only'
+  })
+  const context = kbResult.context
+    ? kbResult.context.slice(0, CALCULATOR_KB_CONTEXT_LIMIT)
+    : ''
+  const section = buildKnowledgeReferenceSection({ ...kbResult, context })
+
+  return {
+    ...result,
+    sections: section ? [...(result.sections || []), section] : (result.sections || []),
+    extra: {
+      ...(result.extra || {}),
+      kbEnhanced: Boolean(section),
+      kbContextChars: context.length,
+      kbFilesUsed: kbResult.meta?.kbFilesUsed || []
+    },
+    meta: {
+      ...(result.meta || {}),
+      kbEnhanced: Boolean(section),
+      kbFilesUsed: kbResult.meta?.kbFilesUsed || [],
+      kbContextChars: context.length,
+      kbRetrievalMode: kbResult.meta?.retrievalMode || 'mapping_only'
+    }
+  }
 }
 
 export const CALCULATORS = {
@@ -3955,7 +4012,12 @@ export async function calculatorEngine(toolConfig, formData) {
     throw new Error(`缺少必要参数: ${missing.join(', ')}`)
   }
 
-  const result = calc.calc(formData)
+  const result = enhanceWithKnowledge(
+    calc.calc(formData),
+    code,
+    formData,
+    formData.memberLevel || toolConfig.memberLevel || 'annual'
+  )
   return {
     summary: result.summary || '',
     sections: result.sections || [],
@@ -3965,6 +4027,7 @@ export async function calculatorEngine(toolConfig, formData) {
     scores: result.scores || null,
     recommendedTools: result.recommendedTools || [],
     customizationCTA: '\n---\n如需针对您的具体场景做个性化定制方案，升级会员即可获得专属深度定制服务。',
+    meta: result.meta || {},
     extra: result.extra || {}
   }
 }

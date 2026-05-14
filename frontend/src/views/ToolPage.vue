@@ -7,331 +7,170 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
-
-import HeadlineGenerator from './tools/HeadlineGenerator.vue'
-import FriendPoster from './tools/FriendPoster.vue'
-import SellingPoint from './tools/SellingPoint.vue'
-import CloseDeal from './tools/CloseDeal.vue'
-import ROICalculator from './tools/ROICalculator.vue'
-import PaybackCalculator from './tools/PaybackCalculator.vue'
-import ScheduleGenerator from './tools/ScheduleGenerator.vue'
-import HookDesigner from './tools/HookDesigner.vue'
-import ScriptGenerator from './tools/ScriptGenerator.vue'
-import XiaohongshuGenerator from './tools/XiaohongshuGenerator.vue'
-import MeituanDiagnoser from './tools/MeituanDiagnoser.vue'
-import TopicGenerator from './tools/TopicGenerator.vue'
-import FestivalMarketing from './tools/FestivalMarketing.vue'
-import SalaryDesigner from './tools/SalaryDesigner.vue'
-import FissionScheme from './tools/FissionScheme.vue'
-import SOPGenerator from './tools/SOPGenerator.vue'
-import IPAgent from './tools/IPAgent.vue'
-import CompetitorAnalyzer from './tools/CompetitorAnalyzer.vue'
-import BusinessPlanGenerator from './tools/BusinessPlanGenerator.vue'
-import MembershipDesign from './tools/MembershipDesign.vue'
-import MarketingCalendar from './tools/MarketingCalendar.vue'
-import GrossMarginRestaurant from './tools/GrossMarginRestaurant.vue'
-import BreakEvenRestaurant from './tools/BreakEvenRestaurant.vue'
-import TurnoverRateRestaurant from './tools/TurnoverRateRestaurant.vue'
-import RenewalRateEducation from './tools/RenewalRateEducation.vue'
-import ClassConsumptionRateEducation from './tools/ClassConsumptionRateEducation.vue'
-import CardConsumptionRateBeauty from './tools/CardConsumptionRateBeauty.vue'
-import SalaryCostRatioRestaurant from './tools/SalaryCostRatioRestaurant.vue'
-import DishPricing from './tools/DishPricing.vue'
-import FoodWasteRate from './tools/FoodWasteRate.vue'
-import FoodYieldRate from './tools/FoodYieldRate.vue'
-import DeliveryProfit from './tools/DeliveryProfit.vue'
-import DeliveryAnalysis from './tools/DeliveryAnalysis.vue'
-import InventoryTurnover from './tools/InventoryTurnover.vue'
-import DishContribution from './tools/DishContribution.vue'
-import RepurchaseRate from './tools/RepurchaseRate.vue'
-import CupEfficiency from './tools/CupEfficiency.vue'
-import DrinkCost from './tools/DrinkCost.vue'
-import PaybackRestaurant from './tools/PaybackRestaurant.vue'
-import CashflowRestaurant from './tools/CashflowRestaurant.vue'
-import ProfitRateRestaurant from './tools/ProfitRateRestaurant.vue'
-import ReturnRateRestaurant from './tools/ReturnRateRestaurant.vue'
-import InvestmentBudgetRestaurant from './tools/InvestmentBudgetRestaurant.vue'
-import GrossMarginEducation from './tools/GrossMarginEducation.vue'
-import BreakEvenEducation from './tools/BreakEvenEducation.vue'
-import SalaryCostRatioEducation from './tools/SalaryCostRatioEducation.vue'
-import LaborEfficiencyEducation from './tools/LaborEfficiencyEducation.vue'
-import VenueUtilizationEducation from './tools/VenueUtilizationEducation.vue'
-import CACEducation from './tools/CACEducation.vue'
-import PaybackEducation from './tools/PaybackEducation.vue'
-import CashflowEducation from './tools/CashflowEducation.vue'
-import ProfitRateEducation from './tools/ProfitRateEducation.vue'
-import ReturnRateEducation from './tools/ReturnRateEducation.vue'
-import ClassRateEducation from './tools/ClassRateEducation.vue'
-import GrossMarginBeauty from './tools/GrossMarginBeauty.vue'
-import BreakEvenBeauty from './tools/BreakEvenBeauty.vue'
-import SalaryCostRatioBeauty from './tools/SalaryCostRatioBeauty.vue'
-import LaborEfficiencyBeauty from './tools/LaborEfficiencyBeauty.vue'
-import ConversionRateBeauty from './tools/ConversionRateBeauty.vue'
-import ProjectProfitBeauty from './tools/ProjectProfitBeauty.vue'
-import ProjectStructureBeauty from './tools/ProjectStructureBeauty.vue'
-import LaborStructureBeauty from './tools/LaborStructureBeauty.vue'
-import CardDebtBeauty from './tools/CardDebtBeauty.vue'
-import FunnelLTVBeauty from './tools/FunnelLTVBeauty.vue'
-import BreakevenProfitBeauty from './tools/BreakevenProfitBeauty.vue'
-import DeviceROIBeauty from './tools/DeviceROIBeauty.vue'
-import MemberCardDesignBeauty from './tools/MemberCardDesignBeauty.vue'
-import LTVBeauty from './tools/LTVBeauty.vue'
-import RepurchaseRateBeauty from './tools/RepurchaseRateBeauty.vue'
-import PaybackBeauty from './tools/PaybackBeauty.vue'
-import CashflowBeauty from './tools/CashflowBeauty.vue'
-import ProfitRateBeauty from './tools/ProfitRateBeauty.vue'
-import ReturnRateBeauty from './tools/ReturnRateBeauty.vue'
-import MarketingPlan from './tools/MarketingPlan.vue'
-import TeamTraining from './tools/TeamTraining.vue'
-import EmployeeIncentive from './tools/EmployeeIncentive.vue'
-import StoreOpening from './tools/StoreOpening.vue'
-import AnniversaryEvent from './tools/AnniversaryEvent.vue'
-import OffseasonTraffic from './tools/OffseasonTraffic.vue'
-import ExperienceService from './tools/ExperienceService.vue'
-import PriceIncrease from './tools/PriceIncrease.vue'
-import PromotionPlan from './tools/PromotionPlan.vue'
-import ComplaintHandling from './tools/ComplaintHandling.vue'
-import CompetitorStrategy from './tools/CompetitorStrategy.vue'
-import BossIP from './tools/BossIP.vue'
-import DouyinGrowth from './tools/DouyinGrowth.vue'
-import XiaohongshuGrowth from './tools/XiaohongshuGrowth.vue'
-import XhsTitle from './tools/XhsTitle.vue'
-import XhsTopic from './tools/XhsTopic.vue'
-import XhsTraffic from './tools/XhsTraffic.vue'
-import XhsSEO from './tools/XhsSEO.vue'
-import XhsDiagnosis from './tools/XhsDiagnosis.vue'
-import XhsReview from './tools/XhsReview.vue'
-import XhsConversion from './tools/XhsConversion.vue'
-
-// 营销推广新增计算器
-import ChannelCAC from './tools/ChannelCAC.vue'
-import CampaignROI from './tools/CampaignROI.vue'
-import ReferralROI from './tools/ReferralROI.vue'
-import ConversionFunnel from './tools/ConversionFunnel.vue'
-import RetentionRate from './tools/RetentionRate.vue'
-import MarketingBudget from './tools/MarketingBudget.vue'
-import ChurnRate from './tools/ChurnRate.vue'
-import LTVRestaurant from './tools/LTVRestaurant.vue'
-import LTVEducation from './tools/LTVEducation.vue'
-import PromotionProfit from './tools/PromotionProfit.vue'
-
-// 通用表格
-import DailyRevenueSheet from './sheets/DailyRevenueSheet.vue'
-import EmployeeAttendanceSheet from './sheets/EmployeeAttendanceSheet.vue'
-import CustomerInfoSheet from './sheets/CustomerInfoSheet.vue'
-import ServiceScheduleSheet from './sheets/ServiceScheduleSheet.vue'
-import SupplierSheet from './sheets/SupplierSheet.vue'
-import InventorySheet from './sheets/InventorySheet.vue'
-import MemberSheet from './sheets/MemberSheet.vue'
-
-// 餐饮表格
-import DailyRevenueRestaurantSheet from './sheets/DailyRevenueRestaurantSheet.vue'
-import EmployeeAttendanceRestaurantSheet from './sheets/EmployeeAttendanceRestaurantSheet.vue'
-import CustomerInfoRestaurantSheet from './sheets/CustomerInfoRestaurantSheet.vue'
-import ReservationSheet from './sheets/ReservationSheet.vue'
-import SupplierRestaurantSheet from './sheets/SupplierRestaurantSheet.vue'
-import InventoryRestaurantSheet from './sheets/InventoryRestaurantSheet.vue'
-import MemberRestaurantSheet from './sheets/MemberRestaurantSheet.vue'
-import RestaurantFoodCostSheet from './sheets/RestaurantFoodCostSheet.vue'
-import RestaurantTurnoverSheet from './sheets/RestaurantTurnoverSheet.vue'
-import MenuGrossMarginSheet from './sheets/MenuGrossMarginSheet.vue'
-import FootTrafficSheet from './sheets/FootTrafficSheet.vue'
-
-// 教培表格
-import DailyRevenueEducationSheet from './sheets/DailyRevenueEducationSheet.vue'
-import EmployeeAttendanceEducationSheet from './sheets/EmployeeAttendanceEducationSheet.vue'
-import CustomerInfoEducationSheet from './sheets/CustomerInfoEducationSheet.vue'
-import CourseScheduleSheet from './sheets/CourseScheduleSheet.vue'
-import SupplierEducationSheet from './sheets/SupplierEducationSheet.vue'
-import InventoryEducationSheet from './sheets/InventoryEducationSheet.vue'
-import MemberEducationSheet from './sheets/MemberEducationSheet.vue'
-import EducationCourseConsumptionSheet from './sheets/EducationCourseConsumptionSheet.vue'
-import EducationRenewalSheet from './sheets/EducationRenewalSheet.vue'
-import CoachPerformanceSheet from './sheets/CoachPerformanceSheet.vue'
-import TrialConversionSheet from './sheets/TrialConversionSheet.vue'
-
-// 美业表格
-import DailyRevenueBeautySheet from './sheets/DailyRevenueBeautySheet.vue'
-import EmployeeAttendanceBeautySheet from './sheets/EmployeeAttendanceBeautySheet.vue'
-import CustomerInfoBeautySheet from './sheets/CustomerInfoBeautySheet.vue'
-import ServiceScheduleBeautySheet from './sheets/ServiceScheduleBeautySheet.vue'
-import SupplierBeautySheet from './sheets/SupplierBeautySheet.vue'
-import InventoryBeautySheet from './sheets/InventoryBeautySheet.vue'
-import BeautyMemberSheet from './sheets/BeautyMemberSheet.vue'
-import ProjectConsumptionSheet from './sheets/ProjectConsumptionSheet.vue'
-import BeautyAcquisitionSheet from './sheets/BeautyAcquisitionSheet.vue'
-import BeauticianPerformanceSheet from './sheets/BeauticianPerformanceSheet.vue'
-import PackagePricingSheet from './sheets/PackagePricingSheet.vue'
-
-// 营销推广新增表格
-import MarketingActivitySheet from './sheets/MarketingActivitySheet.vue'
-import ChannelComparisonSheet from './sheets/ChannelComparisonSheet.vue'
-import CustomerRetentionSheet from './sheets/CustomerRetentionSheet.vue'
-import ReferralTrackingSheet from './sheets/ReferralTrackingSheet.vue'
-import MarketingBudgetSheet from './sheets/MarketingBudgetSheet.vue'
-import PromotionProfitSheet from './sheets/PromotionProfitSheet.vue'
 
 const route = useRoute()
 
+const asyncView = loader => defineAsyncComponent(loader)
+
 const toolComponents = {
-  'headline': HeadlineGenerator,
-  'friend': FriendPoster,
-  'selling-point': SellingPoint,
-  'close-deal': CloseDeal,
-  'roi': ROICalculator,
-  'payback': PaybackCalculator,
-  'schedule': ScheduleGenerator,
-  'hook': HookDesigner,
-  'script': ScriptGenerator,
-  'xiaohongshu': XiaohongshuGenerator,
-  'xhs-title': XhsTitle,
-  'xhs-topic': XhsTopic,
-  'xhs-traffic': XhsTraffic,
-  'xhs-seo': XhsSEO,
-  'xhs-diagnosis': XhsDiagnosis,
-  'xhs-review': XhsReview,
-  'xhs-conversion': XhsConversion,
-  'meituan': MeituanDiagnoser,
-  'topic': TopicGenerator,
-  'festival': FestivalMarketing,
-  'salary': SalaryDesigner,
-  'fission': FissionScheme,
-  'sop': SOPGenerator,
-  'ip-agent': IPAgent,
-  'competitor': CompetitorAnalyzer,
-  'business-plan': BusinessPlanGenerator,
-  'membership-design': MembershipDesign,
-  'marketing-calendar': MarketingCalendar,
-  'marketing-plan': MarketingPlan,
-  'team-training': TeamTraining,
-  'employee-incentive': EmployeeIncentive,
-  'store-opening': StoreOpening,
-  'anniversary-event': AnniversaryEvent,
-  'offseason-traffic': OffseasonTraffic,
-  'experience-service': ExperienceService,
-  'price-increase': PriceIncrease,
-  'promotion-plan': PromotionPlan,
-  'complaint-handling': ComplaintHandling,
-  'competitor-strategy': CompetitorStrategy,
-  'boss-ip': BossIP,
-  'douyin-growth': DouyinGrowth,
-  'xiaohongshu-growth': XiaohongshuGrowth,
-  'gross-margin-restaurant': GrossMarginRestaurant,
-  'break-even-restaurant': BreakEvenRestaurant,
-  'turnover-rate-restaurant': TurnoverRateRestaurant,
-  'renewal-rate-education': RenewalRateEducation,
-  'class-consumption-rate-education': ClassConsumptionRateEducation,
-  'card-consumption-rate-beauty': CardConsumptionRateBeauty,
-  'salary-cost-ratio-restaurant': SalaryCostRatioRestaurant,
-  'dish-pricing': DishPricing,
-  'food-waste-rate': FoodWasteRate,
-  'food-yield-rate': FoodYieldRate,
-  'delivery-profit': DeliveryProfit,
-  'delivery-analysis': DeliveryAnalysis,
-  'inventory-turnover': InventoryTurnover,
-  'dish-contribution': DishContribution,
-  'repurchase-rate': RepurchaseRate,
-  'cup-efficiency': CupEfficiency,
-  'drink-cost': DrinkCost,
-  'payback-restaurant': PaybackRestaurant,
-  'cashflow-restaurant': CashflowRestaurant,
-  'profit-rate-restaurant': ProfitRateRestaurant,
-  'return-rate-restaurant': ReturnRateRestaurant,
-  'investment-budget': InvestmentBudgetRestaurant,
-  'gross-margin-education': GrossMarginEducation,
-  'break-even-education': BreakEvenEducation,
-  'salary-cost-ratio-education': SalaryCostRatioEducation,
-  'labor-efficiency-education': LaborEfficiencyEducation,
-  'venue-utilization-education': VenueUtilizationEducation,
-  'cac-education': CACEducation,
-  'payback-education': PaybackEducation,
-  'cashflow-education': CashflowEducation,
-  'profit-rate-education': ProfitRateEducation,
-  'return-rate-education': ReturnRateEducation,
-  'class-rate-education': ClassRateEducation,
-  'gross-margin-beauty': GrossMarginBeauty,
-  'break-even-beauty': BreakEvenBeauty,
-  'salary-cost-ratio-beauty': SalaryCostRatioBeauty,
-  'labor-efficiency-beauty': LaborEfficiencyBeauty,
-  'conversion-rate-beauty': ConversionRateBeauty,
-  'project-profit-beauty': ProjectProfitBeauty,
-  'project-structure-beauty': ProjectStructureBeauty,
-  'labor-structure-beauty': LaborStructureBeauty,
-  'card-debt-beauty': CardDebtBeauty,
-  'funnel-ltv-beauty': FunnelLTVBeauty,
-  'breakeven-profit-beauty': BreakevenProfitBeauty,
-  'device-roi-beauty': DeviceROIBeauty,
-  'member-card-design-beauty': MemberCardDesignBeauty,
-  'ltv-beauty': LTVBeauty,
-  'repurchase-rate-beauty': RepurchaseRateBeauty,
-  'payback-beauty': PaybackBeauty,
-  'cashflow-beauty': CashflowBeauty,
-  'profit-rate-beauty': ProfitRateBeauty,
-  'return-rate-beauty': ReturnRateBeauty,
+  'headline': asyncView(() => import('./tools/HeadlineGenerator.vue')),
+  'friend': asyncView(() => import('./tools/FriendPoster.vue')),
+  'selling-point': asyncView(() => import('./tools/SellingPoint.vue')),
+  'close-deal': asyncView(() => import('./tools/CloseDeal.vue')),
+  'roi': asyncView(() => import('./tools/ROICalculator.vue')),
+  'payback': asyncView(() => import('./tools/PaybackCalculator.vue')),
+  'schedule': asyncView(() => import('./tools/ScheduleGenerator.vue')),
+  'hook': asyncView(() => import('./tools/HookDesigner.vue')),
+  'script': asyncView(() => import('./tools/ScriptGenerator.vue')),
+  'xiaohongshu': asyncView(() => import('./tools/XiaohongshuGenerator.vue')),
+  'xhs-title': asyncView(() => import('./tools/XhsTitle.vue')),
+  'xhs-topic': asyncView(() => import('./tools/XhsTopic.vue')),
+  'xhs-traffic': asyncView(() => import('./tools/XhsTraffic.vue')),
+  'xhs-seo': asyncView(() => import('./tools/XhsSEO.vue')),
+  'xhs-diagnosis': asyncView(() => import('./tools/XhsDiagnosis.vue')),
+  'xhs-review': asyncView(() => import('./tools/XhsReview.vue')),
+  'xhs-conversion': asyncView(() => import('./tools/XhsConversion.vue')),
+  'meituan': asyncView(() => import('./tools/MeituanDiagnoser.vue')),
+  'topic': asyncView(() => import('./tools/TopicGenerator.vue')),
+  'festival': asyncView(() => import('./tools/FestivalMarketing.vue')),
+  'salary': asyncView(() => import('./tools/SalaryDesigner.vue')),
+  'fission': asyncView(() => import('./tools/FissionScheme.vue')),
+  'sop': asyncView(() => import('./tools/SOPGenerator.vue')),
+  'ip-agent': asyncView(() => import('./tools/IPAgent.vue')),
+  'competitor': asyncView(() => import('./tools/CompetitorAnalyzer.vue')),
+  'business-plan': asyncView(() => import('./tools/BusinessPlanGenerator.vue')),
+  'membership-design': asyncView(() => import('./tools/MembershipDesign.vue')),
+  'marketing-calendar': asyncView(() => import('./tools/MarketingCalendar.vue')),
+  'marketing-plan': asyncView(() => import('./tools/MarketingPlan.vue')),
+  'team-training': asyncView(() => import('./tools/TeamTraining.vue')),
+  'employee-incentive': asyncView(() => import('./tools/EmployeeIncentive.vue')),
+  'store-opening': asyncView(() => import('./tools/StoreOpening.vue')),
+  'anniversary-event': asyncView(() => import('./tools/AnniversaryEvent.vue')),
+  'offseason-traffic': asyncView(() => import('./tools/OffseasonTraffic.vue')),
+  'experience-service': asyncView(() => import('./tools/ExperienceService.vue')),
+  'price-increase': asyncView(() => import('./tools/PriceIncrease.vue')),
+  'promotion-plan': asyncView(() => import('./tools/PromotionPlan.vue')),
+  'complaint-handling': asyncView(() => import('./tools/ComplaintHandling.vue')),
+  'competitor-strategy': asyncView(() => import('./tools/CompetitorStrategy.vue')),
+  'boss-ip': asyncView(() => import('./tools/BossIP.vue')),
+  'douyin-growth': asyncView(() => import('./tools/DouyinGrowth.vue')),
+  'xiaohongshu-growth': asyncView(() => import('./tools/XiaohongshuGrowth.vue')),
+  'gross-margin-restaurant': asyncView(() => import('./tools/GrossMarginRestaurant.vue')),
+  'break-even-restaurant': asyncView(() => import('./tools/BreakEvenRestaurant.vue')),
+  'turnover-rate-restaurant': asyncView(() => import('./tools/TurnoverRateRestaurant.vue')),
+  'renewal-rate-education': asyncView(() => import('./tools/RenewalRateEducation.vue')),
+  'class-consumption-rate-education': asyncView(() => import('./tools/ClassConsumptionRateEducation.vue')),
+  'card-consumption-rate-beauty': asyncView(() => import('./tools/CardConsumptionRateBeauty.vue')),
+  'salary-cost-ratio-restaurant': asyncView(() => import('./tools/SalaryCostRatioRestaurant.vue')),
+  'dish-pricing': asyncView(() => import('./tools/DishPricing.vue')),
+  'food-waste-rate': asyncView(() => import('./tools/FoodWasteRate.vue')),
+  'food-yield-rate': asyncView(() => import('./tools/FoodYieldRate.vue')),
+  'delivery-profit': asyncView(() => import('./tools/DeliveryProfit.vue')),
+  'delivery-analysis': asyncView(() => import('./tools/DeliveryAnalysis.vue')),
+  'inventory-turnover': asyncView(() => import('./tools/InventoryTurnover.vue')),
+  'dish-contribution': asyncView(() => import('./tools/DishContribution.vue')),
+  'repurchase-rate': asyncView(() => import('./tools/RepurchaseRate.vue')),
+  'cup-efficiency': asyncView(() => import('./tools/CupEfficiency.vue')),
+  'drink-cost': asyncView(() => import('./tools/DrinkCost.vue')),
+  'payback-restaurant': asyncView(() => import('./tools/PaybackRestaurant.vue')),
+  'cashflow-restaurant': asyncView(() => import('./tools/CashflowRestaurant.vue')),
+  'profit-rate-restaurant': asyncView(() => import('./tools/ProfitRateRestaurant.vue')),
+  'return-rate-restaurant': asyncView(() => import('./tools/ReturnRateRestaurant.vue')),
+  'investment-budget': asyncView(() => import('./tools/InvestmentBudgetRestaurant.vue')),
+  'gross-margin-education': asyncView(() => import('./tools/GrossMarginEducation.vue')),
+  'break-even-education': asyncView(() => import('./tools/BreakEvenEducation.vue')),
+  'salary-cost-ratio-education': asyncView(() => import('./tools/SalaryCostRatioEducation.vue')),
+  'labor-efficiency-education': asyncView(() => import('./tools/LaborEfficiencyEducation.vue')),
+  'venue-utilization-education': asyncView(() => import('./tools/VenueUtilizationEducation.vue')),
+  'cac-education': asyncView(() => import('./tools/CACEducation.vue')),
+  'payback-education': asyncView(() => import('./tools/PaybackEducation.vue')),
+  'cashflow-education': asyncView(() => import('./tools/CashflowEducation.vue')),
+  'profit-rate-education': asyncView(() => import('./tools/ProfitRateEducation.vue')),
+  'return-rate-education': asyncView(() => import('./tools/ReturnRateEducation.vue')),
+  'class-rate-education': asyncView(() => import('./tools/ClassRateEducation.vue')),
+  'gross-margin-beauty': asyncView(() => import('./tools/GrossMarginBeauty.vue')),
+  'break-even-beauty': asyncView(() => import('./tools/BreakEvenBeauty.vue')),
+  'salary-cost-ratio-beauty': asyncView(() => import('./tools/SalaryCostRatioBeauty.vue')),
+  'labor-efficiency-beauty': asyncView(() => import('./tools/LaborEfficiencyBeauty.vue')),
+  'conversion-rate-beauty': asyncView(() => import('./tools/ConversionRateBeauty.vue')),
+  'project-profit-beauty': asyncView(() => import('./tools/ProjectProfitBeauty.vue')),
+  'project-structure-beauty': asyncView(() => import('./tools/ProjectStructureBeauty.vue')),
+  'labor-structure-beauty': asyncView(() => import('./tools/LaborStructureBeauty.vue')),
+  'card-debt-beauty': asyncView(() => import('./tools/CardDebtBeauty.vue')),
+  'funnel-ltv-beauty': asyncView(() => import('./tools/FunnelLTVBeauty.vue')),
+  'breakeven-profit-beauty': asyncView(() => import('./tools/BreakevenProfitBeauty.vue')),
+  'device-roi-beauty': asyncView(() => import('./tools/DeviceROIBeauty.vue')),
+  'member-card-design-beauty': asyncView(() => import('./tools/MemberCardDesignBeauty.vue')),
+  'ltv-beauty': asyncView(() => import('./tools/LTVBeauty.vue')),
+  'repurchase-rate-beauty': asyncView(() => import('./tools/RepurchaseRateBeauty.vue')),
+  'payback-beauty': asyncView(() => import('./tools/PaybackBeauty.vue')),
+  'cashflow-beauty': asyncView(() => import('./tools/CashflowBeauty.vue')),
+  'profit-rate-beauty': asyncView(() => import('./tools/ProfitRateBeauty.vue')),
+  'return-rate-beauty': asyncView(() => import('./tools/ReturnRateBeauty.vue')),
   // 营销推广新增
-  'channel-cac': ChannelCAC,
-  'campaign-roi': CampaignROI,
-  'referral-roi': ReferralROI,
-  'conversion-funnel': ConversionFunnel,
-  'retention-rate': RetentionRate,
-  'marketing-budget': MarketingBudget,
-  'churn-rate': ChurnRate,
-  'ltv-restaurant': LTVRestaurant,
-  'ltv-education': LTVEducation,
-  'promotion-profit': PromotionProfit,
+  'channel-cac': asyncView(() => import('./tools/ChannelCAC.vue')),
+  'campaign-roi': asyncView(() => import('./tools/CampaignROI.vue')),
+  'referral-roi': asyncView(() => import('./tools/ReferralROI.vue')),
+  'conversion-funnel': asyncView(() => import('./tools/ConversionFunnel.vue')),
+  'retention-rate': asyncView(() => import('./tools/RetentionRate.vue')),
+  'marketing-budget': asyncView(() => import('./tools/MarketingBudget.vue')),
+  'churn-rate': asyncView(() => import('./tools/ChurnRate.vue')),
+  'ltv-restaurant': asyncView(() => import('./tools/LTVRestaurant.vue')),
+  'ltv-education': asyncView(() => import('./tools/LTVEducation.vue')),
+  'promotion-profit': asyncView(() => import('./tools/PromotionProfit.vue')),
   // 通用表格
-  'daily-revenue-sheet': DailyRevenueSheet,
-  'employee-attendance-sheet': EmployeeAttendanceSheet,
-  'customer-info-sheet': CustomerInfoSheet,
-  'service-schedule-sheet': ServiceScheduleSheet,
-  'supplier-sheet': SupplierSheet,
-  'inventory-sheet': InventorySheet,
-  'member-sheet': MemberSheet,
+  'daily-revenue-sheet': asyncView(() => import('./sheets/DailyRevenueSheet.vue')),
+  'employee-attendance-sheet': asyncView(() => import('./sheets/EmployeeAttendanceSheet.vue')),
+  'customer-info-sheet': asyncView(() => import('./sheets/CustomerInfoSheet.vue')),
+  'service-schedule-sheet': asyncView(() => import('./sheets/ServiceScheduleSheet.vue')),
+  'supplier-sheet': asyncView(() => import('./sheets/SupplierSheet.vue')),
+  'inventory-sheet': asyncView(() => import('./sheets/InventorySheet.vue')),
+  'member-sheet': asyncView(() => import('./sheets/MemberSheet.vue')),
   // 餐饮表格
-  'daily-revenue-restaurant-sheet': DailyRevenueRestaurantSheet,
-  'employee-attendance-restaurant-sheet': EmployeeAttendanceRestaurantSheet,
-  'customer-info-restaurant-sheet': CustomerInfoRestaurantSheet,
-  'reservation-sheet': ReservationSheet,
-  'supplier-restaurant-sheet': SupplierRestaurantSheet,
-  'inventory-restaurant-sheet': InventoryRestaurantSheet,
-  'member-restaurant-sheet': MemberRestaurantSheet,
-  'restaurant-food-cost-sheet': RestaurantFoodCostSheet,
-  'restaurant-turnover-sheet': RestaurantTurnoverSheet,
-  'menu-gross-margin-sheet': MenuGrossMarginSheet,
-  'foot-traffic-sheet': FootTrafficSheet,
+  'daily-revenue-restaurant-sheet': asyncView(() => import('./sheets/DailyRevenueRestaurantSheet.vue')),
+  'employee-attendance-restaurant-sheet': asyncView(() => import('./sheets/EmployeeAttendanceRestaurantSheet.vue')),
+  'customer-info-restaurant-sheet': asyncView(() => import('./sheets/CustomerInfoRestaurantSheet.vue')),
+  'reservation-sheet': asyncView(() => import('./sheets/ReservationSheet.vue')),
+  'supplier-restaurant-sheet': asyncView(() => import('./sheets/SupplierRestaurantSheet.vue')),
+  'inventory-restaurant-sheet': asyncView(() => import('./sheets/InventoryRestaurantSheet.vue')),
+  'member-restaurant-sheet': asyncView(() => import('./sheets/MemberRestaurantSheet.vue')),
+  'restaurant-food-cost-sheet': asyncView(() => import('./sheets/RestaurantFoodCostSheet.vue')),
+  'restaurant-turnover-sheet': asyncView(() => import('./sheets/RestaurantTurnoverSheet.vue')),
+  'menu-gross-margin-sheet': asyncView(() => import('./sheets/MenuGrossMarginSheet.vue')),
+  'foot-traffic-sheet': asyncView(() => import('./sheets/FootTrafficSheet.vue')),
   // 教培表格
-  'daily-revenue-education-sheet': DailyRevenueEducationSheet,
-  'employee-attendance-education-sheet': EmployeeAttendanceEducationSheet,
-  'customer-info-education-sheet': CustomerInfoEducationSheet,
-  'course-schedule-sheet': CourseScheduleSheet,
-  'supplier-education-sheet': SupplierEducationSheet,
-  'inventory-education-sheet': InventoryEducationSheet,
-  'member-education-sheet': MemberEducationSheet,
-  'education-course-consumption-sheet': EducationCourseConsumptionSheet,
-  'education-renewal-sheet': EducationRenewalSheet,
-  'coach-performance-sheet': CoachPerformanceSheet,
-  'trial-conversion-sheet': TrialConversionSheet,
+  'daily-revenue-education-sheet': asyncView(() => import('./sheets/DailyRevenueEducationSheet.vue')),
+  'employee-attendance-education-sheet': asyncView(() => import('./sheets/EmployeeAttendanceEducationSheet.vue')),
+  'customer-info-education-sheet': asyncView(() => import('./sheets/CustomerInfoEducationSheet.vue')),
+  'course-schedule-sheet': asyncView(() => import('./sheets/CourseScheduleSheet.vue')),
+  'supplier-education-sheet': asyncView(() => import('./sheets/SupplierEducationSheet.vue')),
+  'inventory-education-sheet': asyncView(() => import('./sheets/InventoryEducationSheet.vue')),
+  'member-education-sheet': asyncView(() => import('./sheets/MemberEducationSheet.vue')),
+  'education-course-consumption-sheet': asyncView(() => import('./sheets/EducationCourseConsumptionSheet.vue')),
+  'education-renewal-sheet': asyncView(() => import('./sheets/EducationRenewalSheet.vue')),
+  'coach-performance-sheet': asyncView(() => import('./sheets/CoachPerformanceSheet.vue')),
+  'trial-conversion-sheet': asyncView(() => import('./sheets/TrialConversionSheet.vue')),
   // 美业表格
-  'daily-revenue-beauty-sheet': DailyRevenueBeautySheet,
-  'employee-attendance-beauty-sheet': EmployeeAttendanceBeautySheet,
-  'customer-info-beauty-sheet': CustomerInfoBeautySheet,
-  'service-schedule-beauty-sheet': ServiceScheduleBeautySheet,
-  'supplier-beauty-sheet': SupplierBeautySheet,
-  'inventory-beauty-sheet': InventoryBeautySheet,
-  'beauty-member-sheet': BeautyMemberSheet,
-  'project-consumption-sheet': ProjectConsumptionSheet,
-  'beauty-acquisition-sheet': BeautyAcquisitionSheet,
-  'beautician-performance-sheet': BeauticianPerformanceSheet,
-  'package-pricing-sheet': PackagePricingSheet,
+  'daily-revenue-beauty-sheet': asyncView(() => import('./sheets/DailyRevenueBeautySheet.vue')),
+  'employee-attendance-beauty-sheet': asyncView(() => import('./sheets/EmployeeAttendanceBeautySheet.vue')),
+  'customer-info-beauty-sheet': asyncView(() => import('./sheets/CustomerInfoBeautySheet.vue')),
+  'service-schedule-beauty-sheet': asyncView(() => import('./sheets/ServiceScheduleBeautySheet.vue')),
+  'supplier-beauty-sheet': asyncView(() => import('./sheets/SupplierBeautySheet.vue')),
+  'inventory-beauty-sheet': asyncView(() => import('./sheets/InventoryBeautySheet.vue')),
+  'beauty-member-sheet': asyncView(() => import('./sheets/BeautyMemberSheet.vue')),
+  'project-consumption-sheet': asyncView(() => import('./sheets/ProjectConsumptionSheet.vue')),
+  'beauty-acquisition-sheet': asyncView(() => import('./sheets/BeautyAcquisitionSheet.vue')),
+  'beautician-performance-sheet': asyncView(() => import('./sheets/BeauticianPerformanceSheet.vue')),
+  'package-pricing-sheet': asyncView(() => import('./sheets/PackagePricingSheet.vue')),
   // 营销推广新增
-  'marketing-activity-sheet': MarketingActivitySheet,
-  'channel-comparison-sheet': ChannelComparisonSheet,
-  'customer-retention-sheet': CustomerRetentionSheet,
-  'referral-tracking-sheet': ReferralTrackingSheet,
-  'marketing-budget-sheet': MarketingBudgetSheet,
-  'promotion-profit-sheet': PromotionProfitSheet
+  'marketing-activity-sheet': asyncView(() => import('./sheets/MarketingActivitySheet.vue')),
+  'channel-comparison-sheet': asyncView(() => import('./sheets/ChannelComparisonSheet.vue')),
+  'customer-retention-sheet': asyncView(() => import('./sheets/CustomerRetentionSheet.vue')),
+  'referral-tracking-sheet': asyncView(() => import('./sheets/ReferralTrackingSheet.vue')),
+  'marketing-budget-sheet': asyncView(() => import('./sheets/MarketingBudgetSheet.vue')),
+  'promotion-profit-sheet': asyncView(() => import('./sheets/PromotionProfitSheet.vue'))
 }
 
 const toolComponent = computed(() => {

@@ -34,6 +34,7 @@
         <button class="generate-btn" :disabled="!canCalculate" @click="calculate">
           计算投放效果
         </button>
+        <p v-if="error" class="error-text">{{ error }}</p>
       </div>
 
       <div v-if="result" class="result-card">
@@ -78,8 +79,10 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
+import request from '@/api/request'
 
 const result = ref(null)
+const error = ref('')
 
 const form = reactive({
   exposures: 500,
@@ -111,20 +114,16 @@ const benchmarkRows = computed(() => {
 })
 
 const calculate = async () => {
-  await new Promise(r => setTimeout(r, 400))
-  const cpm = 40
-  const exposures = Math.round((form.budget / cpm) * 1000)
-  const isWorthInvesting = parseFloat(form.ctr) > 10 && parseFloat(form.interactionRate) > 5
-  result.value = {
-    isWorthInvesting,
-    screeningResult: isWorthInvesting ? '✅ 符合投放标准，建议投放' : '⚠️ 数据未达标，建议优化内容后再投',
-    exposures,
-    cpm,
-    benchmark: { ctr: '>10%', interactionRate: '>5%', saveRate: '>3%', followRate: '>0.5%', readRate: '>40%' }
+  error.value = ''
+  try {
+    result.value = await request.post('/xhs/shutiao-calculator', { ...form })
+  } catch (err) {
+    error.value = err.message || '计算投放效果失败'
   }
 }
 </script>
 
 <style scoped>
 @import '../agent-common.css';
+.error-text { color: #dc2626; margin-top: 12px; }
 </style>

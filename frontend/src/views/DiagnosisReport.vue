@@ -152,7 +152,7 @@
               </div>
             </div>
             <div class="rent-warning" v-if="result.rent.laborPercent > 60">
-              <span class="warning-icon">⚠</span>
+              <span class="warning-icon">风险</span>
               <span>企业高度依赖创始人个人，建议优先建设"租"的部分</span>
             </div>
           </section>
@@ -239,7 +239,7 @@
                 <h4>{{ lever.title || lever.phase || `第${i + 1}步` }}</h4>
                 <p>{{ lever.description || lever.action || '' }}</p>
                 <div v-if="lever.lagWarning || lever.timeRange" class="lag-warning">
-                  <span class="lag-icon">⏰</span>
+                  <span class="lag-icon">提示</span>
                   <span>滞后预警：{{ lever.lagWarning?.timeRange || lever.timeRange }}后显现效果，前期可能看不到明显变化，不要急。</span>
                 </div>
               </div>
@@ -249,7 +249,7 @@
             <div v-if="result.riskNotes && result.riskNotes.length" class="risk-list">
               <h3>问题清单</h3>
               <div v-for="(note, i) in result.riskNotes" :key="i" class="risk-item" :class="getRiskClass(note)">
-                {{ typeof note === 'string' ? note : note.text || note }}
+                {{ formatRiskNote(note) }}
               </div>
             </div>
           </section>
@@ -260,12 +260,12 @@
             <div v-for="(step, i) in result.nextSteps" :key="i" class="next-step" :class="`priority-${step.priority || 'medium'}`">
               <span class="step-priority">{{ getPriorityLabel(step.priority) }}</span>
               <h4>{{ step.title }}</h4>
-              <p>{{ step.description }}</p>
-              <div v-if="step.lagWarning" class="lag-warning">
-                <span class="lag-icon">⏰</span>
-                <span>滞后预警：效果在 {{ step.lagWarning.timeRange }} 后显现，{{ step.lagWarning.desc }}</span>
+                <p>{{ step.description }}</p>
+                <div v-if="step.lagWarning" class="lag-warning">
+                  <span class="lag-icon">提示</span>
+                  <span>滞后预警：效果在 {{ step.lagWarning.timeRange }} 后显现，{{ step.lagWarning.desc }}</span>
+                </div>
               </div>
-            </div>
           </section>
 
           <!-- 八、推荐工具 -->
@@ -324,10 +324,19 @@ function getPriorityLabel(priority) {
 }
 
 function getRiskClass(note) {
-  const text = typeof note === 'string' ? note : (note.text || '')
-  if (text.includes('🔴') || text.includes('紧急')) return 'risk-urgent'
-  if (text.includes('🟡') || text.includes('重要')) return 'risk-important'
+  const level = typeof note === 'object' && note
+    ? String(note.level || note.severity || note.priority || note.type || '').toLowerCase()
+    : ''
+  const text = formatRiskNote(note)
+
+  if (['urgent', 'high', 'critical', 'danger'].includes(level) || text.includes('紧急')) return 'risk-urgent'
+  if (['important', 'medium', 'warning'].includes(level) || text.includes('重要')) return 'risk-important'
   return 'risk-normal'
+}
+
+function formatRiskNote(note) {
+  const text = typeof note === 'string' ? note : (note?.text || note?.title || String(note || ''))
+  return text.replace(/^[\s\u{1F534}\u{1F7E1}\u{1F7E2}]+/u, '')
 }
 
 function getIPClass(score) {
@@ -364,8 +373,22 @@ function getToolDisplayName(toolCode) {
   return getToolByCode(toolCode)?.name || toolCode
 }
 
-function handleShare() {
-  // TODO: 生成分享链接
+async function handleShare() {
+  const shareData = {
+    title: reportTitle.value,
+    text: '企业增长全景顾问诊断报告',
+    url: window.location.href
+  }
+
+  if (navigator.share) {
+    await navigator.share(shareData)
+    return
+  }
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(shareData.url)
+    window.alert('报告链接已复制')
+  }
 }
 
 onMounted(() => {

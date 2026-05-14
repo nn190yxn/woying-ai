@@ -1,7 +1,11 @@
 node_modules/
 dist/
 *.log
+*.pem
 backend/logs/
+audit-freeze/
 .DS_Store
 .env
+**/.env
 !.env.example
+!**/.env.example

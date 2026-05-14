@@ -12,10 +12,116 @@ import { generateStructured } from '../services/ai.js'
 import { createCalculatorTools } from './calculatorTools.js'
 import { createSpreadsheetTools } from './spreadsheetTools.js'
 import { canAccessLevel, getRequiredMemberLevel } from '../config/toolAccess.js'
+import { createContentTools } from '../tools/content.js'
+import { createMarketingTools } from '../tools/marketing.js'
 
 const router = express.Router()
 
+function getActorId(req) {
+  return req.user?.userId || 0
+}
+
+function hasPersistedUser(req) {
+  return !!req.user?.userId
+}
+
+function normalizeToolPayload(toolCode, formData) {
+  const normalized = { ...(formData || {}) }
+
+  if (!normalized.industry) {
+    normalized.industry = 'catering'
+  }
+
+  const ensureArray = (value) => {
+    if (Array.isArray(value)) return value
+    if (value == null || value === '') return []
+    return [value]
+  }
+
+  if (toolCode === 'friend') {
+    return {
+      ...normalized,
+      scene: normalized.scene || '当前业务',
+      highlight: normalized.highlight || '核心卖点',
+      type: normalized.type || 'product',
+      tone: normalized.tone || 'natural'
+    }
+  }
+
+  if (toolCode === 'topic') {
+    return {
+      ...normalized,
+      goals: ensureArray(normalized.goals),
+      contentTypes: ensureArray(normalized.contentTypes),
+      scenes: ensureArray(normalized.scenes),
+      platforms: ensureArray(normalized.platforms),
+      count: Number(normalized.count) || 10
+    }
+  }
+
+  if (toolCode === 'festival') {
+    return {
+      ...normalized,
+      goal: normalized.goal || 'promote',
+      contentType: normalized.contentType || 'poster'
+    }
+  }
+
+  if (toolCode === 'fission') {
+    const budgetMap = {
+      low: 500,
+      mid: 2000,
+      high: 5000,
+      vip: 8000
+    }
+    if (typeof normalized.budget === 'string' && budgetMap[normalized.budget] !== undefined) {
+      normalized.budget = budgetMap[normalized.budget]
+    }
+    return {
+      ...normalized,
+      customerScale: normalized.customerScale || '未知',
+      channel: normalized.channel || 'mixed',
+      priceRange: normalized.priceRange || 'mid',
+      budget: normalized.budget || 2000
+    }
+  }
+
+  if (toolCode === 'marketing-plan') {
+    return {
+      ...normalized,
+      goal: normalized.goal || '提升销售额',
+      budget: normalized.budget || '5000',
+      duration: normalized.duration || normalized.period || '1周'
+    }
+  }
+
+  if (toolCode === 'meituan') {
+    const monthlyOrders = Number(normalized.monthlyOrders) || 0
+    const monthlySales = Number(normalized.monthlySales) || 0
+    const avgOrderValue = monthlyOrders > 0
+      ? monthlySales / monthlyOrders
+      : Number(normalized.avgOrderValue) || 0
+
+    return {
+      ...normalized,
+      industry: normalized.industry || 'restaurant',
+      monthlyOrders,
+      monthlySales,
+      avgOrderValue,
+      platformRate: Number(normalized.platformRate ?? normalized.platformFeeRate) || 0,
+      platformFeeRate: Number(normalized.platformFeeRate ?? normalized.platformRate) || 0,
+      repurchaseRate: Number(normalized.repurchaseRate ?? normalized.repeatRate) || 0,
+      repeatRate: Number(normalized.repeatRate ?? normalized.repurchaseRate) || 0,
+      reviewScore: Number(normalized.reviewScore) || 4.5,
+      issues: ensureArray(normalized.issues)
+    }
+  }
+
+  return normalized
+}
+
 async function trackUsage(userId, toolCode) {
+  if (!userId) return
   try {
     await query(
       'INSERT INTO tool_usage (user_id, tool_code, created_at) VALUES (?, ?, NOW())',
@@ -27,6 +133,7 @@ async function trackUsage(userId, toolCode) {
 }
 
 async function getUserMemberLevel(userId) {
+  if (!userId) return 'annual'
   const users = await query('SELECT member_level FROM users WHERE id = ?', [userId])
   return users[0]?.member_level || 'free'
 }
@@ -2107,68 +2214,155 @@ ${knowledge}
     name: '平台经营诊断器',
     engineType: 'template',
     templateBuilder: async (formData, ind) => {
-      const industry = ind.name || '门店'
-      const monthlyOrders = formData.monthlyOrders || 200
-      const avgOrderValue = formData.avgOrderValue || 50
-      const platformFeeRate = formData.platformFeeRate || 20
-      const reviewScore = formData.reviewScore || 4.5
-      const repeatRate = formData.repeatRate || 30
+      const industryKey = formData.industry || 'restaurant'
+      const industryNameMap = {
+        restaurant: '餐饮',
+        retail: '零售',
+        service: '生活服务'
+      }
+      const industry = industryNameMap[industryKey] || ind.name || '门店'
+      const monthlyOrders = Number(formData.monthlyOrders) || 0
+      const monthlySales = Number(formData.monthlySales) || 0
+      const avgOrderValue = monthlyOrders > 0 ? monthlySales / monthlyOrders : (Number(formData.avgOrderValue) || 0)
+      const platformFeeRate = Number(formData.platformFeeRate ?? formData.platformRate) || 0
+      const repeatRate = Number(formData.repeatRate ?? formData.repurchaseRate) || 0
+      const issues = Array.isArray(formData.issues) ? formData.issues : []
 
-      const monthlyRevenue = monthlyOrders * avgOrderValue
-      const platformFee = monthlyRevenue * (platformFeeRate / 100)
-      const actualRevenue = monthlyRevenue - platformFee
+      const dailyOrders = Math.round(monthlyOrders / 30)
+      const actualRate = 100 - platformFeeRate
+      const avgOrderValueText = avgOrderValue.toFixed(2)
+
+      const avgOrderValueCompare = industryKey === 'restaurant'
+        ? (avgOrderValue >= 35 ? '高于均值' : avgOrderValue >= 20 ? '接近均值' : '低于均值')
+        : (avgOrderValue >= 50 ? '高于均值' : avgOrderValue >= 25 ? '接近均值' : '低于均值')
+
+      const dailyOrdersCompare = industryKey === 'restaurant'
+        ? (dailyOrders >= 30 ? '优秀' : dailyOrders >= 15 ? '良好' : '需提升')
+        : (dailyOrders >= 20 ? '优秀' : dailyOrders >= 10 ? '良好' : '需提升')
+
+      const actualRateCompare = actualRate >= 80 ? '健康' : actualRate >= 70 ? '一般' : '过高'
+      const repeatRateCompare = repeatRate >= 40 ? '优秀' : repeatRate >= 25 ? '良好' : '需提升'
+
+      let score = 60
+      if (avgOrderValue >= (industryKey === 'restaurant' ? 35 : 50)) score += 10
+      else if (avgOrderValue >= (industryKey === 'restaurant' ? 20 : 25)) score += 5
+      if (dailyOrders >= (industryKey === 'restaurant' ? 30 : 20)) score += 10
+      else if (dailyOrders >= (industryKey === 'restaurant' ? 15 : 10)) score += 5
+      if (actualRate >= 80) score += 10
+      else if (actualRate >= 70) score += 5
+      if (repeatRate >= 40) score += 10
+      else if (repeatRate >= 25) score += 5
+
+      const analysis = []
+      if (monthlyOrders < (industryKey === 'restaurant' ? 450 : 300)) {
+        analysis.push(`[高风险] 月均订单量${monthlyOrders}单，低于行业基准，需要提升获客能力`)
+      }
+      if (platformFeeRate > 20) {
+        analysis.push(`[关注] 平台抽成${platformFeeRate}%，需要优化成本结构或提升客单价对冲`)
+      }
+      if (repeatRate < 20) {
+        analysis.push(`[关注] 复购率${repeatRate}%，低于健康值30%，需加强老客户运营`)
+      }
+      if (issues.includes('orders_low')) {
+        analysis.push('[高风险] 存在订单量不足的问题，需要优化曝光和转化')
+      }
+      if (issues.includes('price_high')) {
+        analysis.push('[关注] 价格竞争力可能较弱，建议对比竞品调整定价策略')
+      }
+      if (issues.includes('review_bad')) {
+        analysis.push('[关注] 差评会影响排名与转化，需要建立差评复盘和回复机制')
+      }
+      if (issues.includes('exposure_low')) {
+        analysis.push('[关注] 曝光不足会限制订单增长，需要优化店铺展示和活动参与')
+      }
+      if (issues.includes('conversion_low')) {
+        analysis.push('[关注] 转化率偏弱，需要强化套餐卖点、评价展示和优惠设计')
+      }
+      if (issues.includes('cost_high')) {
+        analysis.push('[关注] 成本偏高，需要拆分平台抽成、履约成本和营销成本')
+      }
+      if (analysis.length === 0) {
+        analysis.push('[正常] 各项指标无明显异常，继续保持当前运营策略')
+      }
+
+      const suggestions = []
+      if (dailyOrders < (industryKey === 'restaurant' ? 15 : 10)) {
+        suggestions.push('提升曝光量：优化店铺头图、商品结构，增加平台活动参与')
+        suggestions.push('优化转化率：完善商品详情页，突出卖点，设置优惠套餐')
+      }
+      if (actualRate < 75) {
+        suggestions.push('降低平台成本：复盘抽成、配送、营销费用，优先保留正毛利活动')
+      }
+      if (repeatRate < 30) {
+        suggestions.push('加强复购：建立会员体系，发放复购券，完善售后跟踪')
+      }
+      if (avgOrderValue < (industryKey === 'restaurant' ? 25 : 40)) {
+        suggestions.push('提升客单价：推出高价值套餐，限时加购推荐，节日营销')
+      }
+      if (suggestions.length === 0) {
+        suggestions.push('当前经营状况良好，可尝试拓展新渠道增加收入')
+        suggestions.push('关注数据波动，保持现有优势，及时调整策略')
+      }
+
+      let level = '待改善'
+      if (score >= 80) level = '优秀'
+      else if (score >= 65) level = '良好'
 
       return {
-        summary: `「${industry}」平台经营诊断报告已生成`,
+        summary: `美团经营自诊完成，综合评分 ${score} 分，当前水平为「${level}」`,
         sections: [
-          { title: '经营数据概览', items: [
-            `月订单量：${monthlyOrders} 单`,
-            `平均客单价：¥${avgOrderValue}`,
-            `月总营收：¥${monthlyRevenue.toLocaleString()}`,
-            `平台抽成（${platformFeeRate}%）：¥${platformFee.toLocaleString()}`,
-            `实际到手：¥${actualRevenue.toLocaleString()}`
-          ]},
-          { title: '评分诊断', items: [
-            reviewScore >= 4.5 ? `✓ 评分 ${reviewScore} 分：优秀，保持当前服务质量` : reviewScore >= 4.0 ? `⚠ 评分 ${reviewScore} 分：中等，需要提升客户体验` : `✗ 评分 ${reviewScore} 分：偏低，已影响店铺排名和转化`,
-            '评分低于4.0会严重影响曝光量和进店率',
-            '建议每周复盘差评原因，针对性改进'
-          ]},
-          { title: '复购诊断', items: [
-            repeatRate >= 40 ? `✓ 复购率 ${repeatRate}%：优秀，客户粘性强` : repeatRate >= 25 ? `⚠ 复购率 ${repeatRate}%：一般，有提升空间` : `✗ 复购率 ${repeatRate}%：偏低，客户流失严重`,
-            '复购率每提升10%，利润可增长25-95%',
-            '建议推出会员专享优惠和老客专属活动'
-          ]},
-          { title: '优化建议', items: [
-            '优化菜品/服务图片，提升进店转化率',
-            '设置满减活动提高客单价',
-            '关注差评及时回复，48小时内处理',
-            '高峰期保证出餐/服务速度，避免超时',
-            '定期推出平台专属新品保持新鲜感'
-          ]}
+          {
+            title: '核心指标',
+            items: [
+              `行业类型：${industry}`,
+              `月均订单：${monthlyOrders} 单`,
+              `月均营业额：¥${monthlySales.toLocaleString()}`,
+              `客单价：¥${avgOrderValueText}（${avgOrderValueCompare}）`,
+              `日均订单：${dailyOrders} 单（${dailyOrdersCompare}）`,
+              `实际到手率：${actualRate.toFixed(1)}%（${actualRateCompare}）`,
+              `复购率：${repeatRate}%（${repeatRateCompare}）`
+            ]
+          },
+          { title: '问题诊断', items: analysis },
+          { title: '优化建议', items: suggestions }
         ],
-        actions: [
-          { priority: 'critical', title: '评分维护', description: '本周内处理所有未回复的差评', owner: '店长', timeline: '3天内' },
-          { priority: 'high', title: '活动配置', description: '设置新的满减/折扣活动提升转化', owner: '运营', timeline: '1周内' }
+        actions: suggestions.slice(0, 3).map((item, index) => ({
+          priority: index === 0 ? 'high' : 'medium',
+          title: `优化动作 ${index + 1}`,
+          description: item,
+          owner: '门店负责人',
+          timeline: index === 0 ? '3天内' : '本周内'
+        })),
+        benchmarks: [
+          { metric: '综合评分', value: `${score}分`, benchmark: '80分', status: score >= 80 ? 'ok' : 'below' },
+          { metric: '客单价', value: `¥${avgOrderValueText}`, benchmark: industryKey === 'restaurant' ? '¥35' : '¥50', status: avgOrderValueCompare === '高于均值' ? 'ok' : 'below' },
+          { metric: '日均订单', value: `${dailyOrders}单`, benchmark: industryKey === 'restaurant' ? '30单' : '20单', status: dailyOrdersCompare === '优秀' ? 'ok' : 'below' },
+          { metric: '复购率', value: `${repeatRate}%`, benchmark: '30%', status: repeatRate >= 30 ? 'ok' : 'below' }
         ],
-        recommendedTools: ['friend', 'festival', 'selling-point']
+        riskNotes: [
+          '平台诊断结果基于录入数据测算，活动投放前仍需结合门店毛利、履约能力和竞争环境复核。'
+        ],
+        recommendedTools: ['competitor', 'membership-design', 'fission']
       }
     }
   }
 }
 
-// Merge calculator and spreadsheet tools
+// Merge knowledge-AI, calculator and spreadsheet tools
+Object.assign(TOOL_DEFINITIONS, createContentTools(), createMarketingTools())
 Object.assign(TOOL_DEFINITIONS, createCalculatorTools(), createSpreadsheetTools())
 
 router.post('/:toolCode', authMiddleware, async (req, res, next) => {
   const { toolCode } = req.params
-  const userId = req.user.userId
-  const formData = req.body
+  const userId = getActorId(req)
+  const formData = normalizeToolPayload(toolCode, req.body)
 
   try {
-    const toolDef = TOOL_DEFINITIONS[toolCode]
-    if (!toolDef) {
+    const baseToolDef = TOOL_DEFINITIONS[toolCode]
+    if (!baseToolDef) {
       return res.status(400).json({ error: `Unknown tool: ${toolCode}` })
     }
+    const toolDef = { ...baseToolDef, code: baseToolDef.code || toolCode }
 
     const memberLevel = await getUserMemberLevel(userId)
     const requiredLevel = getRequiredMemberLevel(toolCode)
@@ -2177,7 +2371,9 @@ router.post('/:toolCode', authMiddleware, async (req, res, next) => {
     }
 
     // Track tool submission event
-    await trackEvent(userId, EVENT_TYPES.TOOL_SUBMIT, { toolCode })
+    if (hasPersistedUser(req)) {
+      await trackEvent(userId, EVENT_TYPES.TOOL_SUBMIT, { toolCode })
+    }
 
     // Apply input validation based on tool engine type
     const validationRules = getValidationRulesForTool(toolDef.engineType)
@@ -2191,6 +2387,11 @@ router.post('/:toolCode', authMiddleware, async (req, res, next) => {
     }
     validationReq.res = validationRes
     await new Promise((resolve) => {
+      const originalJson = validationRes.json.bind(validationRes)
+      validationRes.json = (data) => {
+        originalJson(data)
+        resolve()
+      }
       validateMiddleware(validationReq, validationRes, resolve)
     })
     if (validationRes.statusCode >= 400) {
@@ -2203,15 +2404,19 @@ router.post('/:toolCode', authMiddleware, async (req, res, next) => {
     await trackUsage(userId, toolCode)
 
     // Track success
-    await trackEvent(userId, EVENT_TYPES.TOOL_SUCCESS, { toolCode })
+    if (hasPersistedUser(req)) {
+      await trackEvent(userId, EVENT_TYPES.TOOL_SUCCESS, { toolCode })
+    }
 
     res.json(result)
   } catch (error) {
     logger.toolFailure(userId, toolCode, error, 0)
-    await trackEvent(userId, EVENT_TYPES.TOOL_FAILURE, {
-      toolCode,
-      error: error.message
-    })
+    if (hasPersistedUser(req)) {
+      await trackEvent(userId, EVENT_TYPES.TOOL_FAILURE, {
+        toolCode,
+        error: error.message
+      })
+    }
     next(error)
   }
 })

@@ -89,6 +89,9 @@
             <div class="loading-spinner"></div>
             <p>正在分析账号健康度...</p>
           </div>
+          <div v-else-if="error" class="result-container">
+            <p class="error-text">{{ error }}</p>
+          </div>
           <div v-else class="result-container">
             <div class="score-overview">
               <div class="score-circle" :style="{ borderColor: levelColor }">
@@ -122,8 +125,13 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
-import * as echarts from 'echarts'
-import { onMounted } from 'vue'
+import * as echarts from 'echarts/core'
+import { RadarChart } from 'echarts/charts'
+import { RadarComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import request from '@/api/request'
+
+echarts.use([RadarChart, RadarComponent, CanvasRenderer])
 
 const steps = [
   { label: '基础信息' },
@@ -134,6 +142,7 @@ const currentStep = ref(0)
 const loading = ref(false)
 const result = ref(null)
 const radarChart = ref(null)
+const error = ref('')
 
 const pains = {
   verticality: ['内容杂乱，赛道不聚焦', '选题跟风，缺乏主线', '笔记类型混乱（图文/视频混发无规律）', '标签/话题使用不精准'],
@@ -169,31 +178,16 @@ const levelText = computed(() => {
 const nextStep = async () => {
   if (currentStep.value === 1) {
     loading.value = true
-    await new Promise(r => setTimeout(r, 800))
-    const vScore = Math.max(20, 100 - form.verticalityPains.length * 20)
-    const iScore = Math.max(25, 100 - form.interactionPains.length * 18)
-    const aScore = Math.max(30, 100 - form.activityPains.length * 15)
-    const vMap = { none: 100, minor: 80, multiple: 50, severe: 20 }
-    const violationScore = vMap[form.violationStatus] || 80
-    const completenessScore = 80
-    const total = Math.round(vScore * 0.3 + iScore * 0.25 + aScore * 0.2 + violationScore * 0.15 + completenessScore * 0.1)
-    const level = total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 50 ? 'C' : 'D'
-    const levelText = { A: '健康', B: '良好', C: '预警', D: '危险' }
-    result.value = {
-      totalScore: total,
-      level,
-      diagnosis: `您的账号整体健康度为${total}分，属于${levelText[level]}状态。`,
-      radar: [
-        { name: '内容垂直度', score: vScore, color: vScore < 50 ? '#ef4444' : vScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '互动质量', score: iScore, color: iScore < 50 ? '#ef4444' : iScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '发布活跃度', score: aScore, color: aScore < 50 ? '#ef4444' : aScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '违规记录', score: violationScore, color: violationScore < 60 ? '#ef4444' : '#10b981' },
-        { name: '账号完善度', score: completenessScore, color: '#10b981' }
-      ],
-      suggestions: ['优化内容垂直度，聚焦单一赛道', '提高互动率，多引导收藏和评论', '保持每周 3-4 篇的稳定更新频率']
+    error.value = ''
+    try {
+      const response = await request.post('/xhs/account-diagnosis', { ...form })
+      result.value = response.result
+      await renderRadar(result.value.radar)
+    } catch (err) {
+      error.value = err.message || '生成体检报告失败'
+    } finally {
+      loading.value = false
     }
-    await renderRadar(result.value.radar)
-    loading.value = false
   }
   currentStep.value++
 }
@@ -222,12 +216,9 @@ const renderRadar = async (radarData) => {
   })
 }
 
-onMounted(() => {
-  const token = localStorage.getItem('token')
-  if (!token) { alert('请先登录'); return }
-})
 </script>
 
 <style scoped>
 @import '../agent-common.css';
+.error-text { color: #dc2626; }
 </style>

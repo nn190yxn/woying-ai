@@ -15,22 +15,86 @@ import {
 } from './diagnosisEngine.js'
 import { calculatorEngine } from './calculatorEngine.js'
 import { spreadsheetEngine } from './spreadsheetEngine.js'
+import { createToolResult } from './resultSchema.js'
+import { createRagFallbackResult, isAiAvailabilityError } from './failover.js'
 
 const CUSTOMIZATION_CTA = '\n---\n如需针对您的具体场景做个性化定制方案，升级会员即可获得专属深度定制服务。'
 
 export function buildUnifiedResponse(data, options = {}) {
-  return {
-    summary: data.summary || '',
-    sections: data.sections || [],
-    actions: data.actions || [],
-    recommendedTools: data.recommendedTools || [],
-    riskNotes: data.riskNotes || [],
-    scores: data.scores || null,
-    dimensionRank: data.dimensionRank || null,
-    benchmarks: data.benchmarks || null,
-    customizationCTA: options.includeCTA !== false ? CUSTOMIZATION_CTA : null,
-    ...data.extra
+  return createToolResult(data, {
+    includeCTA: options.includeCTA,
+    customizationCTA: CUSTOMIZATION_CTA,
+    degraded: options.degraded,
+    engineType: options.engineType,
+    toolCode: options.toolCode,
+    fallbackType: options.fallbackType,
+    parseMode: options.parseMode
+  })
+}
+
+function parseStructuredJson(rawText) {
+  const trimmed = String(rawText || '').trim()
+  if (!trimmed) return null
+
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    const start = trimmed.indexOf('{')
+    const end = trimmed.lastIndexOf('}')
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(trimmed.slice(start, end + 1))
+      } catch {
+        return null
+      }
+    }
+    return null
   }
+}
+
+function parseStructuredText(rawText) {
+  const trimmed = String(rawText || '').trim()
+  if (!trimmed) {
+    return { summary: '', sections: [], actions: [], recommendedTools: [], meta: { parseMode: 'empty' } }
+  }
+
+  const lines = trimmed.split('\n').map(line => line.trim()).filter(Boolean)
+  const summary = lines[0]
+  const items = lines.slice(1)
+
+  return {
+    summary,
+    sections: items.length ? [{ title: '生成结果', items }] : [{ title: '生成结果', items: [trimmed] }],
+    actions: [],
+    recommendedTools: [],
+    meta: { parseMode: 'text-fallback' }
+  }
+}
+
+function normalizeRagResult(rawText, toolConfig) {
+  const parsed = parseStructuredJson(rawText)
+  if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed)) {
+      return {
+        summary: `${toolConfig.name}已为您生成`,
+        sections: [{ title: '生成结果', items: parsed.map(item => JSON.stringify(item)) }],
+        actions: [],
+        recommendedTools: [],
+        meta: { parseMode: 'json-array' }
+      }
+    }
+
+    return {
+      summary: parsed.summary || `${toolConfig.name}已为您生成`,
+      sections: parsed.sections || [{ title: '生成结果', items: [rawText] }],
+      actions: parsed.actions || [],
+      recommendedTools: parsed.recommendedTools || [],
+      riskNotes: parsed.riskNotes || [],
+      meta: { ...(parsed.meta || {}), parseMode: 'json-object' }
+    }
+  }
+
+  return parseStructuredText(rawText)
 }
 
 async function ragEngine(toolConfig, formData) {
@@ -55,12 +119,14 @@ async function ragEngine(toolConfig, formData) {
     max_tokens: toolConfig.max_tokens || 3000
   })
 
+  const normalized = normalizeRagResult(rawResult, toolConfig)
+
   return buildUnifiedResponse({
-    summary: `${toolConfig.name}已为您生成`,
-    sections: [
-      { title: '生成结果', items: [rawResult] }
-    ],
-    actions: []
+    ...normalized
+  }, {
+    engineType: toolConfig.engineType,
+    toolCode: toolConfig.code,
+    parseMode: normalized.meta?.parseMode
   })
 }
 
@@ -122,6 +188,9 @@ const engineRegistry = {
     return buildUnifiedResponse({
       summary: `${toolConfig.name}已为您生成`,
       ...result
+    }, {
+      engineType: toolConfig.engineType,
+      toolCode: toolConfig.code
     })
   },
 
@@ -134,6 +203,9 @@ const engineRegistry = {
     return buildUnifiedResponse({
       summary: `${toolConfig.name}评分完成`,
       ...result
+    }, {
+      engineType: toolConfig.engineType,
+      toolCode: toolConfig.code
     })
   },
 
@@ -147,6 +219,9 @@ const engineRegistry = {
     return buildUnifiedResponse({
       summary: `${toolConfig.name}诊断完成`,
       ...result
+    }, {
+      engineType: toolConfig.engineType,
+      toolCode: toolConfig.code
     })
   },
 
@@ -163,6 +238,15 @@ export function registerEngine(type, handler) {
   engineRegistry[type] = handler
 }
 
+function isUnifiedToolResult(result) {
+  return result
+    && typeof result === 'object'
+    && (result.status === 'ok' || result.status === 'fallback')
+    && typeof result.degraded === 'boolean'
+    && result.meta
+    && typeof result.meta === 'object'
+}
+
 export async function executeTool(toolConfig, formData) {
   const engineType = toolConfig.engineType || 'rag'
   const handler = engineRegistry[engineType]
@@ -171,7 +255,30 @@ export async function executeTool(toolConfig, formData) {
     throw new Error(`未知执行引擎类型: ${engineType}`)
   }
 
-  return handler(toolConfig, formData)
+  let result
+  try {
+    result = await handler(toolConfig, formData)
+  } catch (error) {
+    if (engineType === 'rag' && isAiAvailabilityError(error)) {
+      const fallback = createRagFallbackResult(toolConfig, formData, error)
+      if (fallback) return fallback
+    }
+
+    throw error
+  }
+
+  if (isUnifiedToolResult(result)) {
+    return result
+  }
+
+  return buildUnifiedResponse(result, {
+    engineType,
+    toolCode: toolConfig.code,
+    degraded: result?.degraded === true,
+    fallbackType: result?.meta?.fallbackType,
+    parseMode: result?.meta?.parseMode,
+    includeCTA: result?.customizationCTA === null ? false : undefined
+  })
 }
 
 export { CUSTOMIZATION_CTA }
