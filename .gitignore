@@ -2,6 +2,8 @@ node_modules/
 dist/
 *.log
 *.pem
+*.env.server-fill.template
+backend/env.server-fill.template
 backend/logs/
 audit-freeze/
 .DS_Store

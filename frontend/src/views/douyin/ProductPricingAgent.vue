@@ -163,6 +163,7 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/api/request'
 
 const router = useRouter()
 const currentStep = ref(0)
@@ -230,19 +231,14 @@ const nextStep = () => {
 const generate = async () => {
   loading.value = true
   try {
-    const response = await fetch('/api/douyin/product-pricing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        industry: form.industry,
-        stage: form.stage,
-        products: form.products,
-        costStructure: { rate: form.costRate },
-        competitorRange: { min: form.competitorMin, max: form.competitorMax }
-      })
+    const response = await request.post('/douyin/product-pricing', {
+      industry: form.industry,
+      stage: form.stage,
+      products: form.products,
+      costStructure: { rate: form.costRate },
+      competitorRange: { min: form.competitorMin, max: form.competitorMax }
     })
-    const data = await response.json()
-    result.value = data.result
+    result.value = response.result || response
     currentStep.value = 4
   } catch (error) {
     console.error('生成失败:', error)

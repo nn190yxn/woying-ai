@@ -108,6 +108,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/api/request'
 
 const router = useRouter()
 const loading = ref(false)
@@ -123,17 +124,8 @@ const form = reactive({
 const generate = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const response = await fetch('/api/private/cac-ltv', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(form)
-    })
-    const data = await response.json()
-    result.value = data.result
+    const response = await request.post('/private/cac-ltv', form)
+    result.value = response.result || response
   } catch (error) {
     console.error('生成失败:', error)
   } finally {

@@ -180,6 +180,7 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/api/request'
 
 const router = useRouter()
 const currentStep = ref(0)
@@ -224,35 +225,25 @@ const generate = async () => {
   loading.value = true
   result.value = null
   try {
-    const token = localStorage.getItem('token')
-    const res = await fetch('/api/private/diagnosis', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+    const data = await request.post('/private/diagnosis', {
+      industry: form.industry,
+      mode: form.mode,
+      painPoints: {
+        traffic: form.trafficPains,
+        operation: form.operationPains,
+        conversion: form.conversionPains,
+        retention: form.retentionPains,
+        fission: form.fissionPains
       },
-      body: JSON.stringify({
-        industry: form.industry,
-        mode: form.mode,
-        painPoints: {
-          traffic: form.trafficPains,
-          operation: form.operationPains,
-          conversion: form.conversionPains,
-          retention: form.retentionPains,
-          fission: form.fissionPains
-        },
-        currentData: {
-          wechatFriends: form.wechatFriends,
-          communityCount: form.communityCount,
-          monthlyRevenue: form.monthlyRevenue,
-          monthlyNewFriends: form.monthlyNewFriends
-        }
-      })
+      currentData: {
+        wechatFriends: form.wechatFriends,
+        communityCount: form.communityCount,
+        monthlyRevenue: form.monthlyRevenue,
+        monthlyNewFriends: form.monthlyNewFriends
+      }
     })
-    const data = await res.json()
-    if (data.status === 'success') {
-      const r = data.result
-      const lowest = r.radar[0]
+    if (data.status === 'ok' || data.status === 'success') {
+      const r = data.result || data
       r.radar = r.radar.map(d => ({
         ...d,
         color: getDimColor(d.key),

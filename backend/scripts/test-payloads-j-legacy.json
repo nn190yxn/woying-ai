@@ -1,0 +1,7 @@
+[
+  {"code":"J6-legacy","endpoint":"/api/generate/retention-rate","payload":{"totalCustomers":300,"customers30":240,"avgVisitInterval":30,"period":30}},
+  {"code":"J7-legacy","endpoint":"/api/generate/marketing-budget","payload":{"industry":"catering","budget":10000,"marketingGoal":"balanced"}},
+  {"code":"J8-legacy","endpoint":"/api/generate/churn-rate","payload":{"totalCustomers":300,"endCustomers":270,"newCustomers":0,"avgLtv":200}},
+  {"code":"J10-legacy","endpoint":"/api/generate/ltv-education","payload":{"avgCoursePrice":200,"studentFrequency":4,"retentionMonths":6,"materialFee":100,"examFee":60,"cac":800}},
+  {"code":"J11-legacy","endpoint":"/api/generate/promotion-profit","payload":{"originalPrice":200,"discountPrice":160,"marginRate":55,"dailySales":50,"incrementalRate":67,"period":7}}
+]

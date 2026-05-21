@@ -34,6 +34,7 @@ async function createChatCompletion({
   model = DEFAULT_MODEL,
   temperature = 0.8,
   max_tokens = 3000,
+  responseFormat = null,
   useFallback = false
 }) {
   const apiKey = useFallback ? FALLBACK_API_KEY : API_KEY
@@ -51,23 +52,32 @@ async function createChatCompletion({
       const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT)
 
       try {
+        const requestBody = {
+          model: activeModel,
+          messages,
+          temperature,
+          max_tokens
+        }
+
+        if (responseFormat) {
+          requestBody.response_format = responseFormat
+        }
+
         const response = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: activeModel,
-            messages,
-            temperature,
-            max_tokens
-          }),
+          body: JSON.stringify(requestBody),
           signal: controller.signal
         })
 
         if (!response.ok) {
           const errorText = await response.text()
+          if (response.status === 400 && responseFormat) {
+            return createChatCompletion({ messages, model, temperature, max_tokens, responseFormat: null, useFallback })
+          }
           throw buildAiError(response.status, `AI API error: ${response.status} - ${errorText}`, `http_${response.status}`)
         }
 
@@ -101,7 +111,7 @@ async function createChatCompletion({
         status: error.status,
         code: error.code
       })
-      return createChatCompletion({ messages, model, temperature, max_tokens, useFallback: true })
+      return createChatCompletion({ messages, model, temperature, max_tokens, responseFormat, useFallback: true })
     }
     throw error
   }
@@ -119,7 +129,8 @@ async function generateStructured({
   systemPrompt,
   userPrompt,
   temperature = 0.7,
-  max_tokens = 3000
+  max_tokens = 3000,
+  responseFormat = null
 }) {
   return createChatCompletion({
     messages: [
@@ -127,7 +138,8 @@ async function generateStructured({
       { role: 'user', content: userPrompt }
     ],
     temperature,
-    max_tokens
+    max_tokens,
+    responseFormat
   })
 }
 

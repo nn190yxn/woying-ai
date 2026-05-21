@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { query } from '../models/db.js'
+import { logger } from '../middleware/logger.js'
 
 export const REFERRAL_CONFIG = {
   BONUS_DAYS_PER_REFERRAL: parseInt(process.env.REFERRAL_BONUS_DAYS_PER_REFERRAL || '1', 10),
@@ -54,10 +55,10 @@ export async function creditReferralBonus(referrerUserId) {
     const newLevel = currentLevel === 'free' ? 'starter' : currentLevel
     await query('UPDATE users SET member_expire_at = ?, member_level = ? WHERE id = ?', [newExpireAt, newLevel, referrerUserId])
 
-    console.log(`[Referral] Credited ${BONUS_DAYS} days to user ${referrerUserId}, level: ${newLevel}, expire: ${newExpireAt.toISOString()}`)
+    logger.info('referral', `Credited ${BONUS_DAYS} days to user ${referrerUserId}, level: ${newLevel}`)
     return true
   } catch (error) {
-    console.error('Credit referral bonus error:', error)
+    logger.error('referral', `Credit bonus error: ${error.message}`)
     return false
   }
 }

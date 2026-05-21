@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise'
 import { createMockQuery } from './mockDb.js'
+import { logger } from '../middleware/logger.js'
 
 let pool = null
 let useMock = false
@@ -24,9 +25,9 @@ export async function query(sql, params) {
       })
       const connection = await pool.getConnection()
       connection.release()
-      console.log('[DB] MySQL connected')
+      logger.info('db', 'MySQL connected')
     } catch (err) {
-      console.warn('[DB] MySQL unavailable, using in-memory mock:', err.message)
+      logger.warn('db', `MySQL unavailable, using in-memory mock: ${err.message}`)
       useMock = true
       return createMockQuery()(sql, params)
     }
@@ -37,10 +38,10 @@ export async function query(sql, params) {
     return results
   } catch (err) {
     if (process.env.NODE_ENV === 'production') {
-      console.error('[DB] Query failed in production:', err.message)
+      logger.error('db', `Query failed in production: ${err.message}`)
       throw err
     }
-    console.warn('[DB] Query failed, falling back to mock:', err.message)
+    logger.warn('db', `Query failed, falling back to mock: ${err.message}`)
     useMock = true
     return createMockQuery()(sql, params)
   }
@@ -54,5 +55,5 @@ export async function getConnection() {
 }
 
 export async function initDB() {
-  console.log('[DB] initDB called (MySQL mode)')
+  logger.info('db', 'initDB called (MySQL mode)')
 }

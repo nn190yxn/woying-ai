@@ -1,0 +1,7 @@
+[
+  {"code":"C1","endpoint":"/api/generate/headline","payload":{"industry":"catering","keywords":"探店,美食,本地","platform":"douyin"}},
+  {"code":"C2","endpoint":"/api/generate/topic","payload":{"industry":"catering","goals":["获客"],"contentTypes":["口播"],"platforms":["douyin"],"count":5}},
+  {"code":"C3","endpoint":"/api/generate/friend","payload":{"industry":"catering","scene":"周末促销","highlight":"招牌菜","type":"product","tone":"natural"}},
+  {"code":"C4","endpoint":"/api/generate/hook","payload":{"industry":"catering","topic":"探店","platform":"douyin"}},
+  {"code":"C5","endpoint":"/api/generate/script","payload":{"industry":"catering","topic":"新店开业","platform":"douyin","duration":"30s"}}
+]

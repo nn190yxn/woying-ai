@@ -1,10 +1,10 @@
 <template>
   <view class="container">
     <view class="search-box">
-      <input class="search" placeholder="搜索工具..." />
+      <input v-model="keyword" class="search" placeholder="搜索工具..." @confirm="onSearch" />
     </view>
     <view class="grid">
-      <view class="tool" v-for="t in tools" :key="t.name">
+      <view class="tool" v-for="t in filteredTools" :key="t.name" @click="goTool(t)">
         <text class="tool-icon">{{ t.icon }}</text>
         <text class="tool-name">{{ t.name }}</text>
       </view>
@@ -13,17 +13,34 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-// 模拟工具列表，后续接 /api/tools 接口
+const keyword = ref('')
+
 const tools = ref([
-  { name: '经营测算', icon: '📊' },
-  { name: '行业诊断', icon: '🔍' },
-  { name: '内容生成', icon: '📝' },
-  { name: '老板IP', icon: '🎥' },
-  { name: '抖音运营', icon: '🎵' },
-  { name: '小红书', icon: '📕' }
+  { name: '经营测算', icon: '📊', code: 'calculator', url: '/pages/home/index' },
+  { name: '行业诊断', icon: '🔍', code: 'diagnosis', url: '/pages/home/index' },
+  { name: '内容生成', icon: '📝', code: 'content', url: '/pages/home/index' },
+  { name: '老板IP', icon: '🎥', code: 'ip', url: '/pages/home/index' },
+  { name: '抖音运营', icon: '🎵', code: 'douyin', url: '/pages/home/index' },
+  { name: '小红书', icon: '📕', code: 'xhs', url: '/pages/home/index' }
 ])
+
+const filteredTools = computed(() => {
+  if (!keyword.value.trim()) return tools.value
+  const kw = keyword.value.trim().toLowerCase()
+  return tools.value.filter(t => t.name.toLowerCase().includes(kw))
+})
+
+function onSearch() {
+  // 触发 computed 重新计算
+}
+
+function goTool(t) {
+  const token = uni.getStorageSync('token')
+  if (!token) return uni.navigateTo({ url: '/pages/login/index' })
+  uni.navigateTo({ url: t.url })
+}
 </script>
 
 <style scoped>

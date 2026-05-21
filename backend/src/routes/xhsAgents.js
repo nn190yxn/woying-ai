@@ -3,7 +3,8 @@ import { query } from '../models/db.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { isGuestModeEnabled } from '../middleware/auth.js'
+import { getJwtSecret, isGuestModeEnabled } from '../middleware/auth.js'
+import { createDomainToolResult } from '../services/resultSchema.js'
 
 const router = express.Router()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -26,7 +27,11 @@ const checkAccess = async (req, res, next) => {
   try {
     const jwt = await import('jsonwebtoken')
     const token = authHeader.split(' ')[1]
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'woai-ai-secret-key')
+    const jwtSecret = getJwtSecret()
+    if (!jwtSecret) {
+      return res.status(500).json({ error: '服务端认证配置缺失' })
+    }
+    const decoded = jwt.default.verify(token, jwtSecret)
 
     const users = await query('SELECT member_level FROM users WHERE id = ?', [decoded.userId])
     if (users.length === 0) return res.status(403).json({ error: '用户不存在' })
@@ -312,22 +317,27 @@ router.post('/account-diagnosis', checkAccess, requireLevel('free'), async (req,
   
   const total = Math.round(vScore * 0.3 + iScore * 0.25 + aScore * 0.2 + violationScore * 0.15 + completenessScore * 0.1)
   
-  res.json({
+  const domainResult = {
     agent: 'account_diagnosis',
-    result: {
-      radar: [
-        { name: '内容垂直度', score: vScore, color: vScore < 50 ? '#ef4444' : vScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '互动质量', score: iScore, color: iScore < 50 ? '#ef4444' : iScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '发布活跃度', score: aScore, color: aScore < 50 ? '#ef4444' : aScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '违规记录', score: violationScore, color: violationScore < 60 ? '#ef4444' : '#10b981' },
-        { name: '账号完善度', score: completenessScore, color: '#10b981' }
-      ],
-      totalScore: total,
-      level: total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 50 ? 'C' : 'D',
-      diagnosis: `您的账号整体健康度为${total}分，属于${total >= 85 ? '健康' : total >= 70 ? '良好' : total >= 50 ? '预警' : '危险'}状态。`,
-      suggestions: ['优化内容垂直度，聚焦单一赛道', '提高互动率，多引导收藏和评论', '保持每周 3-4 篇的稳定更新频率']
-    }
-  })
+    radar: [
+      { name: '内容垂直度', score: vScore, color: vScore < 50 ? '#ef4444' : vScore < 80 ? '#f59e0b' : '#10b981' },
+      { name: '互动质量', score: iScore, color: iScore < 50 ? '#ef4444' : iScore < 80 ? '#f59e0b' : '#10b981' },
+      { name: '发布活跃度', score: aScore, color: aScore < 50 ? '#ef4444' : aScore < 80 ? '#f59e0b' : '#10b981' },
+      { name: '违规记录', score: violationScore, color: violationScore < 60 ? '#ef4444' : '#10b981' },
+      { name: '账号完善度', score: completenessScore, color: '#10b981' }
+    ],
+    totalScore: total,
+    level: total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 50 ? 'C' : 'D',
+    diagnosis: `您的账号整体健康度为${total}分，属于${total >= 85 ? '健康' : total >= 70 ? '良好' : total >= 50 ? '预警' : '危险'}状态。`,
+    suggestions: ['优化内容垂直度，聚焦单一赛道', '提高互动率，多引导收藏和评论', '保持每周 3-4 篇的稳定更新频率']
+  }
+
+  res.json(createDomainToolResult(domainResult, {
+    summary: `小红书账号健康度${total}分，${total >= 70 ? '良好' : '需优化'}`,
+    engineType: 'rule-based-knowledge',
+    toolCode: 'account-diagnosis',
+    meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
+  }))
 })
 
 // 2. 爆款选题库
@@ -342,7 +352,7 @@ router.post('/topic-generator', checkAccess, requireLevel('starter'), async (req
     tags: ['搜索', '互动', '收藏']
   }))
 
-  res.json({
+  const domainResult = {
     agent: 'topic_generator',
     topics: examples.slice(0, 5).map((t, i) => ({
       ...t,
@@ -350,7 +360,16 @@ router.post('/topic-generator', checkAccess, requireLevel('starter'), async (req
       searchVolume: Math.floor(Math.random() * 50000) + 10000,
       competition: ['低', '中', '高'][Math.floor(Math.random() * 3)]
     }))
-  })
+  }
+
+  res.json(createDomainToolResult(domainResult, {
+    summary: '小红书爆款选题已生成',
+    sections: [{ title: '推荐选题', items: domainResult.topics.map(t => `${t.title}（搜索量约${t.searchVolume}，竞争度${t.competition}）`) }],
+    actions: ['选择 2-3 个低竞争选题优先创作', '连续 3 天发布测试笔记验证数据'],
+    engineType: 'rule-based-knowledge',
+    toolCode: 'topic-generator',
+    meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
+  }))
 })
 
 // 3. 标题生成器
@@ -363,14 +382,23 @@ router.post('/title-generator', checkAccess, requireLevel('starter'), async (req
     selected = formulas.filter(f => f.id === formulaType)
   }
 
-  res.json({
+  const domainResult = {
     agent: 'title_generator',
     titles: selected.slice(0, 6).map(f => ({
       title: f.examples[industry] || f.examples.restaurant,
       type: f.name,
       ctr: Math.floor(Math.random() * 15) + 5 + '%'
     }))
-  })
+  }
+
+  res.json(createDomainToolResult(domainResult, {
+    summary: '小红书标题公式已生成',
+    sections: [{ title: '标题建议', items: domainResult.titles.map(t => `[${t.type}] ${t.title}（预估CTR ${t.ctr}）`) }],
+    actions: ['优先测试 2 个标题做对比', '记录实际发布后的点击率'],
+    engineType: 'rule-based-knowledge',
+    toolCode: 'title-generator',
+    meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
+  }))
 })
 
 // 4. 薯条投放计算器
@@ -383,14 +411,24 @@ router.post('/shutiao-calculator', checkAccess, requireLevel('free'), async (req
   const cpm = (benchmarks.cpm.min + benchmarks.cpm.max) / 2
   const exposures = Math.round((budget / cpm) * 1000)
   
-  res.json({
+  const domainResult = {
     agent: 'shutiao_calculator',
     isWorthInvesting,
-    screeningResult: isWorthInvesting ? '✅ 符合投放标准，建议投放' : '⚠️ 数据未达标，建议优化内容后再投',
+    screeningResult: isWorthInvesting ? '符合投放标准，建议投放' : '数据未达标，建议优化内容后再投',
     exposures,
     cpm: cpm.toFixed(0),
     benchmark: benchmarks.screeningCriteria
-  })
+  }
+
+  res.json(createDomainToolResult(domainResult, {
+    summary: `薯条投放预估曝光 ${exposures} 次，CPM ${domainResult.cpm}`,
+    sections: [{ title: '投放判断', items: [domainResult.screeningResult, `预估曝光：${exposures}次`, `CPM基准：${domainResult.cpm}元`] }],
+    actions: isWorthInvesting ? ['选择自然数据较好的笔记开始投放', '先跑 1-2 天小预算测试'] : ['先优化封面点击率和互动率', '达标后再考虑投放'],
+    riskNotes: ['薯条投放效果受笔记质量和投放时段影响，需持续监控'],
+    engineType: 'rule-based-knowledge',
+    toolCode: 'shutiao-calculator',
+    meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
+  }))
 })
 
 // 5-17 端点使用规则知识库结构化生成
@@ -402,7 +440,16 @@ const structuredAgents = [
 
 structuredAgents.forEach(agent => {
   router.post(`/${agent}`, checkAccess, requireLevel(AGENT_ACCESS[agent] || 'pro'), (req, res) => {
-    res.json(buildAgentResponse(agent, req))
+    const raw = buildAgentResponse(agent, req)
+    res.json(createDomainToolResult(raw, {
+      summary: raw.summary,
+      sections: raw.sections,
+      actions: raw.actions,
+      riskNotes: raw.riskNotes,
+      engineType: 'rule-based-knowledge',
+      toolCode: agent,
+      meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
+    }))
   })
 })
 

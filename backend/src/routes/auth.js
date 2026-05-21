@@ -149,7 +149,7 @@ router.post('/send-code', [
 
   try {
     await redis.set(`code:${phone}`, code, 'EX', 300)
-    console.log(`[SMS Mock] Code generated for phone tail: ${phone.slice(-4)}`)
+    logger.info('auth', 'SMS mock code generated')
     res.json({ message: '验证码已发送' })
   } catch (error) {
     logger.error('auth', `Send code error: ${error.message}`)

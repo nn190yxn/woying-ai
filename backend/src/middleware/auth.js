@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 
-function getJwtSecret() {
+export function getJwtSecret() {
   return process.env.JWT_SECRET
 }
 

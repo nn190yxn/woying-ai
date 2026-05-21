@@ -3,6 +3,8 @@ import { query } from '../models/db.js'
 import { generateStructured } from '../services/ai.js'
 import { isAiAvailabilityError } from '../services/failover.js'
 import { getKBContextWithMeta, getMaxTokensForLevel, getTemperatureForTool } from '../services/kbService.js'
+import { createDomainToolResult } from '../services/resultSchema.js'
+import { getJwtSecret, isGuestModeEnabled } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -30,6 +32,8 @@ const AGENT_KB_TOOL = {
   full_strategy: 'douyin-growth'
 }
 
+const STRUCTURED_OUTPUT_AGENTS = new Set(['diagnosis', 'product_pricing', 'content_planner', 'script_generator', 'data_diagnoser', 'full_strategy'])
+
 const buildKnowledgeAiNotes = (notes = []) => [
   ...notes,
   '本工具主链路为知识库 + AI 生成，输出仍需结合账号历史均值、同城竞争强度、客单价、毛利和履约能力复核。',
@@ -45,14 +49,22 @@ function parseJsonObject(rawText) {
   const text = String(rawText || '').trim()
   if (!text) return null
 
+  const sanitizeJsonLikeText = (value) => value
+    .replace(/```json\s*/gi, '')
+    .replace(/```/g, '')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/,\s*([}\]])/g, '$1')
+
   try {
     return JSON.parse(text)
   } catch {
     const start = text.indexOf('{')
     const end = text.lastIndexOf('}')
     if (start >= 0 && end > start) {
+      const candidate = sanitizeJsonLikeText(text.slice(start, end + 1))
       try {
-        return JSON.parse(text.slice(start, end + 1))
+        return JSON.parse(candidate)
       } catch {
         return null
       }
@@ -102,6 +114,36 @@ function normalizeAiPayload(agentKey, parsed) {
   }
 }
 
+function getDomainPayload(agentKey, payload) {
+  switch (agentKey) {
+    case 'diagnosis':
+    case 'product_pricing':
+    case 'ad_calculator':
+      return payload.result || payload
+    case 'content_planner':
+      return {
+        topics: payload.topics || [],
+        riskNotes: payload.riskNotes || []
+      }
+    case 'script_generator':
+      return {
+        script: payload.script || {},
+        riskNotes: payload.riskNotes || []
+      }
+    case 'data_diagnoser':
+      return {
+        analysis: payload.analysis || payload
+      }
+    case 'full_strategy':
+      return {
+        phases: payload.phases || [],
+        upgradePath: payload.upgradePath || null
+      }
+    default:
+      return payload.result || payload
+  }
+}
+
 async function runKnowledgeAiAgent(agentKey, req, fallbackBuilder, promptBuilder) {
   const kbToolCode = AGENT_KB_TOOL[agentKey] || 'douyin-growth'
   const memberLevel = req.userLevel || 'free'
@@ -119,16 +161,30 @@ async function runKnowledgeAiAgent(agentKey, req, fallbackBuilder, promptBuilder
 【知识库上下文】
 ${kbResult.context || '未命中专属知识切片，请基于用户输入和可复核经营指标输出，并明确需要用户二次确认的数据。'}`
 
-  try {
+  const requestAiPayload = async () => {
     const raw = await generateStructured({
       systemPrompt,
       userPrompt,
       temperature: getTemperatureForTool(kbToolCode),
-      max_tokens: getMaxTokensForLevel(kbToolCode, memberLevel)
+      max_tokens: getMaxTokensForLevel(kbToolCode, memberLevel),
+      responseFormat: STRUCTURED_OUTPUT_AGENTS.has(agentKey) ? { type: 'json_object' } : null
     })
     const parsed = parseJsonObject(raw)
     if (!parsed) {
-      throw new Error('AI 返回内容无法解析为 JSON')
+      const parseError = new Error('AI 返回内容无法解析为 JSON')
+      parseError.code = 'parse_failed'
+      throw parseError
+    }
+    return parsed
+  }
+
+  try {
+    let parsed
+    try {
+      parsed = await requestAiPayload()
+    } catch (error) {
+      if (error?.code !== 'parse_failed') throw error
+      parsed = await requestAiPayload()
     }
 
     const payload = normalizeAiPayload(agentKey, parsed)
@@ -156,16 +212,30 @@ ${kbResult.context || '未命中专属知识切片，请基于用户输入和可
 const checkAccess = async (req, res, next) => {
   const authHeader = req.headers.authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (isGuestModeEnabled()) {
+      req.userLevel = 'annual'
+      req.userId = null
+      return next()
+    }
     return res.status(401).json({ error: '未授权', requiredLevel: 'free' })
   }
 
   try {
     const jwt = await import('jsonwebtoken')
     const token = authHeader.split(' ')[1]
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'woai-ai-secret-key')
+    const jwtSecret = getJwtSecret()
+    if (!jwtSecret) {
+      return res.status(500).json({ error: '服务端认证配置缺失' })
+    }
+    const decoded = jwt.default.verify(token, jwtSecret)
 
     const users = await query('SELECT member_level FROM users WHERE id = ?', [decoded.userId])
     if (users.length === 0) {
+      if (isGuestModeEnabled()) {
+        req.userLevel = 'annual'
+        req.userId = null
+        return next()
+      }
       return res.status(403).json({ error: '用户不存在' })
     }
 
@@ -173,6 +243,11 @@ const checkAccess = async (req, res, next) => {
     req.userId = decoded.userId
     next()
   } catch (error) {
+    if (isGuestModeEnabled()) {
+      req.userLevel = 'annual'
+      req.userId = null
+      return next()
+    }
     res.status(401).json({ error: '无效的 Token' })
   }
 }
@@ -195,7 +270,9 @@ const requireLevel = (requiredLevel) => {
 
 function buildDiagnosisFallback(formData) {
   const { industry, mode, painPoints } = formData
-  const selectedPains = Array.isArray(painPoints) ? painPoints : []
+  const selectedPains = Array.isArray(painPoints)
+    ? painPoints
+    : Object.values(painPoints || {}).flatMap(value => Array.isArray(value) ? value : [value]).filter(Boolean)
   const hasPain = (keyword) => selectedPains.some(item => String(item).includes(keyword))
   const radarData = {
     conversion: hasPain('转化') || hasPain('核销') ? 35 : 65,
@@ -348,8 +425,14 @@ router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) =>
 行业：${industry}
 经营模式：${formData.mode || '未说明'}
 用户勾选痛点：${JSON.stringify(formData.painPoints || [])}
+基础数据：${JSON.stringify(formData.metrics || {})}
 
-请输出 JSON：
+请只输出一个合法 JSON 对象。
+禁止输出 Markdown 代码块。
+禁止输出解释性前缀、后缀、备注或多余文本。
+所有分数字段使用数字，不要带百分号，不要带中文单位。
+
+请输出以下 JSON：
 {
   "result": {
     "radarData": {"conversion": 0-100, "traffic": 0-100, "content": 0-100, "retention": 0-100, "profit": 0-100},
@@ -359,7 +442,17 @@ router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) =>
   }
 }`
   )
-  res.json(payload)
+  const domainResult = getDomainPayload('diagnosis', payload)
+  res.json(createDomainToolResult(domainResult, {
+    summary: domainResult.diagnosis || domainResult.suggestions?.[0] || '抖音经营诊断已生成',
+    sections: [],
+    actions: domainResult.suggestions || [],
+    riskNotes: domainResult.riskNotes || [],
+    engineType: payload.engineType || 'knowledge-ai',
+    toolCode: 'diagnosis',
+    degraded: payload.degraded === true,
+    meta: payload.meta
+  }))
 })
 
 router.post('/product-pricing', checkAccess, requireLevel('pro'), async (req, res) => {
@@ -374,7 +467,12 @@ router.post('/product-pricing', checkAccess, requireLevel('pro'), async (req, re
 成本结构：${JSON.stringify(formData.costStructure || {})}
 竞品价格带：${JSON.stringify(formData.competitorRange || {})}
 
-请输出 JSON：
+请只输出一个合法 JSON 对象。
+禁止输出 Markdown 代码块。
+禁止输出解释性前缀、后缀、备注或多余文本。
+价格字段可输出数字或字符串，其余结构字段保持 JSON 合法。
+
+请输出以下 JSON：
 {
   "result": {
     "type": "团购交易型或线索留资型",
@@ -385,7 +483,17 @@ router.post('/product-pricing', checkAccess, requireLevel('pro'), async (req, re
   }
 }`
   )
-  res.json(payload)
+  const domainResult = getDomainPayload('product_pricing', payload)
+  res.json(createDomainToolResult(domainResult, {
+    summary: '组品定价方案已生成',
+    sections: [],
+    actions: [],
+    riskNotes: domainResult.warnings || [],
+    engineType: payload.engineType || 'knowledge-ai',
+    toolCode: 'product-pricing',
+    degraded: payload.degraded === true,
+    meta: payload.meta
+  }))
 })
 
 router.post('/content-planner', checkAccess, requireLevel('starter'), async (req, res) => {
@@ -399,13 +507,27 @@ router.post('/content-planner', checkAccess, requireLevel('starter'), async (req
 内容类型：${formData.contentType || '未说明'}
 偏好/主推方向：${formData.preference || '未说明'}
 
-请输出 JSON：
+请只输出一个合法 JSON 对象。
+禁止输出 Markdown 代码块。
+禁止输出解释性前缀、后缀、备注或多余文本。
+
+请输出以下 JSON：
 {
   "topics": [{"title":"选题","hook":"开头钩子","structure":"内容结构","target5A":"5A阶段"}],
   "riskNotes": ["风险说明"]
 }`
   )
-  res.json(payload)
+  const domainResult = getDomainPayload('content_planner', payload)
+  res.json(createDomainToolResult(domainResult, {
+    summary: '内容策划选题已生成',
+    sections: [],
+    actions: [],
+    riskNotes: domainResult.riskNotes || [],
+    engineType: payload.engineType || 'knowledge-ai',
+    toolCode: 'content-planner',
+    degraded: payload.degraded === true,
+    meta: payload.meta
+  }))
 })
 
 router.post('/script-generator', checkAccess, requireLevel('starter'), async (req, res) => {
@@ -419,7 +541,12 @@ router.post('/script-generator', checkAccess, requireLevel('starter'), async (re
 格式：${formData.format || '未说明'}
 时长：${formData.duration || '未说明'}
 
-请输出 JSON：
+请只输出一个合法 JSON 对象。
+禁止输出 Markdown 代码块。
+禁止输出解释性前缀、后缀、备注或多余文本。
+时长字段必须输出数字。
+
+请输出以下 JSON：
 {
   "script": {
     "title": "脚本标题",
@@ -433,7 +560,17 @@ router.post('/script-generator', checkAccess, requireLevel('starter'), async (re
   "riskNotes": ["风险说明"]
 }`
   )
-  res.json(payload)
+  const domainResult = getDomainPayload('script_generator', payload)
+  res.json(createDomainToolResult(domainResult, {
+    summary: '短视频脚本已生成',
+    sections: [],
+    actions: [],
+    riskNotes: domainResult.riskNotes || [],
+    engineType: payload.engineType || 'knowledge-ai',
+    toolCode: 'script-generator',
+    degraded: payload.degraded === true,
+    meta: payload.meta
+  }))
 })
 
 router.post('/data-diagnoser', checkAccess, requireLevel('pro'), async (req, res) => {
@@ -452,7 +589,11 @@ router.post('/data-diagnoser', checkAccess, requireLevel('pro'), async (req, res
       comments: formData.comments
     })}
 
-请输出 JSON：
+请只输出一个合法 JSON 对象。
+禁止输出 Markdown 代码块。
+禁止输出解释性前缀、后缀、备注或多余文本。
+
+请输出以下 JSON：
 {
   "analysis": {
     "viewRate": "点赞/播放百分比",
@@ -465,7 +606,17 @@ router.post('/data-diagnoser', checkAccess, requireLevel('pro'), async (req, res
   }
 }`
   )
-  res.json(payload)
+  const domainResult = getDomainPayload('data_diagnoser', payload)
+  res.json(createDomainToolResult(domainResult, {
+    summary: '视频数据诊断已生成',
+    sections: [],
+    actions: domainResult.analysis?.suggestions || [],
+    riskNotes: domainResult.analysis?.riskNotes || [],
+    engineType: payload.engineType || 'knowledge-ai',
+    toolCode: 'data-diagnoser',
+    degraded: payload.degraded === true,
+    meta: payload.meta
+  }))
 })
 
 router.post('/ad-calculator', checkAccess, requireLevel('pro'), async (req, res) => {
@@ -492,7 +643,17 @@ CPC：${formData.cpc || '未说明'}
   }
 }`
   )
-  res.json(payload)
+  const domainResult = getDomainPayload('ad_calculator', payload)
+  res.json(createDomainToolResult(domainResult, {
+    summary: '投流测算已生成',
+    sections: [],
+    actions: [],
+    riskNotes: domainResult.riskNotes || [],
+    engineType: payload.engineType || 'knowledge-ai',
+    toolCode: 'ad-calculator',
+    degraded: payload.degraded === true,
+    meta: payload.meta
+  }))
 })
 
 router.post('/full-strategy', checkAccess, requireLevel('annual'), async (req, res) => {
@@ -516,13 +677,27 @@ router.post('/full-strategy', checkAccess, requireLevel('annual'), async (req, r
 行业：${industry}
 用户输入：${JSON.stringify(formData || {})}
 
-请输出 JSON：
+请只输出一个合法 JSON 对象。
+禁止输出 Markdown 代码块。
+禁止输出解释性前缀、后缀、备注或多余文本。
+
+请输出以下 JSON：
 {
   "phases": [{"name":"阶段名","detail":"阶段策略"}],
   "upgradePath": {"type":"1v1_consultation","title":"预约专家定制全案","description":"说明","contactHint":"联系提示"}
 }`
   )
-  res.json(payload)
+  const domainResult = getDomainPayload('full_strategy', payload)
+  res.json(createDomainToolResult(domainResult, {
+    summary: '抖音 90 天完整战略已生成',
+    sections: [],
+    actions: [],
+    riskNotes: [],
+    engineType: payload.engineType || 'knowledge-ai',
+    toolCode: 'full-strategy',
+    degraded: payload.degraded === true,
+    meta: payload.meta
+  }))
 })
 
 export default router

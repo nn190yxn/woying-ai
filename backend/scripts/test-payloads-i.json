@@ -1,0 +1,22 @@
+[
+  {"code":"I1","endpoint":"/api/generate/card-consumption-rate-beauty","payload":{"totalCards":500,"consumedCards":300,"period":30,"avgCardValue":2000,"totalCustomers":100,"scheduledAppointments":400,"showUpRate":75}},
+  {"code":"I2","endpoint":"/api/generate/gross-margin-beauty","payload":{"servicePrice":300,"productCost":30,"laborCost":80}},
+  {"code":"I3","endpoint":"/api/generate/break-even-beauty","payload":{"fixedCost":25000,"avgRevenue":300,"avgCostRate":35}},
+  {"code":"I4","endpoint":"/api/generate/salary-cost-ratio-beauty","payload":{"totalSalary":25000,"monthlyRevenue":80000}},
+  {"code":"I5","endpoint":"/api/generate/labor-efficiency-beauty","payload":{"monthlyRevenue":80000,"employeeCount":6}},
+  {"code":"I6","endpoint":"/api/generate/conversion-rate-beauty","payload":{"visitors":500,"converted":120,"trialVisitors":200,"trialConverted":80,"newVisitors":150,"newConverted":40,"avgOrderValue":300,"totalRevenue":36000}},
+  {"code":"I7","endpoint":"/api/generate/project-profit-beauty","payload":{"servicePrice":300,"productCost":50,"laborCost":80,"overheadCost":30}},
+  {"code":"I8","endpoint":"/api/generate/ltv-beauty","payload":{"avgOrderValue":300,"purchaseFrequency":4,"customerLifespan":2,"cac":200,"serviceGrossMargin":60,"retentionCost":50}},
+  {"code":"I9","endpoint":"/api/generate/repurchase-rate-beauty","payload":{"totalCustomers":300,"repurchasedCustomers":120,"periodDays":30,"serviceCycleDays":21,"avgOrderValue":300,"dormantCustomers":50}},
+  {"code":"I10","endpoint":"/api/generate/payback-beauty","payload":{"totalInvestment":150000,"monthlyProfit":12000}},
+  {"code":"I11","endpoint":"/api/generate/cashflow-beauty","payload":{"initialCash":40000,"monthlyRevenue":80000,"monthlyCost":70000,"months":6}},
+  {"code":"I12","endpoint":"/api/generate/profit-rate-beauty","payload":{"revenue":80000,"productCost":20000,"laborCost":25000,"rent":10000,"otherCost":5000}},
+  {"code":"I13","endpoint":"/api/generate/return-rate-beauty","payload":{"investment":150000,"return":450000}},
+  {"code":"I14","endpoint":"/api/generate/project-structure-beauty","payload":{"beautyType":"life","projects":[{"name":"面部护理","price":298,"role":"traffic","laborRate":10,"productRate":8},{"name":"身体塑形","price":498,"role":"retention","laborRate":12,"productRate":10},{"name":"抗衰疗程","price":998,"role":"profit","laborRate":8,"productRate":6},{"name":"家居护肤","price":198,"role":"retail","laborRate":3,"productRate":15}]}},
+  {"code":"I15","endpoint":"/api/generate/card-debt-beauty","payload":{"periodStartDebt":80000,"monthSales":50000,"monthConsumption":30000,"monthRefund":5000}},
+  {"code":"I16","endpoint":"/api/generate/funnel-ltv-beauty","payload":{"newVisitors":500,"experienceCount":200,"retainedCount":80,"repurchasedCount":40,"totalMarketingCost":10000,"avgOrderValue":300,"purchaseFrequency":4,"customerLifespan":2}},
+  {"code":"I17","endpoint":"/api/generate/breakeven-profit-beauty","payload":{"rent":10000,"fixedSalary":15000,"utilities":3000,"otherFixed":2000,"productRate":10,"laborCommissionRate":15,"platformRate":5,"revenue":80000,"targetProfit":10000}},
+  {"code":"I18","endpoint":"/api/generate/device-roi-beauty","payload":{"deviceCost":50000,"deviceLifespan":5,"costPerSession":20,"operatorCommissionRate":15,"pricePerSession":298,"sessionsPerMonth":40}},
+  {"code":"I19","endpoint":"/api/generate/member-card-design-beauty","payload":{"rechargeAmount":2000,"giftAmount":400,"marginRate":60}},
+  {"code":"I20","endpoint":"/api/generate/salary-cost-ratio-beauty","payload":{"totalSalary":25000,"monthlyRevenue":80000}}
+]

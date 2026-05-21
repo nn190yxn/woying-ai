@@ -1,9 +1,10 @@
 import { createMockRedis } from './mockRedis.js'
+import { logger } from '../middleware/logger.js'
 
 const USE_REAL_REDIS = process.env.USE_REAL_REDIS === 'true'
 
 let redisInstance = createMockRedis()
-console.log('[Redis] Using in-memory mock')
+logger.info('redis', 'Using in-memory mock')
 
 if (USE_REAL_REDIS) {
   (async () => {
@@ -15,24 +16,24 @@ if (USE_REAL_REDIS) {
       })
 
       let lastErrorTime = 0
-      const ERROR_THROTTLE_MS = 60 * 1000 // 每分钟最多记录一次
+      const ERROR_THROTTLE_MS = 60 * 1000
       instance.on('error', (err) => {
         const now = Date.now()
         if (now - lastErrorTime > ERROR_THROTTLE_MS) {
-          console.warn('[Redis] Connection error:', err.message)
+          logger.warn('redis', `Connection error: ${err.message}`)
           lastErrorTime = now
         }
       })
 
       instance.on('connect', () => {
-        console.log('[Redis] Connected')
+        logger.info('redis', 'Connected')
       })
 
       await instance.ping()
       redisInstance = instance
-      console.log('[Redis] Ready')
+      logger.info('redis', 'Ready')
     } catch (err) {
-      console.warn('[Redis] Real Redis unavailable:', err.message)
+      logger.warn('redis', `Real Redis unavailable: ${err.message}`)
     }
   })()
 }

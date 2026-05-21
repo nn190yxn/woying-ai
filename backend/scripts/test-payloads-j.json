@@ -1,0 +1,11 @@
+[
+  {"code":"J2","endpoint":"/api/generate/channel-cac","payload":{"channels":[{"name":"抖音","cost":10000,"leads":200,"converted":50},{"name":"美团","cost":8000,"leads":150,"converted":40},{"name":"转介绍","cost":2000,"leads":30,"converted":25}]}},
+  {"code":"J3","endpoint":"/api/generate/campaign-roi","payload":{"campaignName":"618大促","totalCost":5000,"days":7,"newVisitors":300,"orders":80,"revenue":15000,"grossMargin":55}},
+  {"code":"J4","endpoint":"/api/generate/referral-roi","payload":{"oldCustomers":100,"newCustomers":20,"rewardCost":1000,"newRevenue":200,"otherCAC":300}},
+  {"code":"J5","endpoint":"/api/generate/conversion-funnel","payload":{"stages":[{"name":"曝光","count":10000},{"name":"点击","count":500},{"name":"咨询","count":200},{"name":"成交","count":50}]}},
+  {"code":"J6","endpoint":"/api/generate/retention-rate","payload":{"period":30,"startCustomers":300,"newCustomers":50,"endActive":240,"dormantDays":30}},
+  {"code":"J7","endpoint":"/api/generate/marketing-budget","payload":{"totalBudget":10000,"goal":"balanced","channels":[{"key":"douyin","enabled":true,"cac":200},{"key":"meituan","enabled":true,"cac":150},{"key":"referral","enabled":true,"cac":50}]}},
+  {"code":"J8","endpoint":"/api/generate/churn-rate","payload":{"startCustomers":300,"churned":30,"avgOrder":200,"freq":2}},
+  {"code":"J10","endpoint":"/api/generate/ltv-education","payload":{"hourlyFee":200,"monthlyHours":4,"retentionMonths":12,"extraIncomePct":10,"cac":800}},
+  {"code":"J11","endpoint":"/api/generate/promotion-profit","payload":{"normalPrice":200,"normalMargin":55,"discount":80,"promoOrders":50,"normalOrders":30,"days":7}}
+]

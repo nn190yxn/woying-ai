@@ -15,8 +15,9 @@ import {
 } from './diagnosisEngine.js'
 import { calculatorEngine } from './calculatorEngine.js'
 import { spreadsheetEngine } from './spreadsheetEngine.js'
-import { createToolResult } from './resultSchema.js'
+import { createToolResult, createDomainToolResult } from './resultSchema.js'
 import { createRagFallbackResult, isAiAvailabilityError } from './failover.js'
+import { getKBContextWithMeta, getMaxTokensForLevel, getTemperatureForTool } from './kbService.js'
 
 const CUSTOMIZATION_CTA = '\n---\n如需针对您的具体场景做个性化定制方案，升级会员即可获得专属深度定制服务。'
 
@@ -177,6 +178,69 @@ function buildKnowledgeContext(scope, formData, industry) {
 
 const engineRegistry = {
   rag: ragEngine,
+
+  'knowledge-ai': async (toolConfig, formData) => {
+    const kbToolCode = toolConfig.kbToolCode || toolConfig.code
+    const memberLevel = formData.memberLevel || 'annual'
+    const kbResult = getKBContextWithMeta(kbToolCode, memberLevel, formData)
+
+    const systemPrompt = typeof toolConfig.systemPrompt === 'function'
+      ? toolConfig.systemPrompt(formData)
+      : (toolConfig.systemPrompt || '你是行业经营顾问，输出必须基于知识库上下文和用户输入生成 JSON。')
+
+    const userPrompt = typeof toolConfig.userPromptTemplate === 'function'
+      ? toolConfig.userPromptTemplate(formData, kbResult.context)
+      : `${toolConfig.userPromptTemplate || '请根据用户输入生成结果'}\n\n【知识库上下文】\n${kbResult.context || '未命中知识库，请基于用户输入输出。'}`
+
+    try {
+      const raw = await generateStructured({
+        systemPrompt,
+        userPrompt,
+        temperature: toolConfig.temperature || getTemperatureForTool(kbToolCode),
+        max_tokens: toolConfig.max_tokens || getMaxTokensForLevel(kbToolCode, memberLevel)
+      })
+
+      const parsed = parseStructuredJson(raw)
+      if (!parsed) throw new Error('AI 返回内容无法解析为 JSON')
+
+      const domainResult = typeof toolConfig.domainExtractor === 'function'
+        ? toolConfig.domainExtractor(parsed)
+        : parsed
+
+      return createDomainToolResult(domainResult, {
+        summary: domainResult.summary || domainResult.diagnosis || `${toolConfig.name}已生成`,
+        engineType: 'knowledge-ai',
+        toolCode: toolConfig.code,
+        meta: {
+          kbToolCode,
+          kbFilesUsed: kbResult.meta?.kbFilesUsed || [],
+          kbFilesMissing: kbResult.meta?.kbFilesMissing || [],
+          kbSectionsMissing: kbResult.meta?.kbSectionsMissing || [],
+          kbContextChars: kbResult.meta?.contextChars || 0,
+          kbRetrievalMode: kbResult.meta?.retrievalMode || 'mapping_only',
+          aiUsed: true
+        }
+      })
+    } catch (error) {
+      const fallbackResult = typeof toolConfig.fallbackBuilder === 'function'
+        ? toolConfig.fallbackBuilder(formData)
+        : { summary: `${toolConfig.name}降级生成`, sections: [], actions: [] }
+
+      return createDomainToolResult(fallbackResult, {
+        summary: fallbackResult.summary || `${toolConfig.name}降级生成`,
+        engineType: 'knowledge-ai',
+        toolCode: toolConfig.code,
+        degraded: true,
+        meta: {
+          kbToolCode,
+          kbFilesUsed: kbResult.meta?.kbFilesUsed || [],
+          aiUsed: false,
+          fallbackType: isAiAvailabilityError(error) ? 'ai_unavailable' : 'ai_or_parse_failed',
+          fallbackReason: error.message
+        }
+      })
+    }
+  },
 
   template: async (toolConfig, formData) => {
     const { templateBuilder } = toolConfig

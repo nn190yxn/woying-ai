@@ -5,7 +5,7 @@ import { logger } from '../middleware/logger.js'
 
 const router = express.Router()
 
-router.post('/cron/downgrade-expired', async (req, res) => {
+router.post('/downgrade-expired', async (req, res) => {
   const { secret } = req.query
 
   if (secret !== process.env.CRON_SECRET) {
@@ -21,7 +21,7 @@ router.post('/cron/downgrade-expired', async (req, res) => {
   }
 })
 
-router.post('/cron/reset-daily-quotas', async (req, res) => {
+router.post('/reset-daily-quotas', async (req, res) => {
   const { secret } = req.query
 
   if (secret !== process.env.CRON_SECRET) {

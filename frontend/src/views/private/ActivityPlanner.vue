@@ -44,6 +44,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/api/request'
 
 const router = useRouter()
 const loading = ref(false)
@@ -54,13 +55,8 @@ const form = reactive({ industry: '' })
 const generate = async () => {
   loading.value = true
   try {
-    const response = await fetch('/api/private/community-sop', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
-    })
-    const data = await response.json()
-    result.value = data.result
+    const response = await request.post('/private/community-sop', form)
+    result.value = response.result || response
   } catch (error) {
     console.error('生成失败:', error)
   } finally {

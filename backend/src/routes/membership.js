@@ -1,5 +1,6 @@
 import express from 'express'
 import { query } from '../models/db.js'
+import { getJwtSecret } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -23,7 +24,11 @@ router.get('/current', async (req, res) => {
   try {
     const jwt = await import('jsonwebtoken')
     const token = authHeader.split(' ')[1]
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'woai-ai-secret-key')
+    const jwtSecret = getJwtSecret()
+    if (!jwtSecret) {
+      return res.json({ memberLevel: 'free' })
+    }
+    const decoded = jwt.default.verify(token, jwtSecret)
 
     const users = await query('SELECT member_level, member_expire_at FROM users WHERE id = ?', [decoded.userId])
     if (users.length === 0) {

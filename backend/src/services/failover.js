@@ -315,8 +315,10 @@ export async function executeWithFailover(toolConfig, formData, executeFn) {
     )
 
     const duration = Date.now() - startTime
+
+    const isDegraded = result?.degraded === true || result?.status === 'fallback'
     logger.toolSuccess(null, toolCode, duration)
-    logger.info('generate', `${toolCode} | degraded=false | ${duration}ms`, { toolCode, degraded: false, duration })
+    logger.info('generate', `${toolCode} | degraded=${isDegraded} | ${duration}ms`, { toolCode, degraded: isDegraded, duration })
 
     return result
   } catch (error) {

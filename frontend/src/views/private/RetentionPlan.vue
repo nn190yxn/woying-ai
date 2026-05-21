@@ -117,6 +117,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/api/request'
 
 const router = useRouter()
 const loading = ref(false)
@@ -132,22 +133,13 @@ const form = reactive({
 const generate = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const response = await fetch('/api/private/retention-plan', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        industry: form.industry,
-        currentRetention: form.currentRetention || 30,
-        avgPurchaseCycle: form.avgPurchaseCycle || 30,
-        customerCount: form.customerCount || 1000
-      })
+    const response = await request.post('/private/retention-plan', {
+      industry: form.industry,
+      currentRetention: form.currentRetention || 30,
+      avgPurchaseCycle: form.avgPurchaseCycle || 30,
+      customerCount: form.customerCount || 1000
     })
-    const data = await response.json()
-    result.value = data.result
+    result.value = response.result || response
   } catch (error) {
     console.error('生成失败:', error)
   } finally {

@@ -1,6 +1,6 @@
 // Spreadsheet tool definitions for generate.js
 
-import { SPREADSHEETS } from '../services/spreadsheetEngine.js'
+import { SPREADSHEETS } from './spreadsheetEngine.js'
 
 export function createSpreadsheetTools() {
   const tools = {}

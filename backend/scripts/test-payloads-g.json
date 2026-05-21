@@ -1,0 +1,17 @@
+[
+  {"code":"G1","endpoint":"/api/generate/gross-margin-restaurant","payload":{"storeName":"测试餐厅","categories":[{"name":"炒菜","revenue":60000,"cost":22000},{"name":"酒水","revenue":20000,"cost":5000},{"name":"主食","revenue":20000,"cost":8000}]}},
+  {"code":"G2","endpoint":"/api/generate/turnover-rate-restaurant","payload":{"totalCustomers":120,"tableCount":20,"mealPeriod":"lunch"}},
+  {"code":"G3","endpoint":"/api/generate/salary-cost-ratio-restaurant","payload":{"storeType":"中档正餐","revenue":100000,"front":[{"name":"服务员","count":4,"salary":3500}],"back":[{"name":"厨师","count":2,"salary":6000}],"mgmt":[{"name":"店长","count":1,"salary":8000}]}},
+  {"code":"G4","endpoint":"/api/generate/delivery-profit","payload":{"price":35,"platformFee":20,"packageCost":2,"foodCost":15,"deliverySubsidy":3}},
+  {"code":"G5","endpoint":"/api/generate/delivery-analysis","payload":{"monthlyOrders":500,"avgOrderValue":35,"platformFeeRate":20,"foodCostRate":40,"packageCostPerOrder":2,"deliverySubsidyPerOrder":3,"monthlyMarketing":2000,"monthlyFixed":8000,"repeatRate":15,"dineInRevenue":30000,"dineInMargin":55}},
+  {"code":"G6","endpoint":"/api/generate/profit-rate-restaurant","payload":{"revenue":100000,"foodCost":35000,"laborCost":25000,"rent":12000,"otherCost":8000}},
+  {"code":"G7","endpoint":"/api/generate/dish-pricing","payload":{"storeType":"normal","dishes":[{"name":"宫保鸡丁","role":"traffic","pricingMethod":"margin","cost":8,"targetMargin":25},{"name":"水煮鱼","role":"main","pricingMethod":"margin","cost":18,"targetMargin":60},{"name":"招牌牛排","role":"image","pricingMethod":"market","cost":35,"competitorPrice":68}]}},
+  {"code":"G8","endpoint":"/api/generate/food-waste-rate","payload":{"purchaseAmount":50000,"usedAmount":47000,"period":"月"}},
+  {"code":"G9","endpoint":"/api/generate/food-yield-rate","payload":{"rawWeight":10,"netWeight":7.5,"purchasePrice":15,"wasteSellable":true,"wastePrice":3}},
+  {"code":"G10","endpoint":"/api/generate/break-even-restaurant","payload":{"rent":12000,"salary":25000,"depreciation":3000,"otherFixed":5000,"dineInPct":70,"dineInVarCost":35,"deliveryPct":30,"deliveryArrivalRate":65,"deliveryVarCost":40,"area":150,"seats":50,"hours":10,"avgTicket":80,"actualRevenue":100000,"targetProfit":20000}},
+  {"code":"G11","endpoint":"/api/generate/cashflow-restaurant","payload":{"currentCash":50000,"monthlyRevenue":100000,"rent":12000,"baseSalary":25000,"utilities":3000,"otherFixed":5000,"foodCostRate":35,"marketingRate":5,"months":6,"upcomingExpenses":0,"memberPrepay":0}},
+  {"code":"G12","endpoint":"/api/generate/payback-restaurant","payload":{"totalInvestment":200000,"monthlyProfit":15000}},
+  {"code":"G13","endpoint":"/api/generate/return-rate-restaurant","payload":{"investment":200000,"return":380000}},
+  {"code":"G14","endpoint":"/api/generate/investment-budget","payload":{"storeType":"normal","cityLevel":"tier2","area":150,"isFranchise":false,"franchiseFee":0,"deposit":30000,"renovationPerSqm":800,"equipmentCost":80000,"initialMaterial":30000,"rentMonthly":12000,"rentDepositMonths":3,"licenseCost":5000,"marketingBudget":10000,"reserveMonths":3,"otherCost":10000}},
+  {"code":"G15","endpoint":"/api/generate/ltv-restaurant","payload":{"avgOrder":80,"frequency":2,"retentionMonths":12,"grossMargin":55,"cac":200}}
+]

@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "NODE_ENV=development node --watch src/index.js",
     "start": "node src/index.js",
-    "build": "echo 'No build step needed for Node.js'"
+    "build": "echo 'No build step needed for Node.js'",
+    "check:env": "node scripts/check-env-presence.js",
+    "smoke:core": "node scripts/smoke-core-endpoints.js"
   },
   "dependencies": {
     "express": "^4.18.2",

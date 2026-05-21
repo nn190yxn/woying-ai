@@ -3302,5 +3302,155 @@
       "maxTokensPro": 800,
       "maxTokensAnnual": 1000
     }
+  },
+  "private-diagnosis": {
+    "name": "私域体检表",
+    "knowledgeFiles": [
+      {
+        "path": "07_私域运营专项库/理论层/B_客户生命周期管理.md",
+        "sections": ["客户生命周期", "留存", "流失预警"],
+        "purpose": "私域生命周期与留存诊断参考",
+        "memberLevel": "free"
+      },
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_客户分层打标流程.md",
+        "sections": ["客户分层", "打标流程"],
+        "purpose": "私域分层运营诊断参考",
+        "memberLevel": "free"
+      },
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_沉睡客户激活流程.md",
+        "sections": ["沉睡客户", "激活流程"],
+        "purpose": "流失与召回诊断参考",
+        "memberLevel": "starter"
+      }
+    ],
+    "aiConfig": { "temperature": 0.3, "maxTokensFree": 400, "maxTokensStarter": 600, "maxTokensPro": 900, "maxTokensAnnual": 1200 }
+  },
+  "member-design": {
+    "name": "会员体系设计器",
+    "knowledgeFiles": [
+      {
+        "path": "07_私域运营专项库/话术库/话术_会员储值.md",
+        "sections": ["储值话术", "限时促单"],
+        "purpose": "会员储值设计与促单参考",
+        "memberLevel": "pro"
+      },
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_企微添加欢迎语模板.md",
+        "sections": ["欢迎语", "首单转化"],
+        "purpose": "会员欢迎与首单承接参考",
+        "memberLevel": "pro"
+      }
+    ],
+    "aiConfig": { "temperature": 0.3, "maxTokensFree": 300, "maxTokensStarter": 500, "maxTokensPro": 900, "maxTokensAnnual": 1200 }
+  },
+  "retention-plan": {
+    "name": "复购留存方案",
+    "knowledgeFiles": [
+      {
+        "path": "07_私域运营专项库/理论层/E_复购留存模型.md",
+        "sections": ["复购留存", "模型"],
+        "purpose": "复购模型参考",
+        "memberLevel": "pro"
+      },
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_沉睡客户激活流程.md",
+        "sections": ["沉睡客户", "激活流程"],
+        "purpose": "沉睡召回执行参考",
+        "memberLevel": "pro"
+      },
+      {
+        "path": "07_私域运营专项库/话术库/话术_复购引导.md",
+        "sections": ["复购引导", "客户挽留"],
+        "purpose": "复购促单话术参考",
+        "memberLevel": "pro"
+      }
+    ],
+    "aiConfig": { "temperature": 0.3, "maxTokensFree": 300, "maxTokensStarter": 500, "maxTokensPro": 1000, "maxTokensAnnual": 1400 }
+  },
+  "fission-plan": {
+    "name": "裂变增长方案",
+    "knowledgeFiles": [
+      {
+        "path": "07_私域运营专项库/理论层/F_裂变增长引擎.md",
+        "sections": ["裂变增长", "K 值"],
+        "purpose": "裂变模型参考",
+        "memberLevel": "annual"
+      },
+      {
+        "path": "07_私域运营专项库/话术库/话术_转介绍裂变.md",
+        "sections": ["转介绍话术", "裂变机制"],
+        "purpose": "裂变活动话术参考",
+        "memberLevel": "annual"
+      }
+    ],
+    "aiConfig": { "temperature": 0.3, "maxTokensFree": 300, "maxTokensStarter": 500, "maxTokensPro": 800, "maxTokensAnnual": 1400 }
+  },
+  "community-sop": {
+    "name": "社群运营SOP",
+    "knowledgeFiles": [
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_社群每日运营清单.md",
+        "sections": ["每日运营", "社群日历"],
+        "purpose": "社群日常运营参考",
+        "memberLevel": "starter"
+      },
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_企微添加欢迎语模板.md",
+        "sections": ["欢迎语", "企微"],
+        "purpose": "社群欢迎承接参考",
+        "memberLevel": "starter"
+      },
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_私域数据周报模板.md",
+        "sections": ["周报", "复盘"],
+        "purpose": "社群周报与复盘参考",
+        "memberLevel": "starter"
+      }
+    ],
+    "aiConfig": { "temperature": 0.3, "maxTokensFree": 300, "maxTokensStarter": 800, "maxTokensPro": 1000, "maxTokensAnnual": 1200 }
+  },
+  "cac-ltv": {
+    "name": "CAC vs LTV 分析",
+    "knowledgeFiles": [
+      {
+        "path": "07_私域运营专项库/理论层/B_客户生命周期管理.md",
+        "sections": ["客户生命周期", "留存"],
+        "purpose": "LTV 影响因子参考",
+        "memberLevel": "free"
+      },
+      {
+        "path": "07_私域运营专项库/案例库/餐饮私域案例_瑞幸.md",
+        "sections": ["餐饮私域", "LTV"],
+        "purpose": "私域 LTV 案例参考",
+        "memberLevel": "free"
+      }
+    ],
+    "aiConfig": { "temperature": 0.3, "maxTokensFree": 400, "maxTokensStarter": 600, "maxTokensPro": 800, "maxTokensAnnual": 1000 }
+  },
+  "full-strategy": {
+    "name": "90天私域战略",
+    "knowledgeFiles": [
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_客户分层打标流程.md",
+        "sections": ["客户分层", "打标流程"],
+        "purpose": "基础搭建参考",
+        "memberLevel": "annual"
+      },
+      {
+        "path": "07_私域运营专项库/标准执行/SOP_社群每日运营清单.md",
+        "sections": ["每日运营", "社群日历"],
+        "purpose": "运营深化参考",
+        "memberLevel": "annual"
+      },
+      {
+        "path": "07_私域运营专项库/话术库/话术_转介绍裂变.md",
+        "sections": ["转介绍话术", "裂变机制"],
+        "purpose": "裂变增长参考",
+        "memberLevel": "annual"
+      }
+    ],
+    "aiConfig": { "temperature": 0.3, "maxTokensFree": 300, "maxTokensStarter": 500, "maxTokensPro": 900, "maxTokensAnnual": 1600 }
   }
 }

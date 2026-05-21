@@ -5,33 +5,31 @@ const state = reactive({
   userInfo: uni.getStorageSync('user') || null
 })
 
+let instance = null
+
 export function useUserStore() {
-  function setToken(token) {
-    state.token = token
-    uni.setStorageSync('token', token)
-  }
+  if (instance) return instance
 
-  function setUserInfo(user) {
-    state.userInfo = user
-    uni.setStorageSync('user', user)
-  }
-
-  function logout() {
-    state.token = ''
-    state.userInfo = null
-    uni.removeStorageSync('token')
-    uni.removeStorageSync('user')
-  }
-
-  function isLoggedIn() {
-    return !!state.token
-  }
-
-  return {
+  instance = {
     state,
-    setToken,
-    setUserInfo,
-    logout,
-    isLoggedIn
+    setToken(token) {
+      state.token = token
+      uni.setStorageSync('token', token)
+    },
+    setUserInfo(user) {
+      state.userInfo = user
+      uni.setStorageSync('user', user)
+    },
+    logout() {
+      state.token = ''
+      state.userInfo = null
+      uni.removeStorageSync('token')
+      uni.removeStorageSync('user')
+    },
+    isLoggedIn() {
+      return !!state.token
+    }
   }
+
+  return instance
 }

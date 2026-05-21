@@ -9,11 +9,12 @@ import { trackEvent, EVENT_TYPES } from '../services/analytics.js'
 import { getIndustryData, getFestival, getSalaryByIndustry, getFissionBenchmarks, getBusinessPlanByCapital, getPlatformStyle } from '../services/industryKnowledge.js'
 import { getDiagnosisTemplate, calculateDiagnosisScore, generateDiagnosisActions } from '../services/diagnosisEngine.js'
 import { generateStructured } from '../services/ai.js'
-import { createCalculatorTools } from './calculatorTools.js'
-import { createSpreadsheetTools } from './spreadsheetTools.js'
+import { createCalculatorTools } from '../services/calculatorTools.js'
+import { createSpreadsheetTools } from '../services/spreadsheetTools.js'
 import { canAccessLevel, getRequiredMemberLevel } from '../config/toolAccess.js'
 import { createContentTools } from '../tools/content.js'
 import { createMarketingTools } from '../tools/marketing.js'
+import { normalizeToolPayload } from '../services/toolPayloadNormalizer.js'
 
 const router = express.Router()
 
@@ -23,101 +24,6 @@ function getActorId(req) {
 
 function hasPersistedUser(req) {
   return !!req.user?.userId
-}
-
-function normalizeToolPayload(toolCode, formData) {
-  const normalized = { ...(formData || {}) }
-
-  if (!normalized.industry) {
-    normalized.industry = 'catering'
-  }
-
-  const ensureArray = (value) => {
-    if (Array.isArray(value)) return value
-    if (value == null || value === '') return []
-    return [value]
-  }
-
-  if (toolCode === 'friend') {
-    return {
-      ...normalized,
-      scene: normalized.scene || '当前业务',
-      highlight: normalized.highlight || '核心卖点',
-      type: normalized.type || 'product',
-      tone: normalized.tone || 'natural'
-    }
-  }
-
-  if (toolCode === 'topic') {
-    return {
-      ...normalized,
-      goals: ensureArray(normalized.goals),
-      contentTypes: ensureArray(normalized.contentTypes),
-      scenes: ensureArray(normalized.scenes),
-      platforms: ensureArray(normalized.platforms),
-      count: Number(normalized.count) || 10
-    }
-  }
-
-  if (toolCode === 'festival') {
-    return {
-      ...normalized,
-      goal: normalized.goal || 'promote',
-      contentType: normalized.contentType || 'poster'
-    }
-  }
-
-  if (toolCode === 'fission') {
-    const budgetMap = {
-      low: 500,
-      mid: 2000,
-      high: 5000,
-      vip: 8000
-    }
-    if (typeof normalized.budget === 'string' && budgetMap[normalized.budget] !== undefined) {
-      normalized.budget = budgetMap[normalized.budget]
-    }
-    return {
-      ...normalized,
-      customerScale: normalized.customerScale || '未知',
-      channel: normalized.channel || 'mixed',
-      priceRange: normalized.priceRange || 'mid',
-      budget: normalized.budget || 2000
-    }
-  }
-
-  if (toolCode === 'marketing-plan') {
-    return {
-      ...normalized,
-      goal: normalized.goal || '提升销售额',
-      budget: normalized.budget || '5000',
-      duration: normalized.duration || normalized.period || '1周'
-    }
-  }
-
-  if (toolCode === 'meituan') {
-    const monthlyOrders = Number(normalized.monthlyOrders) || 0
-    const monthlySales = Number(normalized.monthlySales) || 0
-    const avgOrderValue = monthlyOrders > 0
-      ? monthlySales / monthlyOrders
-      : Number(normalized.avgOrderValue) || 0
-
-    return {
-      ...normalized,
-      industry: normalized.industry || 'restaurant',
-      monthlyOrders,
-      monthlySales,
-      avgOrderValue,
-      platformRate: Number(normalized.platformRate ?? normalized.platformFeeRate) || 0,
-      platformFeeRate: Number(normalized.platformFeeRate ?? normalized.platformRate) || 0,
-      repurchaseRate: Number(normalized.repurchaseRate ?? normalized.repeatRate) || 0,
-      repeatRate: Number(normalized.repeatRate ?? normalized.repurchaseRate) || 0,
-      reviewScore: Number(normalized.reviewScore) || 4.5,
-      issues: ensureArray(normalized.issues)
-    }
-  }
-
-  return normalized
 }
 
 async function trackUsage(userId, toolCode) {

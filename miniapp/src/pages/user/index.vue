@@ -24,16 +24,9 @@
 
 <script setup>
 import { computed } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
-
-// 每次页面显示时同步状态
-onShow(() => {
-  // 触发重新计算（如果 store 是响应式的，这里会自动更新）
-  // 在 uni-app + Vue3 中，直接引用 reactive store state 即可响应
-})
 
 const userInfo = computed(() => userStore.state.userInfo)
 const userInitial = computed(() => userInfo.value?.nickname?.[0] || '?')
@@ -49,6 +42,7 @@ function goPage(url) { uni.navigateTo({ url }) }
 function handleLogout() {
   userStore.logout()
   uni.showToast({ title: '已退出' })
+  setTimeout(() => uni.switchTab({ url: '/pages/home/index' }), 800)
 }
 </script>
 

@@ -94,45 +94,70 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import request from '@/api/request'
+
 const result = ref(null)
+const loading = ref(false)
 const form = reactive({ views: 0, likes: 0, completes: 0, saves: 0, shares: 0, comments: 0, duration: 'medium', trafficSource: 'recommend' })
 
-const diagnose = () => {
+const toPercentNumber = (value) => {
+  const parsed = Number.parseFloat(String(value || '0').replace('%', ''))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const diagnose = async () => {
+  loading.value = true
   const v = form.views
-  const likeRate = v > 0 ? (form.likes / v * 100) : 0
-  const completeRate = v > 0 ? (form.completes / v * 100) : 0
-  const saveRate = v > 0 ? (form.saves / v * 100) : 0
-  const shareRate = v > 0 ? (form.shares / v * 100) : 0
+  try {
+    const response = await request.post('/douyin/data-diagnoser', {
+      industry: 'restaurant',
+      views: form.views,
+      likes: form.likes,
+      completes: form.completes,
+      saves: form.saves,
+      shares: form.shares,
+      comments: form.comments
+    })
+    const analysis = response.result?.analysis || response.analysis || response.result || response
+    const likeRate = toPercentNumber(analysis.viewRate)
+    const completeRate = toPercentNumber(analysis.completeRate)
+    const saveRate = toPercentNumber(analysis.saveRate)
+    const interactionRate = toPercentNumber(analysis.interactionRate)
 
-  let level, levelClass, levelDesc
-  if (v < 500) { level = 'Level 1: 初始池'; levelClass = 'level-low'; levelDesc = '内容尚未触发推荐算法，需优化标签与封面' }
-  else if (v < 5000) { level = 'Level 2: 同城池'; levelClass = 'level-mid'; levelDesc = '已进入同城推荐，但核心指标未达标，卡在流量池边界' }
-  else if (v < 50000) { level = 'Level 3: 推荐池'; levelClass = 'level-high'; levelDesc = '表现良好，有机会冲击更大流量池' }
-  else { level = 'Level 4: 热门池'; levelClass = 'level-hot'; levelDesc = '爆款内容，建议趁热打追投' }
+    let levelText = 'Level 1: 初始池'
+    let levelClass = 'level-low'
+    let levelDesc = '内容尚未触发推荐算法，需优化标签与封面'
+    if (v >= 50000) {
+      levelText = 'Level 4: 热门池'
+      levelClass = 'level-hot'
+      levelDesc = '爆款内容，建议趁热打追投'
+    } else if (v >= 5000) {
+      levelText = 'Level 3: 推荐池'
+      levelClass = 'level-high'
+      levelDesc = '表现良好，有机会冲击更大流量池'
+    } else if (v >= 500) {
+      levelText = 'Level 2: 同城池'
+      levelClass = 'level-mid'
+      levelDesc = '已进入同城推荐，但核心指标仍需继续优化'
+    }
 
-  const issues = []
-  if (saveRate < 2) issues.push('收藏率偏低（< 2%），7 天长效赛马权重不足')
-  if (likeRate < 3) issues.push('点赞率偏低，内容缺乏情绪共鸣')
-  if (completeRate < 25) issues.push('完播率偏低，前 3 秒钩子或内容节奏需优化')
-  if (shareRate < 0.5) issues.push('转发率偏低，缺乏社交货币属性')
-
-  result.value = {
-    levelText: level,
-    levelClass,
-    levelDesc,
-    metrics: [
-      { name: '点赞率', value: likeRate.toFixed(1) + '%', percent: Math.min(likeRate * 10, 100), color: likeRate >= 3 ? '#10b981' : '#ef4444', benchmark: '3-5%', status: likeRate >= 3 ? 'pass' : 'fail' },
-      { name: '完播率', value: completeRate.toFixed(1) + '%', percent: Math.min(completeRate * 2.5, 100), color: completeRate >= 25 ? '#10b981' : '#ef4444', benchmark: '25-40%', status: completeRate >= 25 ? 'pass' : 'fail' },
-      { name: '收藏率', value: saveRate.toFixed(1) + '%', percent: Math.min(saveRate * 12, 100), color: saveRate >= 5 ? '#10b981' : '#ef4444', benchmark: '5-8%', status: saveRate >= 5 ? 'pass' : 'fail' },
-      { name: '转发率', value: shareRate.toFixed(1) + '%', percent: Math.min(shareRate * 50, 100), color: shareRate >= 1 ? '#10b981' : '#ef4444', benchmark: '1-2%', status: shareRate >= 1 ? 'pass' : 'fail' }
-    ],
-    conclusion: issues.length > 0 ? issues.join('；') + '。' : '各项指标均在健康范围内，建议保持内容质量稳定。',
-    actions: [
-      saveRate < 2 ? '在 15-25s 插入干货清单画面，引导截图收藏' : null,
-      likeRate < 3 ? '增加情绪化表达，使用"你""我"等人称代词拉近距离' : null,
-      completeRate < 25 ? '前 3 秒设置更强钩子，砍掉冗余铺垫' : null,
-      shareRate < 0.5 ? '加入社交货币元素："转发给需要的人""@你的 XX 来看"' : null
-    ].filter(Boolean)
+    result.value = {
+      levelText,
+      levelClass,
+      levelDesc,
+      metrics: [
+        { name: '点赞率', value: analysis.viewRate || '0%', percent: Math.min(likeRate * 10, 100), color: likeRate >= 3 ? '#10b981' : '#ef4444', benchmark: '3-5%', status: likeRate >= 3 ? 'pass' : 'fail' },
+        { name: '完播率', value: analysis.completeRate || '0%', percent: Math.min(completeRate * 2.5, 100), color: completeRate >= 25 ? '#10b981' : '#ef4444', benchmark: '25-40%', status: completeRate >= 25 ? 'pass' : 'fail' },
+        { name: '收藏率', value: analysis.saveRate || '0%', percent: Math.min(saveRate * 12, 100), color: saveRate >= 5 ? '#10b981' : '#ef4444', benchmark: '5-8%', status: saveRate >= 5 ? 'pass' : 'fail' },
+        { name: '互动率', value: analysis.interactionRate || '0%', percent: Math.min(interactionRate * 12, 100), color: interactionRate >= 5 ? '#10b981' : '#ef4444', benchmark: '5-8%', status: interactionRate >= 5 ? 'pass' : 'fail' }
+      ],
+      conclusion: (analysis.issues || []).length ? analysis.issues.join('；') + '。' : '各项指标均在健康范围内，建议保持内容质量稳定。',
+      actions: analysis.suggestions || []
+    }
+  } catch (error) {
+    console.error('诊断失败:', error)
+  } finally {
+    loading.value = false
   }
 }
 </script>

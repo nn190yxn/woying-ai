@@ -2,13 +2,15 @@
 const BASE_URL = import.meta?.env?.VITE_API_BASE_URL || 'https://woyingai.com/api'
 // const BASE_URL = 'http://localhost:3001/api' // 本地调试用
 
+const REQUEST_TIMEOUT = 10000 // 10 秒超时
+
 // 通用请求方法
 export function request(options) {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync('token')
     const url = `${BASE_URL}${options.url}`
-    
-    uni.request({
+
+    const task = uni.request({
       url,
       method: options.method || 'GET',
       data: options.data || {},
@@ -29,7 +31,7 @@ export function request(options) {
           resolve(res.data)
         } else {
           const msg = res.data?.message || '请求失败'
-          uni.showToast({ title: msg, icon: 'none' })
+          uni.showToast({ title: msg.length > 20 ? '请求失败' : msg, icon: 'none' })
           reject(new Error(msg))
         }
       },
@@ -38,5 +40,11 @@ export function request(options) {
         reject(err)
       }
     })
+
+    // 超时保护
+    setTimeout(() => {
+      task.abort()
+      reject(new Error('请求超时'))
+    }, REQUEST_TIMEOUT)
   })
 }

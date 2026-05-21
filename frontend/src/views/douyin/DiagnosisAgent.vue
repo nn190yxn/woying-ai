@@ -163,6 +163,7 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/api/request'
 
 const router = useRouter()
 const currentStep = ref(0)
@@ -203,39 +204,57 @@ const canProceed = computed(() => {
   return false
 })
 
+const scoreClassFor = (score) => (score < 40 ? 'low' : score < 70 ? 'mid' : 'high')
+
+const radarColorMap = {
+  traffic: '#3b82f6',
+  content: '#8b5cf6',
+  conversion: '#f59e0b',
+  retention: '#10b981',
+  profit: '#ef4444'
+}
+
+const radarNameMap = {
+  traffic: '流量力',
+  content: '内容力',
+  conversion: '转化力',
+  retention: '留存力',
+  profit: '投流力'
+}
+
 const generate = async () => {
   loading.value = true
   try {
-    const totalPains = [...form.trafficPains, ...form.contentPains, ...form.conversionPains, ...form.retentionPains, ...form.adsPains].length
-    const trafficScore = Math.max(20, 100 - form.trafficPains.length * 20)
-    const contentScore = Math.max(25, 100 - form.contentPains.length * 18)
-    const conversionScore = Math.max(15, 100 - form.conversionPains.length * 22)
-    const retentionScore = Math.max(30, 100 - form.retentionPains.length * 15)
-    const adsScore = Math.max(20, 100 - form.adsPains.length * 20)
+    const response = await request.post('/douyin/diagnosis', {
+      industry: form.industry,
+      mode: form.mode,
+      painPoints: {
+        traffic: form.trafficPains,
+        content: form.contentPains,
+        conversion: form.conversionPains,
+        retention: form.retentionPains,
+        ads: form.adsPains
+      },
+      metrics: {
+        monthlyViews: form.monthlyViews,
+        monthlyFollowers: form.monthlyFollowers,
+        monthlyConversions: form.monthlyConversions,
+        monthlyAdBudget: form.monthlyAdBudget
+      }
+    })
 
-    const lowestDim = [
-      { name: '流量力', score: trafficScore },
-      { name: '内容力', score: contentScore },
-      { name: '转化力', score: conversionScore },
-      { name: '留存力', score: retentionScore },
-      { name: '投流力', score: adsScore }
-    ].sort((a, b) => a.score - b.score)[0]
+    const domainResult = response.result || response
+    const radar = Object.entries(domainResult.radarData || {}).map(([key, score]) => ({
+      key,
+      name: radarNameMap[key] || key,
+      score,
+      color: radarColorMap[key] || '#6366f1',
+      scoreClass: scoreClassFor(score)
+    }))
 
     result.value = {
-      radar: [
-        { name: '流量力', score: trafficScore, color: '#3b82f6', scoreClass: trafficScore < 40 ? 'low' : trafficScore < 70 ? 'mid' : 'high' },
-        { name: '内容力', score: contentScore, color: '#8b5cf6', scoreClass: contentScore < 40 ? 'low' : contentScore < 70 ? 'mid' : 'high' },
-        { name: '转化力', score: conversionScore, color: '#f59e0b', scoreClass: conversionScore < 40 ? 'low' : conversionScore < 70 ? 'mid' : 'high' },
-        { name: '留存力', score: retentionScore, color: '#10b981', scoreClass: retentionScore < 40 ? 'low' : retentionScore < 70 ? 'mid' : 'high' },
-        { name: '投流力', score: adsScore, color: '#ef4444', scoreClass: adsScore < 40 ? 'low' : adsScore < 70 ? 'mid' : 'high' }
-      ],
-      diagnosis: `您的门店在抖音经营中，最明显的短板是「${lowestDim.name}」（${lowestDim.score}分）。共识别到 ${totalPains} 个痛点，${form.mode === 'group-buy' ? '团购转化链路' : '线索留资链路'}存在明显优化空间。`,
-      suggestions: [
-        `优先解决「${lowestDim.name}」问题，预计可提升整体经营效率 30%`,
-        '建立每周内容排期，保证更新频率',
-        '优化团购套餐或留资钩子的视觉呈现',
-        '设置私信自动回复与 2 小时内响应机制'
-      ]
+      ...domainResult,
+      radar
     }
     currentStep.value = 3
   } catch (error) {

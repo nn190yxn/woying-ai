@@ -3,26 +3,52 @@ import { query } from '../models/db.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { createDomainToolResult } from '../services/resultSchema.js'
+import { getKBContextWithMeta } from '../services/kbService.js'
+import { getJwtSecret, isGuestModeEnabled } from '../middleware/auth.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const KB_DIR = path.resolve(__dirname, '../../knowledge-base/07_私域运营专项库')
 const router = express.Router()
+const PRIVATE_KB_CACHE_TTL = 5 * 60 * 1000
+let privateKbCache = null
 
 const checkAccess = async (req, res, next) => {
   const authHeader = req.headers.authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (isGuestModeEnabled()) {
+      req.userLevel = 'annual'
+      req.userId = null
+      return next()
+    }
     return res.status(401).json({ error: '未授权', requiredLevel: 'free' })
   }
   try {
     const jwt = await import('jsonwebtoken')
     const token = authHeader.split(' ')[1]
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'woying-ai-secret-key')
+    const jwtSecret = getJwtSecret()
+    if (!jwtSecret) {
+      return res.status(500).json({ error: '服务端认证配置缺失' })
+    }
+    const decoded = jwt.default.verify(token, jwtSecret)
     const users = await query('SELECT member_level FROM users WHERE id = ?', [decoded.userId])
-    if (users.length === 0) return res.status(403).json({ error: '用户不存在' })
+    if (users.length === 0) {
+      if (isGuestModeEnabled()) {
+        req.userLevel = 'annual'
+        req.userId = null
+        return next()
+      }
+      return res.status(403).json({ error: '用户不存在' })
+    }
     req.userLevel = users[0].member_level || 'free'
     req.userId = decoded.userId
     next()
   } catch (error) {
+    if (isGuestModeEnabled()) {
+      req.userLevel = 'annual'
+      req.userId = null
+      return next()
+    }
     res.status(401).json({ error: '无效的 Token' })
   }
 }
@@ -30,6 +56,16 @@ const checkAccess = async (req, res, next) => {
 const AGENT_ACCESS = {
   diagnosis: 'free', member_design: 'pro', retention_plan: 'pro',
   fission_plan: 'annual', community_sop: 'starter', cac_ltv: 'free', full_strategy: 'annual'
+}
+
+const PRIVATE_KB_TOOL = {
+  diagnosis: 'private-diagnosis',
+  'member-design': 'member-design',
+  'retention-plan': 'retention-plan',
+  'fission-plan': 'fission-plan',
+  'community-sop': 'community-sop',
+  'cac-ltv': 'cac-ltv',
+  'full-strategy': 'full-strategy'
 }
 
 const requireLevel = (requiredLevel) => (req, res, next) => {
@@ -41,6 +77,28 @@ const requireLevel = (requiredLevel) => (req, res, next) => {
     })
   }
   next()
+}
+
+function getPrivateKbMeta(toolCode, memberLevel, formData) {
+  const kbToolCode = PRIVATE_KB_TOOL[toolCode]
+  if (!kbToolCode) {
+    return {
+      knowledgeSource: 'knowledge-base/07_私域运营专项库',
+      kbToolCode: null,
+      kbFilesUsed: [],
+      kbContextChars: 0,
+      kbRetrievalMode: 'mapping_only'
+    }
+  }
+
+  const kbResult = getKBContextWithMeta(kbToolCode, memberLevel || 'free', formData || {})
+  return {
+    knowledgeSource: 'knowledge-base/07_私域运营专项库',
+    kbToolCode,
+    kbFilesUsed: kbResult.meta?.kbFilesUsed || [],
+    kbContextChars: kbResult.meta?.contextChars || 0,
+    kbRetrievalMode: kbResult.meta?.retrievalMode || 'mapping_only'
+  }
 }
 
 // ===== 知识库读取引擎 =====
@@ -76,35 +134,99 @@ const extractJsonFromMarkdown = (markdown, key) => {
 }
 
 const loadKB = () => {
-  return {
+  const now = Date.now()
+  if (privateKbCache && (now - privateKbCache.timestamp) < PRIVATE_KB_CACHE_TTL) {
+    return privateKbCache.value
+  }
+
+  const kb = {
     theory: readMarkdownFiles('理论层/*.md'),
     scenes: readMarkdownFiles('实操场景/*.md'),
     sops: readMarkdownFiles('标准执行/*.md'),
     cases: readMarkdownFiles('案例库/*.md'),
     scripts: readMarkdownFiles('话术库/*.md')
   }
+
+  privateKbCache = {
+    timestamp: now,
+    value: kb
+  }
+
+  return kb
 }
 
-const parseKPIFromKB = (kb, industry, section) => {
+function summarizePrivateKbLibrary(kb, industryLabel) {
+  const sceneFiles = getSceneSummariesByIndustry(kb, industryLabel)
+
+  return {
+    totalFiles: Object.values(kb).reduce((sum, cat) => sum + Object.keys(cat).length, 0),
+    theoryFiles: getPrivateKbFileNames(kb, 'theory'),
+    sceneFiles,
+    sopFiles: getPrivateKbFileNames(kb, 'sops'),
+    scriptFiles: getPrivateKbFileNames(kb, 'scripts')
+  }
+}
+
+function getPrivateKbDoc(kb, category, name) {
+  return kb?.[category]?.[name] || ''
+}
+
+function getPrivateKbFileNames(kb, category) {
+  return Object.keys(kb?.[category] || {})
+}
+
+function getSceneSummariesByIndustry(kb, industryLabel) {
+  return Object.entries(kb?.scenes || {})
+    .filter(([name]) => name.includes(industryLabel))
+    .map(([name, content]) => ({ name, summary: content.substring(0, 200) }))
+}
+
+function extractSnippet(text, regex, fallback = '') {
+  if (!text) return fallback
+  const match = text.match(regex)
+  return match?.[0] || fallback
+}
+
+function hasSnippetKeyword(text, keyword) {
+  return Boolean(text && keyword && text.includes(keyword))
+}
+
+function getIndustrySceneDocs(kb, industry) {
   const industryMap = { restaurant: '餐饮', education: '教培', beauty: '美业', service: '同城服务' }
   const cnName = industryMap[industry] || '餐饮'
-  let kpis = {}
 
-  for (const [name, content] of Object.entries(kb.scenes)) {
-    if (name.includes(cnName) && content.includes('核心数据指标')) {
-      const tableMatch = content.match(/\| 指标 \|.*?\n((?:\|[^|\n]+\|\n)+)/s)
-      if (tableMatch) {
-        const rows = tableMatch[1].trim().split('\n')
-        for (const row of rows) {
-          if (row.includes('目标值') || row.includes('---')) continue
-          const cols = row.split('|').map(c => c.trim()).filter(Boolean)
-          if (cols.length >= 2) {
-            kpis[cols[0]] = cols[1]
-          }
-        }
-      }
+  return Object.entries(kb.scenes).filter(([name, content]) => name.includes(cnName) && content.includes('核心数据指标'))
+}
+
+function parseMarkdownTableMap(content, headerName = '指标') {
+  if (!content) return {}
+
+  const tableMatch = content.match(new RegExp(`\\|\\s*${headerName}\\s*\\|.*?\n((?:\\|[^|\\n]+\\|\n)+)`, 's'))
+  if (!tableMatch) return {}
+
+  const rows = tableMatch[1].trim().split('\n')
+  const result = {}
+  for (const row of rows) {
+    if (row.includes('目标值') || row.includes('---')) continue
+    const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+    if (cols.length >= 2) {
+      result[cols[0]] = cols[1]
     }
   }
+
+  return result
+}
+
+const parseKPIFromKB = (kb, industry) => {
+  let kpis = {}
+
+  for (const [, content] of getIndustrySceneDocs(kb, industry)) {
+    const tableData = parseMarkdownTableMap(content, '指标')
+    if (Object.keys(tableData).length > 0) {
+      kpis = { ...kpis, ...tableData }
+    }
+  }
+
   return kpis
 }
 
@@ -158,8 +280,9 @@ const INDUSTRY_BENCHMARKS = {
 router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) => {
   const { industry, mode, painPoints, currentData } = req.body
   const kb = loadKB()
+  const kbMeta = getPrivateKbMeta('diagnosis', req.userLevel, req.body)
   const bm = INDUSTRY_BENCHMARKS[industry] || INDUSTRY_BENCHMARKS.restaurant
-  const kpis = parseKPIFromKB(kb, industry, '核心数据指标')
+  const kpis = parseKPIFromKB(kb, industry)
 
   const painCount = painPoints ? Object.values(painPoints).reduce((sum, arr) => sum + (arr?.length || 0), 0) : 0
   let trafficScore = Math.max(20, bm.traffic - (painPoints?.traffic?.length || 0) * 12)
@@ -196,20 +319,22 @@ router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) =>
     suggestions.push(`识别到 ${painCount} 个痛点，建议优先处理高优痛点（引流>转化>留存>裂变）`)
   }
 
-  res.json({
-    agent: 'private-diagnosis',
-    status: 'success',
-    result: {
-      industry: bm.name,
-      radar: scores,
-      avgScore,
-      industryBenchmark: { traffic: bm.traffic, operation: bm.operation, conversion: bm.conversion, retention: bm.retention, fission: bm.fission },
-      kpis,
-      diagnosis: `您的私域运营整体健康度为${avgScore}分（行业基准：${bm.traffic}-${bm.retention}分）。最明显的短板是「${lowest.name}」（${lowest.score}分 vs 基准${lowest.benchmark}分），共识别到 ${painCount} 个痛点。${modeHint[mode] || '私域运营'}链路存在明显优化空间。`,
-      suggestions,
-      upgradeHint: '获取《15 天针对性私域提升方案》+《行业对标报告》需成为进阶会员，或预约专家 1v1 深度诊断'
-    }
-  })
+  const domainResult = {
+    industry: bm.name,
+    radar: scores,
+    avgScore,
+    industryBenchmark: { traffic: bm.traffic, operation: bm.operation, conversion: bm.conversion, retention: bm.retention, fission: bm.fission },
+    kpis,
+    diagnosis: `您的私域运营整体健康度为${avgScore}分（行业基准：${bm.traffic}-${bm.retention}分）。最明显的短板是「${lowest.name}」（${lowest.score}分 vs 基准${lowest.benchmark}分），共识别到 ${painCount} 个痛点。${modeHint[mode] || '私域运营'}链路存在明显优化空间。`,
+    suggestions,
+    upgradeHint: '获取《15 天针对性私域提升方案》+《行业对标报告》需成为进阶会员，或预约专家 1v1 深度诊断'
+  }
+  res.json(createDomainToolResult(domainResult, {
+    summary: domainResult.diagnosis,
+    engineType: 'rule-based-knowledge',
+    toolCode: 'diagnosis',
+    meta: kbMeta
+  }))
 })
 
 // ===== 2. 会员体系设计器（PRO） =====
@@ -217,10 +342,10 @@ router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) =>
 router.post('/member-design', checkAccess, requireLevel('pro'), async (req, res) => {
   const { industry, currentMembers, avgOrderValue, goal } = req.body
   const kb = loadKB()
+  const kbMeta = getPrivateKbMeta('member-design', req.userLevel, req.body)
   const bm = INDUSTRY_BENCHMARKS[industry] || INDUSTRY_BENCHMARKS.restaurant
 
-  const memberScript = kb.scripts['话术_会员储值'] || ''
-  const welcomeScript = kb.scripts['话术_首单转化'] || ''
+  const memberScript = getPrivateKbDoc(kb, 'scripts', '话术_会员储值')
 
   const tierAnalysis = bm.rechargeTiers.map(tier => {
     const discount = typeof tier.gift === 'number'
@@ -234,37 +359,39 @@ router.post('/member-design', checkAccess, requireLevel('pro'), async (req, res)
     }
   })
 
-  res.json({
-    agent: 'member-design',
-    status: 'success',
-    result: {
-      industry: bm.name,
-      memberDay: bm.memberDay,
-      recommendedTiers: tierAnalysis,
-      projectedRevenue: tierAnalysis.map(tier => ({
-        tier: tier.desc,
-        gift: tier.gift,
-        expectedLock: tier.expectedLock,
-        retentionLift: tier.desc.includes('8.5') ? '+35%' : tier.desc.includes('9折') ? '+25%' : '+15%'
-      })),
-      implementationTimeline: [
-        { week: '第1周', task: '设计储值方案 + 系统配置' },
-        { week: '第2周', task: '员工培训 + 话术演练' },
-        { week: '第3周', task: '种子用户内测（邀请20%高价值客户）' },
-        { week: '第4周', task: '全量上线 + 社群推广' }
-      ],
-      scriptSnippets: {
-        rechargePitch: memberScript.includes('我给您算一下') ? memberScript.match(/我给您算一下[^。]*。/s)?.[0] || '' : '',
-        urgency: memberScript.includes('这个储值活动就这周有') ? '限时促单话术已就绪' : ''
-      },
-      suggestions: [
-        '储值金额设置为月均消费额的 3-5 倍，降低决策门槛',
-        '赠品选择高感知价值、低实际成本的项目（如招牌菜/体验课）',
-        '会员日固定化（' + bm.memberDay + '），培养客户周期性消费习惯',
-        '建立会员等级权益差异，高等级客户享受专属服务'
-      ]
-    }
-  })
+  const domainResult = {
+    industry: bm.name,
+    memberDay: bm.memberDay,
+    recommendedTiers: tierAnalysis,
+    projectedRevenue: tierAnalysis.map(tier => ({
+      tier: tier.desc,
+      gift: tier.gift,
+      expectedLock: tier.expectedLock,
+      retentionLift: tier.desc.includes('8.5') ? '+35%' : tier.desc.includes('9折') ? '+25%' : '+15%'
+    })),
+    implementationTimeline: [
+      { week: '第1周', task: '设计储值方案 + 系统配置' },
+      { week: '第2周', task: '员工培训 + 话术演练' },
+      { week: '第3周', task: '种子用户内测（邀请20%高价值客户）' },
+      { week: '第4周', task: '全量上线 + 社群推广' }
+    ],
+    scriptSnippets: {
+      rechargePitch: hasSnippetKeyword(memberScript, '我给您算一下') ? extractSnippet(memberScript, /我给您算一下[^。]*。/s, '') : '',
+      urgency: hasSnippetKeyword(memberScript, '这个储值活动就这周有') ? '限时促单话术已就绪' : ''
+    },
+    suggestions: [
+      '储值金额设置为月均消费额的 3-5 倍，降低决策门槛',
+      '赠品选择高感知价值、低实际成本的项目（如招牌菜/体验课）',
+      '会员日固定化（' + bm.memberDay + '），培养客户周期性消费习惯',
+      '建立会员等级权益差异，高等级客户享受专属服务'
+    ]
+  }
+  res.json(createDomainToolResult(domainResult, {
+    summary: `${bm.name}会员体系设计：${tierAnalysis.length}档储值方案，预期客单价提升15-35%`,
+    engineType: 'rule-based-knowledge',
+    toolCode: 'member-design',
+    meta: kbMeta
+  }))
 })
 
 // ===== 3. 复购留存方案（PRO） =====
@@ -272,11 +399,11 @@ router.post('/member-design', checkAccess, requireLevel('pro'), async (req, res)
 router.post('/retention-plan', checkAccess, requireLevel('pro'), async (req, res) => {
   const { industry, currentRetention, avgPurchaseCycle, customerCount } = req.body
   const kb = loadKB()
+  const kbMeta = getPrivateKbMeta('retention-plan', req.userLevel, req.body)
   const bm = INDUSTRY_BENCHMARKS[industry] || INDUSTRY_BENCHMARKS.restaurant
 
-  const retentionKB = kb.theory['E_复购留存模型'] || ''
-  const activationScript = kb.sops['SOP_沉睡客户激活流程'] || ''
-  const retentionScript = kb.scripts['话术_复购引导'] || ''
+  const activationScript = getPrivateKbDoc(kb, 'sops', 'SOP_沉睡客户激活流程')
+  const retentionScript = getPrivateKbDoc(kb, 'scripts', '话术_复购引导')
 
   const strategies = {
     restaurant: [
@@ -309,32 +436,34 @@ router.post('/retention-plan', checkAccess, requireLevel('pro'), async (req, res
   const projectedRetention = Math.min(85, (currentRetention || 30) + 25)
   const additionalRevenue = Math.round((customerCount || 1000) * (projectedRetention - (currentRetention || 30)) / 100 * (avgPurchaseCycle || 200))
 
-  res.json({
-    agent: 'retention-plan',
-    status: 'success',
-    result: {
-      industry: bm.name,
-      currentRetention: currentRetention || 30,
-      projectedRetention,
-      targetRetention: bm.retentionTarget,
-      additionalRevenue,
-      sleepThreshold: bm.sleepThreshold,
-      strategies: strategyList,
-      retentionCalendar: [
-        { day: 'T+0', action: '首单后24小时内发送感谢消息+使用指南', channel: '企微私聊' },
-        { day: 'T+3', action: '首次体验回访，收集使用反馈', channel: '企微私聊' },
-        { day: 'T+7', action: '推荐关联产品/项目，引导二单', channel: '企微私聊' },
-        { day: 'T+15', action: '推送会员专享优惠，引导办卡/储值', channel: '朋友圈+私聊' },
-        { day: 'T+30', action: '沉睡预警触发，发送定向激活优惠券', channel: '企微私聊' },
-        { day: 'T+60', action: '电话回访了解原因，提供超预期方案', channel: '电话' },
-        { day: 'T+90', action: '最终召回（年度最大优惠）或标记流失', channel: '电话+短信' }
-      ],
-      scriptSnippets: {
-        followup: retentionScript.match(/XX您好～上次[^"]*？/s)?.[0] || '首单后回访话术已就绪',
-        activation: activationScript.includes('好久不见') ? '沉睡激活话术已就绪' : ''
-      }
+  const domainResult = {
+    industry: bm.name,
+    currentRetention: currentRetention || 30,
+    projectedRetention,
+    targetRetention: bm.retentionTarget,
+    additionalRevenue,
+    sleepThreshold: bm.sleepThreshold,
+    strategies: strategyList,
+    retentionCalendar: [
+      { day: 'T+0', action: '首单后24小时内发送感谢消息+使用指南', channel: '企微私聊' },
+      { day: 'T+3', action: '首次体验回访，收集使用反馈', channel: '企微私聊' },
+      { day: 'T+7', action: '推荐关联产品/项目，引导二单', channel: '企微私聊' },
+      { day: 'T+15', action: '推送会员专享优惠，引导办卡/储值', channel: '朋友圈+私聊' },
+      { day: 'T+30', action: '沉睡预警触发，发送定向激活优惠券', channel: '企微私聊' },
+      { day: 'T+60', action: '电话回访了解原因，提供超预期方案', channel: '电话' },
+      { day: 'T+90', action: '最终召回（年度最大优惠）或标记流失', channel: '电话+短信' }
+    ],
+    scriptSnippets: {
+      followup: extractSnippet(retentionScript, /XX您好～上次[^"]*？/s, '首单后回访话术已就绪'),
+      activation: hasSnippetKeyword(activationScript, '好久不见') ? '沉睡激活话术已就绪' : ''
     }
-  })
+  }
+  res.json(createDomainToolResult(domainResult, {
+    summary: `${bm.name}复购留存方案：目标留存率${projectedRetention}%，预期增收¥${additionalRevenue}`,
+    engineType: 'rule-based-knowledge',
+    toolCode: 'retention-plan',
+    meta: kbMeta
+  }))
 })
 
 // ===== 4. 裂变增长方案（ANNUAL） =====
@@ -342,10 +471,10 @@ router.post('/retention-plan', checkAccess, requireLevel('pro'), async (req, res
 router.post('/fission-plan', checkAccess, requireLevel('annual'), async (req, res) => {
   const { industry, currentCustomers, avgOrderValue, targetGrowth } = req.body
   const kb = loadKB()
+  const kbMeta = getPrivateKbMeta('fission-plan', req.userLevel, req.body)
   const bm = INDUSTRY_BENCHMARKS[industry] || INDUSTRY_BENCHMARKS.restaurant
 
-  const fissionKB = kb.theory['F_裂变增长引擎'] || ''
-  const referralScript = kb.scripts['话术_转介绍裂变'] || ''
+  const referralScript = getPrivateKbDoc(kb, 'scripts', '话术_转介绍裂变')
 
   const models = {
     referral: { name: '转介绍裂变', kValue: '0.3-0.8', desc: '老客推荐新客，双方获利', bestFor: ['education', 'beauty'], match: industry === 'education' || industry === 'beauty' },
@@ -366,29 +495,31 @@ router.post('/fission-plan', checkAccess, requireLevel('annual'), async (req, re
     service: { tier1: '推荐1人得100元券', tier3: '推荐3人得300元券+优先服务', tier5: '推荐5人免服务费1次' }
   }
 
-  res.json({
-    agent: 'fission-plan',
-    status: 'success',
-    result: {
-      industry: bm.name,
-      recommendedModel: { ...bestModel, projectedNewCustomers, projectedRevenue, kValue: projectedK },
-      allModels: Object.values(models).map(m => ({
-        ...m, matchScore: m.match ? '★★★★★' : '★★★☆☆'
-      })),
-      referralRewards: referralRewards[industry] || referralRewards.restaurant,
-      implementationSteps: [
-        { step: 1, name: '设计诱饵', desc: '选择高感知价值、低边际成本的奖品（体验课/招牌菜/护理体验）' },
-        { step: 2, name: '设置规则', desc: '明确参与条件、奖励机制、有效期，确保可执行' },
-        { step: 3, name: '种子用户', desc: '从最活跃的20%客户中邀请参与，形成初始传播' },
-        { step: 4, name: '社交传播', desc: '通过企微群、朋友圈、小程序分享扩大影响' },
-        { step: 5, name: '数据追踪', desc: '每日监控参与率、转化率、K值，及时调整' }
-      ],
-      scriptSnippets: {
-        referral: referralScript.match(/XX您好.*朋友.*奖励/s)?.[0]?.substring(0, 100) || '转介绍话术已就绪',
-        groupBuy: referralScript.includes('拼团') ? '拼团活动话术已就绪' : ''
-      }
+  const domainResult = {
+    industry: bm.name,
+    recommendedModel: { ...bestModel, projectedNewCustomers, projectedRevenue, kValue: projectedK },
+    allModels: Object.values(models).map(m => ({
+      ...m, matchScore: m.match ? '★★★★★' : '★★★☆☆'
+    })),
+    referralRewards: referralRewards[industry] || referralRewards.restaurant,
+    implementationSteps: [
+      { step: 1, name: '设计诱饵', desc: '选择高感知价值、低边际成本的奖品（体验课/招牌菜/护理体验）' },
+      { step: 2, name: '设置规则', desc: '明确参与条件、奖励机制、有效期，确保可执行' },
+      { step: 3, name: '种子用户', desc: '从最活跃的20%客户中邀请参与，形成初始传播' },
+      { step: 4, name: '社交传播', desc: '通过企微群、朋友圈、小程序分享扩大影响' },
+      { step: 5, name: '数据追踪', desc: '每日监控参与率、转化率、K值，及时调整' }
+    ],
+    scriptSnippets: {
+      referral: extractSnippet(referralScript, /XX您好.*朋友.*奖励/s, '转介绍话术已就绪').substring(0, 100),
+      groupBuy: hasSnippetKeyword(referralScript, '拼团') ? '拼团活动话术已就绪' : ''
     }
-  })
+  }
+  res.json(createDomainToolResult(domainResult, {
+    summary: `${bm.name}裂变增长方案：推荐${bestModel.name}模式，K值${projectedK}，预期新增${projectedNewCustomers}客户`,
+    engineType: 'rule-based-knowledge',
+    toolCode: 'fission-plan',
+    meta: kbMeta
+  }))
 })
 
 // ===== 5. 社群运营SOP（STARTER） =====
@@ -396,10 +527,8 @@ router.post('/fission-plan', checkAccess, requireLevel('annual'), async (req, re
 router.post('/community-sop', checkAccess, requireLevel('starter'), async (req, res) => {
   const { industry, communitySize, goal } = req.body
   const kb = loadKB()
+  const kbMeta = getPrivateKbMeta('community-sop', req.userLevel, req.body)
   const bm = INDUSTRY_BENCHMARKS[industry] || INDUSTRY_BENCHMARKS.restaurant
-
-  const dailySOP = kb.sops['SOP_社群每日运营清单'] || ''
-  const welcomeScript = kb.sops['SOP_企微添加欢迎语模板'] || ''
 
   const industrySOP = {
     restaurant: {
@@ -467,45 +596,47 @@ router.post('/community-sop', checkAccess, requireLevel('starter'), async (req, 
 
   const sop = industrySOP[industry] || industrySOP.restaurant
 
-  res.json({
-    agent: 'community-sop',
-    status: 'success',
-    result: {
-      industry: bm.name,
-      communitySize,
-      goal,
-      dailySchedule: sop.dailySchedule,
-      weeklyEvents: sop.weeklyEvents,
-      contentRatio: sop.contentRatio,
-      engagementTargets: {
-        dailyActive: Math.round((communitySize || 200) * 0.15),
-        weeklyConversion: Math.round((communitySize || 200) * 0.05),
-        monthlyRetention: Math.round((communitySize || 200) * 0.7)
-      },
-      weeklyReportTemplate: {
-        metrics: ['新增好友数', '入群人数', '社群活跃度', '首单转化数', '复购率', '转介绍率'],
-        format: '周报模板已就绪，详见SOP_私域数据周报模板'
-      },
-      redLines: [
-        '禁止每日群发广告，内容价值:营销 = 7:3',
-        '禁止@所有人每日超过1次',
-        '禁止在群内处理客户投诉，引导私聊解决',
-        '禁止发布与行业无关的政治/敏感话题'
-      ],
-      sopReference: {
-        dailyChecklist: 'SOP_社群每日运营清单',
-        welcomeTemplate: 'SOP_企微添加欢迎语模板',
-        weeklyReport: 'SOP_私域数据周报模板'
-      }
+  const domainResult = {
+    industry: bm.name,
+    communitySize,
+    goal,
+    dailySchedule: sop.dailySchedule,
+    weeklyEvents: sop.weeklyEvents,
+    contentRatio: sop.contentRatio,
+    engagementTargets: {
+      dailyActive: Math.round((communitySize || 200) * 0.15),
+      weeklyConversion: Math.round((communitySize || 200) * 0.05),
+      monthlyRetention: Math.round((communitySize || 200) * 0.7)
+    },
+    weeklyReportTemplate: {
+      metrics: ['新增好友数', '入群人数', '社群活跃度', '首单转化数', '复购率', '转介绍率'],
+      format: '周报模板已就绪，详见SOP_私域数据周报模板'
+    },
+    redLines: [
+      '禁止每日群发广告，内容价值:营销 = 7:3',
+      '禁止@所有人每日超过1次',
+      '禁止在群内处理客户投诉，引导私聊解决',
+      '禁止发布与行业无关的政治/敏感话题'
+    ],
+    sopReference: {
+      dailyChecklist: 'SOP_社群每日运营清单',
+      welcomeTemplate: 'SOP_企微添加欢迎语模板',
+      weeklyReport: 'SOP_私域数据周报模板'
     }
-  })
+  }
+  res.json(createDomainToolResult(domainResult, {
+    summary: `${bm.name}社群运营SOP：${sop.dailySchedule.length}项日程+4项周活动`,
+    engineType: 'rule-based-knowledge',
+    toolCode: 'community-sop',
+    meta: kbMeta
+  }))
 })
 
 // ===== 6. CAC vs LTV 分析（免费） =====
 
 router.post('/cac-ltv', checkAccess, requireLevel('free'), async (req, res) => {
   const { industry, acquisitionChannels, avgOrderValue, purchaseFrequency, retentionMonths } = req.body
-  const kb = loadKB()
+  const kbMeta = getPrivateKbMeta('cac-ltv', req.userLevel, req.body)
   const bm = INDUSTRY_BENCHMARKS[industry] || INDUSTRY_BENCHMARKS.restaurant
 
   const channels = acquisitionChannels || [
@@ -532,25 +663,27 @@ router.post('/cac-ltv', checkAccess, requireLevel('free'), async (req, res) => {
 
   const cacBm = industryCACBenchmarks[industry] || industryCACBenchmarks.restaurant
 
-  res.json({
-    agent: 'cac-ltv',
-    status: 'success',
-    result: {
-      channels: cacData,
-      avgCAC,
-      cacBenchmark: cacBm,
-      ltv,
-      ltvCacRatio,
-      healthStatus: parseFloat(ltvCacRatio) >= 3 ? '健康' : parseFloat(ltvCacRatio) >= 1.5 ? '需优化' : '危险',
-      suggestions: [
-        `最优获客渠道：「${cacData[0].name}」（CAC: ¥${cacData[0].cac}），建议增加预算占比至40%+`,
-        `LTV/CAC比值 ${ltvCacRatio}，${parseFloat(ltvCacRatio) >= 3 ? '处于健康区间' : '需要优化获客成本或提升客户价值'}`,
-        '优先投资高留存渠道（转介绍、私域），降低长期获客成本',
-        '建立客户生命周期管理，提升复购频次和留存月数',
-        `行业CAC基准：优秀≤¥${cacBm.best}，平均¥${cacBm.avg}，警惕>¥${cacBm.worst}`
-      ]
-    }
-  })
+  const domainResult = {
+    channels: cacData,
+    avgCAC,
+    cacBenchmark: cacBm,
+    ltv,
+    ltvCacRatio,
+    healthStatus: parseFloat(ltvCacRatio) >= 3 ? '健康' : parseFloat(ltvCacRatio) >= 1.5 ? '需优化' : '危险',
+    suggestions: [
+      `最优获客渠道：「${cacData[0].name}」（CAC: ¥${cacData[0].cac}），建议增加预算占比至40%+`,
+      `LTV/CAC比值 ${ltvCacRatio}，${parseFloat(ltvCacRatio) >= 3 ? '处于健康区间' : '需要优化获客成本或提升客户价值'}`,
+      '优先投资高留存渠道（转介绍、私域），降低长期获客成本',
+      '建立客户生命周期管理，提升复购频次和留存月数',
+      `行业CAC基准：优秀≤¥${cacBm.best}，平均¥${cacBm.avg}，警惕>¥${cacBm.worst}`
+    ]
+  }
+  res.json(createDomainToolResult(domainResult, {
+    summary: `CAC vs LTV分析：LTV/CAC=${ltvCacRatio}，状态${domainResult.healthStatus}，最优渠道「${cacData[0].name}」`,
+    engineType: 'rule-based-knowledge',
+    toolCode: 'cac-ltv',
+    meta: kbMeta
+  }))
 })
 
 // ===== 7. 90天私域战略（ANNUAL） =====
@@ -558,13 +691,9 @@ router.post('/cac-ltv', checkAccess, requireLevel('free'), async (req, res) => {
 router.post('/full-strategy', checkAccess, requireLevel('annual'), async (req, res) => {
   const { industry, currentStage, goals } = req.body
   const kb = loadKB()
+  const kbMeta = getPrivateKbMeta('full-strategy', req.userLevel, req.body)
   const bm = INDUSTRY_BENCHMARKS[industry] || INDUSTRY_BENCHMARKS.restaurant
-
-  const sceneFiles = Object.entries(kb.scenes)
-    .filter(([name]) => name.includes(bm.name))
-    .map(([name, content]) => ({ name, summary: content.substring(0, 200) }))
-
-  const sopFiles = Object.keys(kb.sops)
+  const kbLibrary = summarizePrivateKbLibrary(kb, bm.name)
 
   const phaseData = {
     restaurant: {
@@ -591,60 +720,62 @@ router.post('/full-strategy', checkAccess, requireLevel('annual'), async (req, r
 
   const phases = industry ? phaseData[industry] : phaseData.restaurant
 
-  res.json({
-    agent: 'full-strategy',
-    status: 'success',
-    result: {
-      industry: bm.name,
-      phases: [
-        {
-          name: '第一阶段：基础搭建（第1-30天）',
-          focus: '企微基建+客户沉淀+标签体系',
-          deliverables: [
-            '企业微信账号矩阵搭建（客服号+社群号）',
-            '客户5维度标签体系设计（基础属性/来源渠道/消费行为/意向程度/生命周期）',
-            '欢迎语SOP+首单转化路径设计',
-            '社群基础运营日历制定'
-          ],
-          targets: phases.phase1Target,
-          kbReferences: ['SOP_企微添加欢迎语模板', 'SOP_客户分层打标流程']
-        },
-        {
-          name: '第二阶段：运营深化（第31-60天）',
-          focus: '内容运营+会员体系+复购提升',
-          deliverables: [
-            '朋友圈内容日历执行（专业40%/生活20%/互动20%/营销20%）',
-            '会员储值方案上线（' + bm.rechargeTiers.map(t => t.desc).join(' / ') + '）',
-            `${bm.memberDay}会员日/社群团购活动常态化`,
-            '沉睡客户激活流程建立（' + bm.sleepThreshold + '）'
-          ],
-          targets: phases.phase2Target,
-          kbReferences: ['SOP_社群每日运营清单', 'SOP_沉睡客户激活流程', '话术_会员储值']
-        },
-        {
-          name: '第三阶段：裂变增长（第61-90天）',
-          focus: '转介绍机制+裂变活动+数据驱动',
-          deliverables: [
-            '老带新奖励机制设计并上线',
-            '拼团/分销裂变活动策划执行',
-            '私域数据看板搭建（引流/转化/复购/裂变）',
-            'SOP标准化文档沉淀'
-          ],
-          targets: phases.phase3Target,
-          kbReferences: ['话术_转介绍裂变', 'SOP_私域数据周报模板']
-        }
-      ],
-      kbLibrary: {
-        totalFiles: Object.values(kb).reduce((sum, cat) => sum + Object.keys(cat).length, 0),
-        theoryFiles: Object.keys(kb.theory),
-        sceneFiles: sceneFiles.map(f => f.name),
-        sopFiles,
-        scriptFiles: Object.keys(kb.scripts)
+  const domainResult = {
+    industry: bm.name,
+    phases: [
+      {
+        name: '第一阶段：基础搭建（第1-30天）',
+        focus: '企微基建+客户沉淀+标签体系',
+        deliverables: [
+          '企业微信账号矩阵搭建（客服号+社群号）',
+          '客户5维度标签体系设计（基础属性/来源渠道/消费行为/意向程度/生命周期）',
+          '欢迎语SOP+首单转化路径设计',
+          '社群基础运营日历制定'
+        ],
+        targets: phases.phase1Target,
+        kbReferences: ['SOP_企微添加欢迎语模板', 'SOP_客户分层打标流程']
       },
-      note: '详细执行方案（含每日SOP、话术模板、活动物料）基于知识库22+文件自动生成',
-      upgradeHint: '预约专家1v1定制全案，包含：行业诊断+90天执行SOP+每周复盘指导+话术模板库'
-    }
-  })
+      {
+        name: '第二阶段：运营深化（第31-60天）',
+        focus: '内容运营+会员体系+复购提升',
+        deliverables: [
+          '朋友圈内容日历执行（专业40%/生活20%/互动20%/营销20%）',
+          '会员储值方案上线（' + bm.rechargeTiers.map(t => t.desc).join(' / ') + '）',
+          `${bm.memberDay}会员日/社群团购活动常态化`,
+          '沉睡客户激活流程建立（' + bm.sleepThreshold + '）'
+        ],
+        targets: phases.phase2Target,
+        kbReferences: ['SOP_社群每日运营清单', 'SOP_沉睡客户激活流程', '话术_会员储值']
+      },
+      {
+        name: '第三阶段：裂变增长（第61-90天）',
+        focus: '转介绍机制+裂变活动+数据驱动',
+        deliverables: [
+          '老带新奖励机制设计并上线',
+          '拼团/分销裂变活动策划执行',
+          '私域数据看板搭建（引流/转化/复购/裂变）',
+          'SOP标准化文档沉淀'
+        ],
+        targets: phases.phase3Target,
+        kbReferences: ['话术_转介绍裂变', 'SOP_私域数据周报模板']
+      }
+    ],
+    kbLibrary: {
+      totalFiles: kbLibrary.totalFiles,
+      theoryFiles: kbLibrary.theoryFiles,
+      sceneFiles: kbLibrary.sceneFiles.map(f => f.name),
+      sopFiles: kbLibrary.sopFiles,
+      scriptFiles: kbLibrary.scriptFiles
+    },
+    note: '详细执行方案（含每日SOP、话术模板、活动物料）基于知识库22+文件自动生成',
+    upgradeHint: '预约专家1v1定制全案，包含：行业诊断+90天执行SOP+每周复盘指导+话术模板库'
+  }
+  res.json(createDomainToolResult(domainResult, {
+    summary: `${bm.name}90天私域战略：3阶段执行方案（基础搭建→运营深化→裂变增长）`,
+    engineType: 'rule-based-knowledge',
+    toolCode: 'full-strategy',
+    meta: kbMeta
+  }))
 })
 
 export default router

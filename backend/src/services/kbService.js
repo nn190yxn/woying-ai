@@ -4,6 +4,7 @@
 import { readFileSync, existsSync } from 'fs'
 import { join, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
+import { logger } from '../middleware/logger.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -315,7 +316,7 @@ export function getKBContextWithMeta(toolCode, memberLevel = 'free', formData = 
     // Read the file with path validation
     const filePath = validateKBPath(kbFile.path)
     if (!filePath) {
-      console.warn(`[KB] Path traversal attempt blocked: ${kbFile.path}`)
+      logger.warn('kb', `Path traversal attempt blocked: ${kbFile.path}`)
       continue
     }
     const content = readFileWithCache(filePath)

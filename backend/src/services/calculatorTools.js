@@ -1,7 +1,7 @@
 // Calculator tool definitions for generate.js
 // Imports calcFn from calculatorEngine.js
 
-import { CALCULATORS } from '../services/calculatorEngine.js'
+import { CALCULATORS } from './calculatorEngine.js'
 
 export function createCalculatorTools() {
   const tools = {}

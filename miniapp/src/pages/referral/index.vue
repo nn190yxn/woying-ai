@@ -48,10 +48,13 @@ const totalCommission = computed(() => stats.value.commissionSummary?.totalCommi
 onShow(loadData)
 
 // 小程序分享配置
-onShareAppMessage(() => ({
-  title: `推荐码：${stats.value.referralCode || ''}，注册得会员`,
-  path: `/pages/register/index?ref=${stats.value.referralCode || ''}`
-}))
+onShareAppMessage(() => {
+  const code = stats.value.referralCode || ''
+  return {
+    title: code ? `推荐码：${code}，注册得会员` : '我赢AI - 老板的AI生意助理',
+    path: code ? `/pages/register/index?ref=${code}` : '/pages/register/index'
+  }
+})
 
 async function loadData() {
   try {
@@ -62,15 +65,19 @@ async function loadData() {
     ])
     stats.value = { ...s, referralCode: code.referralCode }
     commissions.value = list
-  } catch {}
+  } catch (e) {
+    // 静默失败，页面仍可展示基本结构
+    console.error('loadData error:', e)
+  }
 }
 
 function copyCode() {
   if (!stats.value.referralCode) return
-  uni.setClipboardData({ data: stats.value.referralCode })
+  uni.setClipboardData({ data: stats.value.referralCode, success: () => uni.showToast({ title: '已复制', icon: 'success' }) })
 }
 
 function statusText(s) {
+  if (!s) return ''
   return { pending: '冻结中', paid: '已发放', cancelled: '已取消' }[s] || s
 }
 </script>
