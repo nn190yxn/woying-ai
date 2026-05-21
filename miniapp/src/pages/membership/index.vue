@@ -32,8 +32,7 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
-import { createOrder } from '@/api/payment'
+import { createMiniProgramOrder } from '@/api/payment'
 import { getUserInfo } from '@/api/auth'
 import { useUserStore } from '@/store/user'
 
@@ -57,17 +56,37 @@ async function handleBuy(plan) {
   if (plan.code === userInfo.value?.memberLevel) return
   try {
     uni.showLoading({ title: '创建订单中' })
-    const res = await createOrder(plan.code)
+    const res = await createMiniProgramOrder(plan.code)
     uni.hideLoading()
 
-    uni.showModal({
-      title: '订单创建成功',
-      content: `订单号：${res.orderId}\n金额：¥${res.amount}\n\n请在电脑端完成支付。`,
-      showCancel: false
-    })
-
-    polling.value = true
-    startPolling(res.orderId)
+    // 发起小程序支付
+    if (res.paymentParams) {
+      uni.requestPayment({
+        provider: 'wxpay',
+        ...res.paymentParams,
+        success: () => {
+          uni.showToast({ title: '支付成功', icon: 'success' })
+          polling.value = true
+          startPolling(res.orderId)
+        },
+        fail: (err) => {
+          if (err.errMsg.includes('cancel')) {
+            uni.showToast({ title: '已取消支付', icon: 'none' })
+          } else {
+            uni.showToast({ title: '支付失败', icon: 'none' })
+          }
+        }
+      })
+    } else {
+      // 兼容旧版：显示订单信息
+      uni.showModal({
+        title: '订单创建成功',
+        content: `订单号：${res.orderId}\n金额：¥${res.amount}\n\n请在电脑端完成支付。`,
+        showCancel: false
+      })
+      polling.value = true
+      startPolling(res.orderId)
+    }
   } catch (e) {
     uni.hideLoading()
     uni.showToast({ title: e.message || '创建订单失败', icon: 'none' })
@@ -82,18 +101,21 @@ function startPolling(orderId) {
       clearInterval(pollTimer)
       pollTimer = null
       polling.value = false
+      uni.showToast({ title: '支付超时，请重试', icon: 'none' })
       return
     }
     try {
       const res = await getUserInfo()
       userStore.setUserInfo(res)
-      if (res.memberLevel !== userInfo.value?.memberLevel) {
+      if (res.memberLevel && res.memberLevel !== userInfo.value?.memberLevel) {
         clearInterval(pollTimer)
         pollTimer = null
         polling.value = false
         uni.showToast({ title: '会员状态已更新', icon: 'success' })
       }
-    } catch {}
+    } catch {
+      // 轮询期间请求失败属正常（网络波动），静默继续
+    }
   }, 5000)
 }
 

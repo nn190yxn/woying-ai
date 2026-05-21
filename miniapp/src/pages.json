@@ -27,6 +27,10 @@
     {
       "path": "pages/user/index",
       "style": { "navigationBarTitleText": "我的" }
+    },
+    {
+      "path": "pages/privacy/index",
+      "style": { "navigationBarTitleText": "隐私政策" }
     }
   ],
   "globalStyle": {
@@ -43,16 +47,28 @@
     "list": [
       {
         "pagePath": "pages/home/index",
-        "text": "首页"
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
       },
       {
         "pagePath": "pages/tools/index",
-        "text": "工具"
+        "text": "工具",
+        "iconPath": "static/tabbar/tools.png",
+        "selectedIconPath": "static/tabbar/tools-active.png"
       },
       {
         "pagePath": "pages/user/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "static/tabbar/user.png",
+        "selectedIconPath": "static/tabbar/user-active.png"
       }
     ]
+  },
+  "requiredPrivateInfos": ["chooseAddress"],
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于为您提供本地化经营建议"
+    }
   }
 }

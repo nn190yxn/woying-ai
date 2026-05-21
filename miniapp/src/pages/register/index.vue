@@ -42,6 +42,11 @@
       <button class="btn-primary" @click="handleRegister">
         立即注册
       </button>
+
+      <view class="agreement">
+        <text class="agreement-text">注册即表示同意</text>
+        <text class="link" @click="goPrivacy">《隐私政策》</text>
+      </view>
     </view>
   </view>
 </template>
@@ -102,6 +107,8 @@ async function handleRegister() {
   }
 }
 
+function goPrivacy() { uni.navigateTo({ url: '/pages/privacy/index' }) }
+
 onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer)
 })
@@ -121,4 +128,6 @@ onUnmounted(() => {
 .btn-code { width: 220rpx; background: #f3f4f6; font-size: 24rpx; margin: 0; }
 .btn-code.disabled { opacity: 0.6; }
 .btn-primary { background: #0e7490; color: #fff; margin-top: 24rpx; font-size: 32rpx; }
+.agreement { text-align: center; font-size: 24rpx; color: #999; margin-top: 16rpx; display: flex; justify-content: center; }
+.link { color: #0e7490; }
 </style>

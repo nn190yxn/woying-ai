@@ -35,6 +35,10 @@ import xhsAgentRoutes from './routes/xhsAgents.js'
 import privateAgentRoutes from './routes/privateAgents.js'
 
 import userFeedbackRoutes from './routes/user-feedback.js'
+import posterGeneratorRoutes from './routes/posterGenerator.js'
+import feedbackRoutes from './routes/feedback.js'
+import tokenMonitorRoutes from './routes/tokenMonitor.js'
+import securityRoutes from './routes/security.js'
 
 app.use('/api/auth', authRoutes)
 app.use('/api/user', userRoutes)
@@ -51,6 +55,10 @@ app.use('/api/douyin', douyinAgentRoutes)
 app.use('/api/xhs', xhsAgentRoutes)
 app.use('/api/private', privateAgentRoutes)
 app.use('/api/user-feedback', userFeedbackRoutes)
+app.use('/api/poster-generator', posterGeneratorRoutes)
+app.use('/api/feedback', feedbackRoutes)
+app.use('/api/token-monitor', tokenMonitorRoutes)
+app.use('/api/security', securityRoutes)
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })

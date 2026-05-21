@@ -51,6 +51,42 @@ router.post('/create-order', authMiddleware, async (req, res) => {
   }
 })
 
+// 小程序专用支付接口
+router.post('/create-miniprogram-order', authMiddleware, async (req, res) => {
+  const { planCode } = req.body
+  const userId = req.user.userId
+
+  if (!PLAN_PRICES[planCode]) {
+    return res.status(400).json({ message: '无效的套餐' })
+  }
+
+  try {
+    const result = await query(
+      'INSERT INTO orders (user_id, plan_code, plan_name, amount, status, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+      [userId, planCode, PLAN_NAMES[planCode] || planCode, PLAN_PRICES[planCode], 'pending']
+    )
+
+    const orderId = result.insertId
+
+    // TODO: 接入真实微信支付统一下单 API
+    // 当前返回模拟支付参数供审核演示
+    res.json({
+      orderId,
+      amount: PLAN_PRICES[planCode],
+      paymentParams: {
+        timeStamp: String(Math.floor(Date.now() / 1000)),
+        nonceStr: 'mock_nonce',
+        package: 'prepay_id=mock_prepay_id',
+        signType: 'RSA',
+        paySign: 'mock_sign'
+      }
+    })
+  } catch (error) {
+    logger.error('payment', `Create miniapp order error: ${error.message}`)
+    res.status(500).json({ message: '创建订单失败' })
+  }
+})
+
 router.post('/callback', async (req, res) => {
   const { orderId, status, sign, timestamp } = req.body
 

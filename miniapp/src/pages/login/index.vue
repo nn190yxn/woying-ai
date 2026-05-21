@@ -31,8 +31,17 @@
       </view>
 
       <button class="btn-primary" @click="handleLogin">
-        登录 / 注册
+        登录
       </button>
+
+      <view class="agreement">
+        <text class="agreement-text">登录即表示同意</text>
+        <text class="link" @click="goPrivacy">《隐私政策》</text>
+      </view>
+
+      <text class="switch-hint">
+        还没有账号？<text class="link" @click="goRegister">立即注册</text>
+      </text>
     </view>
   </view>
 </template>
@@ -75,12 +84,7 @@ async function handleLogin() {
     return
   }
   try {
-    let res
-    try {
-      res = await login(form)
-    } catch {
-      res = await register({ ...form, nickname: `用户${form.phone.slice(-4)}` })
-    }
+    const res = await login(form)
     userStore.setToken(res.token)
     userStore.setUserInfo(res.user)
     uni.showToast({ title: '登录成功', icon: 'success' })
@@ -89,6 +93,9 @@ async function handleLogin() {
     uni.showToast({ title: e.message || '登录失败，请重试', icon: 'none' })
   }
 }
+
+function goRegister() { uni.navigateTo({ url: '/pages/register/index' }) }
+function goPrivacy() { uni.navigateTo({ url: '/pages/privacy/index' }) }
 
 onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer)
@@ -107,4 +114,7 @@ onUnmounted(() => {
 .btn-code { width: 220rpx; background: #f3f4f6; font-size: 24rpx; margin: 0; }
 .btn-code.disabled { opacity: 0.6; }
 .btn-primary { background: #0e7490; color: #fff; margin-top: 24rpx; font-size: 32rpx; }
+.agreement { text-align: center; font-size: 24rpx; color: #999; margin-top: 16rpx; display: flex; justify-content: center; }
+.switch-hint { text-align: center; font-size: 26rpx; color: #999; margin-top: 24rpx; display: block; }
+.link { color: #0e7490; }
 </style>
