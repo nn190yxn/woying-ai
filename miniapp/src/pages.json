@@ -17,6 +17,10 @@
       "style": { "navigationBarTitleText": "工具箱" }
     },
     {
+      "path": "pages/copywriter/index",
+      "style": { "navigationBarTitleText": "文案生成" }
+    },
+    {
       "path": "pages/membership/index",
       "style": { "navigationBarTitleText": "会员中心" }
     },
@@ -64,11 +68,5 @@
         "selectedIconPath": "static/tabbar/user-active.png"
       }
     ]
-  },
-  "requiredPrivateInfos": ["chooseAddress"],
-  "permission": {
-    "scope.userLocation": {
-      "desc": "用于为您提供本地化经营建议"
-    }
   }
 }

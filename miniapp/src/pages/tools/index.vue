@@ -1,54 +1,56 @@
 <template>
   <view class="container">
-    <view class="search-box">
-      <input v-model="keyword" class="search" placeholder="搜索工具..." @confirm="onSearch" />
+    <view class="header">
+      <text class="title">老板的 AI 文案工具箱</text>
+      <text class="desc">每天一键生成，生意更轻松</text>
     </view>
+
     <view class="grid">
-      <view class="tool" v-for="t in filteredTools" :key="t.name" @click="goTool(t)">
-        <text class="tool-icon">{{ t.icon }}</text>
-        <text class="tool-name">{{ t.name }}</text>
+      <!-- 朋友圈 -->
+      <view class="card moments" @click="goCopywriter('moments')">
+        <view class="card-icon">🟢</view>
+        <text class="card-title">朋友圈文案</text>
+        <text class="card-desc">日常种草、促销、早安</text>
+      </view>
+
+      <!-- 小红书 -->
+      <view class="card xhs" @click="goCopywriter('xhs')">
+        <view class="card-icon">🔴</view>
+        <text class="card-title">小红书文案</text>
+        <text class="card-desc">爆款笔记、种草图文</text>
+      </view>
+
+      <!-- 抖音 -->
+      <view class="card douyin" @click="goCopywriter('douyin')">
+        <view class="card-icon">⚫</view>
+        <text class="card-title">抖音文案</text>
+        <text class="card-desc">短视频脚本、爆款标题</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-
-const keyword = ref('')
-
-const tools = ref([
-  { name: '经营测算', icon: '📊', code: 'calculator', url: '/pages/home/index' },
-  { name: '行业诊断', icon: '🔍', code: 'diagnosis', url: '/pages/home/index' },
-  { name: '内容生成', icon: '📝', code: 'content', url: '/pages/home/index' },
-  { name: '老板IP', icon: '🎥', code: 'ip', url: '/pages/home/index' },
-  { name: '抖音运营', icon: '🎵', code: 'douyin', url: '/pages/home/index' },
-  { name: '小红书', icon: '📕', code: 'xhs', url: '/pages/home/index' }
-])
-
-const filteredTools = computed(() => {
-  if (!keyword.value.trim()) return tools.value
-  const kw = keyword.value.trim().toLowerCase()
-  return tools.value.filter(t => t.name.toLowerCase().includes(kw))
-})
-
-function onSearch() {
-  // 触发 computed 重新计算
-}
-
-function goTool(t) {
+function goCopywriter(type) {
   const token = uni.getStorageSync('token')
   if (!token) return uni.navigateTo({ url: '/pages/login/index' })
-  uni.navigateTo({ url: t.url })
+  uni.navigateTo({ url: `/pages/copywriter/index?type=${type}` })
 }
 </script>
 
 <style scoped>
-.container { padding: 20rpx; }
-.search-box { margin-bottom: 30rpx; }
-.search { background: #fff; padding: 20rpx; border-radius: 40rpx; font-size: 26rpx; }
-.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20rpx; }
-.tool { background: #fff; padding: 30rpx; border-radius: 16rpx; text-align: center; }
-.tool-icon { font-size: 40rpx; display: block; margin-bottom: 10rpx; }
-.tool-name { font-size: 24rpx; }
+.container { padding: 30rpx; background: #f5f7fa; min-height: 100vh; }
+.header { margin-bottom: 40rpx; }
+.title { font-size: 44rpx; font-weight: bold; display: block; margin-bottom: 10rpx; color: #1f2937; }
+.desc { color: #6b7280; font-size: 28rpx; display: block; }
+
+.grid { display: flex; flex-direction: column; gap: 30rpx; }
+.card { background: #fff; padding: 40rpx; border-radius: 24rpx; display: flex; align-items: center; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05); }
+.card-icon { width: 100rpx; height: 100rpx; border-radius: 50%; background: #f3f4f6; font-size: 50rpx; display: flex; align-items: center; justify-content: center; margin-right: 30rpx; }
+.card-title { font-size: 36rpx; font-weight: bold; display: block; margin-bottom: 8rpx; color: #111827; }
+.card-desc { color: #6b7280; font-size: 26rpx; display: block; }
+
+.moments .card-icon { background: #ecfdf5; color: #059669; }
+.xhs .card-icon { background: #fef2f2; color: #dc2626; }
+.douyin .card-icon { background: #f3f4f6; color: #111827; }
 </style>

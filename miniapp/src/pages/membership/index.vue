@@ -23,7 +23,7 @@
     <view class="modal" v-if="polling">
       <view class="modal-content">
         <text class="modal-title">等待支付完成</text>
-        <text class="modal-desc">请在电脑端完成支付，系统将自动更新会员状态</text>
+        <text class="modal-desc">请在弹出的窗口完成支付，系统将自动更新会员状态</text>
         <button class="btn-cancel" @click="cancelPoll">我知道了</button>
       </view>
     </view>

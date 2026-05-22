@@ -9,6 +9,7 @@ export function request(options) {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync('token')
     const url = `${BASE_URL}${options.url}`
+    let settled = false
 
     const task = uni.request({
       url,
@@ -19,6 +20,8 @@ export function request(options) {
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       success: (res) => {
+        if (settled) return
+        settled = true
         if (res.statusCode === 401) {
           uni.removeStorageSync('token')
           uni.removeStorageSync('user')
@@ -36,6 +39,8 @@ export function request(options) {
         }
       },
       fail: (err) => {
+        if (settled) return
+        settled = true
         uni.showToast({ title: '网络异常，请重试', icon: 'none' })
         reject(err)
       }
@@ -43,6 +48,8 @@ export function request(options) {
 
     // 超时保护
     setTimeout(() => {
+      if (settled) return
+      settled = true
       task.abort()
       reject(new Error('请求超时'))
     }, REQUEST_TIMEOUT)

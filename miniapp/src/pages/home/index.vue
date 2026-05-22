@@ -25,8 +25,6 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-
 function goPage(url) {
   const token = uni.getStorageSync('token')
   if (!token) return uni.navigateTo({ url: '/pages/login/index' })
