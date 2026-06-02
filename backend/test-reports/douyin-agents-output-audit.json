@@ -1,0 +1,14 @@
+{
+  "status": "ok",
+  "checkedFiles": [
+    "src/routes/douyinAgents.js"
+  ],
+  "blockers": [],
+  "missingRequiredPhrases": [],
+  "userVisibleHardClaims": [],
+  "summary": {
+    "blockerCount": 0,
+    "missingRequiredPhraseCount": 0,
+    "hardClaimCount": 0
+  }
+}

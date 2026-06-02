@@ -1,0 +1,15 @@
+[
+  {"code":"H1","endpoint":"/api/generate/renewal-rate-education","payload":{"expiredStudents":180,"renewedStudents":140,"renewalWindowDays":30,"avgTuition":5000,"newStudents":30,"totalStudents":200,"periodLabel":"季度"}},
+  {"code":"H2","endpoint":"/api/generate/class-consumption-rate-education","payload":{"totalPurchased":800,"consumed":600,"period":30,"avgTuition":200,"totalStudents":80,"scheduledHours":700,"attendanceRate":85}},
+  {"code":"H3","endpoint":"/api/generate/gross-margin-education","payload":{"courseFee":100000,"teacherCost":35000,"venueCost":15000,"materialCost":5000}},
+  {"code":"H4","endpoint":"/api/generate/break-even-education","payload":{"fixedCost":30000,"coursePrice":200,"costPerStudent":80}},
+  {"code":"H5","endpoint":"/api/generate/salary-cost-ratio-education","payload":{"totalSalary":35000,"monthlyRevenue":100000}},
+  {"code":"H6","endpoint":"/api/generate/labor-efficiency-education","payload":{"teacherCount":5,"monthlyRevenue":100000}},
+  {"code":"H7","endpoint":"/api/generate/venue-utilization-education","payload":{"totalHours":200,"bookedHours":150,"rooms":4}},
+  {"code":"H8","endpoint":"/api/generate/cac-education","payload":{"totalMarketingCost":10000,"newStudents":50,"avgTuition":5000}},
+  {"code":"H9","endpoint":"/api/generate/payback-education","payload":{"totalInvestment":150000,"monthlyProfit":12000}},
+  {"code":"H10","endpoint":"/api/generate/cashflow-education","payload":{"initialCash":30000,"monthlyRevenue":100000,"monthlyCost":65000,"months":6}},
+  {"code":"H11","endpoint":"/api/generate/profit-rate-education","payload":{"revenue":100000,"teacherCost":35000,"venueCost":15000,"marketingCost":5000,"otherCost":3000}},
+  {"code":"H12","endpoint":"/api/generate/return-rate-education","payload":{"investment":150000,"return":450000}},
+  {"code":"H13","endpoint":"/api/generate/class-rate-education","payload":{"totalClasses":800,"consumedClasses":600,"period":"月"}}
+]

@@ -1,0 +1,344 @@
+{
+  "timestamp": "2026-05-11T01:31:40.107Z",
+  "results": [
+    {
+      "status": "ok",
+      "degraded": false,
+      "summary": "「奶茶店」朋友圈文案已生成，适用于活动促销，重点突出「第二杯半价」",
+      "sections": [
+        {
+          "title": "文案模板",
+          "items": [
+            "【预热型】\n这两天会给奶茶店做一轮新的活动安排。\n\n这次不会只喊优惠，重点还是围绕第二杯半价来做，让大家一眼看懂现在来咨询/到店到底值在哪里。尤其对在意到店体验、口味稳定、出品效率、复购理由的人，这次会更有感知。\n\n如果你之前就在观望，这一轮会比较适合出手，我会把时间、权益和适合人群一次讲清楚，让你判断自己是不是适合现在行动。\n\n语气自然，不端着，不过度包装",
+            "【限时型】\n先提前说一声，这次奶茶店活动不是长期常驻。\n\n我们把大家最关心的第二杯半价放到了最核心的位置，适合最近正准备做决定、又不想来回对比太久的人。\n\n接下来我会把具体时间和权益发出来，别等错过了再回头问。\n\n语气自然，不端着，不过度包装"
+          ]
+        },
+        {
+          "title": "发布建议",
+          "items": [
+            "发圈时第一句就带出奶茶店和第二杯半价，减少客户理解成本",
+            "配图优先围绕到店、口味这些真实感知点去拍，不要只放纯海报",
+            "评论区补一句“适合谁、为什么现在做更值、下一步怎么行动”，更容易引导用户到店下单或顺手转发给朋友"
+          ]
+        },
+        {
+          "title": "本次输入已使用",
+          "items": [
+            "行业：餐饮",
+            "业务场景：奶茶店",
+            "核心卖点：第二杯半价",
+            "文案类型：活动促销",
+            "语气：natural",
+            "行业关注点：到店体验、口味稳定、出品效率、复购理由"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "priority": "critical",
+          "title": "替换真实信息",
+          "description": "把文案中的场景、权益和客户收益换成你当前真实活动或真实服务内容",
+          "owner": "运营",
+          "timeline": "发布前"
+        },
+        {
+          "priority": "high",
+          "title": "首发测试",
+          "description": "先发 1 条最贴近当前业务阶段的版本，观察咨询和互动反馈",
+          "owner": "运营",
+          "timeline": "今天"
+        }
+      ],
+      "recommendedTools": [
+        "selling-point",
+        "headline",
+        "hook"
+      ],
+      "riskNotes": [],
+      "scores": null,
+      "dimensionRank": null,
+      "benchmarks": null,
+      "customizationCTA": "\n---\n如需针对您的具体场景做个性化定制方案，升级会员即可获得专属深度定制服务。",
+      "meta": {
+        "engineType": "template",
+        "toolCode": "friend",
+        "fallbackType": null,
+        "parseMode": null
+      }
+    },
+    {
+      "isFallback": true,
+      "toolCode": "topic",
+      "fallbackType": "rule-based-rag",
+      "status": "fallback",
+      "degraded": true,
+      "summary": "已为您生成 5 个教培抖音选题方向",
+      "sections": [
+        {
+          "title": "选题清单",
+          "items": [
+            "选题1：为什么教培老板做曝光不能只发优惠\n推荐理由：适合用口播讲解在店内现场呈现，先解决客户的判断顾虑，再引导咨询或到店。\n标签：#教培 #曝光 #抖音",
+            "选题2：教培客户下单前最关心的 3 个问题\n推荐理由：适合用口播讲解在店内现场呈现，先解决客户的判断顾虑，再引导咨询或到店。\n标签：#教培 #曝光 #抖音",
+            "选题3：用一个真实案例讲清楚教培的信任感\n推荐理由：适合用口播讲解在店内现场呈现，先解决客户的判断顾虑，再引导咨询或到店。\n标签：#教培 #曝光 #抖音",
+            "选题4：店内现场里最容易被忽略的成交细节\n推荐理由：适合用口播讲解在店内现场呈现，先解决客户的判断顾虑，再引导咨询或到店。\n标签：#教培 #曝光 #抖音",
+            "选题5：抖音上教培内容怎么避免只热视频不转化\n推荐理由：适合用口播讲解在店内现场呈现，先解决客户的判断顾虑，再引导咨询或到店。\n标签：#教培 #曝光 #抖音"
+          ]
+        },
+        {
+          "title": "执行建议",
+          "items": [
+            "先从店内现场能直接拍到的内容开始，降低执行成本",
+            "每条内容只讲一个曝光相关问题，不要把优惠、案例和老板观点混在一起",
+            "发布后重点看咨询率、收藏率和评论问题，而不是只看播放量"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "priority": "high",
+          "title": "确定首发选题",
+          "description": "从清单中挑 3 个最接近当下经营目标的方向先拍",
+          "owner": "内容",
+          "timeline": "今天"
+        }
+      ],
+      "recommendedTools": [
+        "headline",
+        "hook",
+        "script"
+      ],
+      "riskNotes": [
+        "当前 AI 网关不可用，以上内容由规则模板生成。错误信息：AI API error: 403 - Forbidden"
+      ],
+      "scores": null,
+      "dimensionRank": null,
+      "benchmarks": null,
+      "customizationCTA": "\n---\n如需针对您的具体场景做个性化定制方案，升级会员即可获得专属深度定制服务。",
+      "meta": {
+        "engineType": null,
+        "toolCode": "topic",
+        "fallbackType": "rule-based-rag",
+        "parseMode": null
+      }
+    },
+    {
+      "isFallback": true,
+      "toolCode": "festival",
+      "fallbackType": "rule-based-rag",
+      "status": "fallback",
+      "degraded": true,
+      "summary": "已为您生成 元宵节美业促销转化营销文案框架",
+      "sections": [
+        {
+          "title": "文案方向",
+          "items": [
+            "方向一：元宵节限时福利，突出“现在行动更划算”，适合促销转化目标",
+            "方向二：元宵节客户回馈，突出老客户专属权益，适合唤醒沉默客户",
+            "方向三：元宵节主题活动，突出氛围感和参与感，适合做朋友圈海报文案"
+          ]
+        },
+        {
+          "title": "示例文案",
+          "items": [
+            "元宵节到了，美业门店这次把权益说清楚：到店/咨询可享[核心权益]，适合最近正准备体验或复购的客户。",
+            "这次元宵节活动不只做低价，更想把[产品/服务亮点]讲明白，让客户知道为什么现在来更合适。",
+            "老客户可以重点关注这次元宵节专属安排，[老客权益]建议限时开放，既有回馈感，也方便集中转化。"
+          ]
+        },
+        {
+          "title": "执行建议",
+          "items": [
+            "把活动利益点写成一句大白话，不要同时塞太多权益",
+            "必须写清楚截止时间、适用人群和核销方式",
+            "朋友圈、社群、短视频统一使用同一套主视觉和主文案",
+            "活动结束后复盘咨询数、到店数、成交数和老客唤醒数"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "priority": "high",
+          "title": "补齐真实权益",
+          "description": "把示例中的占位优惠替换成真实活动方案再发布",
+          "owner": "运营",
+          "timeline": "今天"
+        }
+      ],
+      "recommendedTools": [
+        "friend",
+        "headline"
+      ],
+      "riskNotes": [
+        "当前 AI 网关不可用，以上内容由规则模板生成。错误信息：AI API error: 403 - Forbidden"
+      ],
+      "scores": null,
+      "dimensionRank": null,
+      "benchmarks": null,
+      "customizationCTA": "\n---\n如需针对您的具体场景做个性化定制方案，升级会员即可获得专属深度定制服务。",
+      "meta": {
+        "engineType": null,
+        "toolCode": "festival",
+        "fallbackType": "rule-based-rag",
+        "parseMode": null
+      }
+    },
+    {
+      "status": "ok",
+      "degraded": false,
+      "summary": "「生活服务」裂变活动方案已生成，适配线上线下结合",
+      "sections": [
+        {
+          "title": "活动前提",
+          "items": [
+            "客户规模：100-500",
+            "主要渠道：线上线下结合",
+            "客单价范围：100-1000元",
+            "预算范围：5000"
+          ]
+        },
+        {
+          "title": "活动结构",
+          "items": [
+            "老客转介绍奖励：控制在 20-80 元，让老客户有动力但不至于倒挂利润",
+            "新客首单激励：建议把首次体验门槛控制在 10-25 元范围内，更利于快速决策",
+            "二次传播机制：让已成交客户在付款后立即触发分享动作，而不是事后再追着要转发"
+          ]
+        },
+        {
+          "title": "执行节奏",
+          "items": [
+            "第1步：先确定一个主活动主题，只做一个主奖励，避免规则太复杂",
+            "第2步：同步准备海报、朋友圈文案、私聊话术、到店口播四件套",
+            "第3步：先小范围投到老客群或核心会员群，观察分享率和咨询率",
+            "第4步：48小时后根据到店率和成交率再决定是否放大预算"
+          ]
+        },
+        {
+          "title": "关键指标",
+          "items": [
+            "分享参与率：参与分享人数 / 触达老客人数",
+            "新客到店率：新客到店人数 / 分享触达人数",
+            "首单转化率：成交新客人数 / 到店新客人数",
+            "裂变获客成本：总激励成本 / 成交新客人数"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "priority": "critical",
+          "title": "先做小样本测试",
+          "description": "先在20-50位老客中验证活动参与率，不要一上来全量铺开",
+          "owner": "运营",
+          "timeline": "本周内"
+        },
+        {
+          "priority": "high",
+          "title": "统一话术和权益",
+          "description": "确保门店员工、社群运营、朋友圈文案使用同一套活动表达和权益口径",
+          "owner": "店长/运营",
+          "timeline": "活动前"
+        }
+      ],
+      "recommendedTools": [
+        "friend",
+        "headline",
+        "marketing-plan"
+      ],
+      "riskNotes": [
+        "当前裂变活动先使用稳定模板方案，后续会再升级为 AI 增强版。"
+      ],
+      "scores": null,
+      "dimensionRank": null,
+      "benchmarks": null,
+      "customizationCTA": "\n---\n如需针对您的具体场景做个性化定制方案，升级会员即可获得专属深度定制服务。",
+      "meta": {
+        "engineType": "template",
+        "toolCode": "fission",
+        "fallbackType": null,
+        "parseMode": null
+      }
+    },
+    {
+      "status": "ok",
+      "degraded": false,
+      "summary": "「提升营业额」营销方案已生成，预算5000，周期2周",
+      "sections": [
+        {
+          "title": "方案概览",
+          "items": [
+            "行业：餐饮",
+            "目标：提升营业额",
+            "预算：5000",
+            "周期：2周",
+            "渠道：美团/大众点评、抖音本地推、朋友圈本地广告"
+          ]
+        },
+        {
+          "title": "执行节奏",
+          "items": [
+            "前20%周期：预热和测试，先验证主卖点和主渠道",
+            "中间60%周期：集中放量，把预算优先打到反馈最好的内容和渠道",
+            "最后20%周期：催单转化、老客召回和复盘沉淀"
+          ]
+        },
+        {
+          "title": "预算分配",
+          "items": [
+            "内容制作：1500元（30%）",
+            "渠道投放：2500元（50%）",
+            "客户激励：750元（15%）",
+            "机动预算：250元（5%）"
+          ]
+        },
+        {
+          "title": "关键指标",
+          "items": [
+            "每日看咨询量、到店量、成交量三条线",
+            "优先控制获客成本不要失真上升",
+            "把素材点击率和成交转化率分开看，避免只看曝光",
+            "每48小时根据数据重新分配预算"
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "priority": "critical",
+          "title": "统一主活动",
+          "description": "先明确本轮只打一个核心活动和一个核心卖点，避免渠道分散",
+          "owner": "运营负责人",
+          "timeline": "活动前3天"
+        },
+        {
+          "priority": "high",
+          "title": "素材联动",
+          "description": "把朋友圈、社群、短视频和到店话术统一成同一套活动表达",
+          "owner": "运营人员",
+          "timeline": "活动前2天"
+        },
+        {
+          "priority": "medium",
+          "title": "数据复盘",
+          "description": "每天复盘一轮数据，至少调整一次渠道分配或文案表达",
+          "owner": "数据分析",
+          "timeline": "活动期间"
+        }
+      ],
+      "recommendedTools": [
+        "friend",
+        "festival",
+        "headline"
+      ],
+      "riskNotes": [],
+      "scores": null,
+      "dimensionRank": null,
+      "benchmarks": null,
+      "customizationCTA": "\n---\n如需针对您的具体场景做个性化定制方案，升级会员即可获得专属深度定制服务。",
+      "meta": {
+        "engineType": "template",
+        "toolCode": "marketing-plan",
+        "fallbackType": null,
+        "parseMode": null
+      }
+    }
+  ]
+}

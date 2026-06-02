@@ -1,0 +1,13 @@
+{
+  "status": "ok",
+  "checkedFiles": [
+    "src/services/calculatorEngine.js",
+    "src/routes/generate.js"
+  ],
+  "legacyBlockers": [],
+  "remainingStaticBenchmarkFindings": [],
+  "summary": {
+    "blockerCount": 0,
+    "remainingFindingCount": 0
+  }
+}

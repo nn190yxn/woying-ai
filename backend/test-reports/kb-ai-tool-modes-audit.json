@@ -1,0 +1,23 @@
+{
+  "status": "ok",
+  "checkedFiles": [
+    "src/routes/generate.js",
+    "src/tools/content.js",
+    "src/tools/marketing.js",
+    "src/routes/posterGenerator.js"
+  ],
+  "mappedToolCount": 46,
+  "ignoredToolCodes": [
+    "restaurant-health",
+    "education-health",
+    "beauty-health",
+    "service-health",
+    "retail-health",
+    "store-health",
+    "schedule"
+  ],
+  "findings": [],
+  "summary": {
+    "findingCount": 0
+  }
+}

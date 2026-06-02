@@ -1,0 +1,9 @@
+[
+  {"code":"E1","endpoint":"/api/douyin/diagnosis","payload":{"industry":"catering","platform":"douyin","metrics":{"views":50000,"likes":2000,"comments":150,"shares":80}}},
+  {"code":"E2","endpoint":"/api/douyin/product-pricing","payload":{"industry":"catering","product":"套餐","cost":35,"targetMargin":60}},
+  {"code":"E3","endpoint":"/api/douyin/content-planner","payload":{"industry":"catering","topic":"探店","platform":"douyin"}},
+  {"code":"E4","endpoint":"/api/douyin/script-generator","payload":{"industry":"catering","topic":"开业引流","duration":"30s"}},
+  {"code":"E5","endpoint":"/api/douyin/data-diagnoser","payload":{"industry":"catering","views":50000,"likes":2000,"comments":150,"shares":80}},
+  {"code":"E6","endpoint":"/api/douyin/ad-calculator","payload":{"industry":"catering","budget":3000,"targetCpc":2,"conversionRate":5}},
+  {"code":"E7","endpoint":"/api/douyin/full-strategy","payload":{"industry":"catering","budget":10000,"duration":"30天","goal":"获客"}}
+]

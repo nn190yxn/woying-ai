@@ -1,0 +1,19 @@
+[
+  {"code":"A1","endpoint":"/api/xhs/account-diagnosis","payload":{"industry":"food","views":50000,"likes":2500,"collects":1200,"comments":380,"follows":200,"orders":85,"revenue":8500}},
+  {"code":"A2","endpoint":"/api/xhs/quick-start-plan","payload":{"industry":"restaurant","audience":"本地顾客","topic":"新店起号"}},
+  {"code":"A3","endpoint":"/api/xhs/growth-strategy","payload":{"industry":"beauty","topic":"品牌增长","audience":"25-35岁女性"}},
+  {"code":"A4","endpoint":"/api/xhs/topic-generator","payload":{"industry":"fashion","audience":"年轻女性","topic":"穿搭分享"}},
+  {"code":"A5","endpoint":"/api/xhs/title-generator","payload":{"industry":"restaurant","topic":"探店推荐"}},
+  {"code":"A6","endpoint":"/api/xhs/script-generator","payload":{"industry":"beauty","topic":"护肤测评","audience":"女性用户"}},
+  {"code":"A7","endpoint":"/api/xhs/cover-helper","payload":{"industry":"fashion","topic":"穿搭指南"}},
+  {"code":"A8","endpoint":"/api/xhs/note-diagnoser","payload":{"industry":"restaurant","topic":"探店笔记","views":30000,"likes":1500,"collects":800,"comments":200}},
+  {"code":"A9","endpoint":"/api/xhs/account-reviewer","payload":{"industry":"beauty","views":80000,"likes":4000,"collects":2000,"comments":500,"follows":300}},
+  {"code":"A10","endpoint":"/api/xhs/seo-optimizer","payload":{"industry":"education","topic":"考研经验"}},
+  {"code":"A11","endpoint":"/api/xhs/conversion-optimizer","payload":{"industry":"restaurant","views":50000,"orders":200,"revenue":20000,"cost":5000}},
+  {"code":"A12","endpoint":"/api/xhs/competitor-analyzer","payload":{"industry":"fashion","topic":"竞品分析"}},
+  {"code":"A13","endpoint":"/api/xhs/grass-converter","payload":{"industry":"restaurant","product":"团购套餐","views":12000,"likes":600,"collects":300,"comments":80,"orders":45,"revenue":4500,"cost":1200}},
+  {"code":"A14","endpoint":"/api/xhs/shutiao-calculator","payload":{"industry":"beauty","budget":5000,"duration":"7天","targetOrders":30}},
+  {"code":"A15","endpoint":"/api/xhs/juguang-strategy","payload":{"industry":"restaurant","budget":3000,"target":"新客引流"}},
+  {"code":"A16","endpoint":"/api/xhs/ip-positioning","payload":{"industry":"beauty","positioning":"专业护肤博主","audience":"25-35岁女性"}},
+  {"code":"A17","endpoint":"/api/xhs/ip-consistency","payload":{"industry":"fashion","positioning":"穿搭博主","contentStyle":"日常穿搭"}}
+]

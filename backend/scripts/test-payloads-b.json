@@ -1,0 +1,5 @@
+[
+  {"code":"B1","endpoint":"/api/generate/festival","payload":{"industry":"catering","festival":"端午节","goal":"promote","contentType":"poster"}},
+  {"code":"B2","endpoint":"/api/generate/fission","payload":{"industry":"catering","customerScale":"300","channel":"wechat","priceRange":"mid","budget":2000}},
+  {"code":"B3","endpoint":"/api/generate/marketing-plan","payload":{"industry":"catering","goal":"提升到店转化","budget":"5000","duration":"1周"}}
+]

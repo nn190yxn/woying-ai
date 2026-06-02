@@ -1,0 +1,6 @@
+[
+  {"code":"F1","endpoint":"/api/private/fission-plan","payload":{"industry":"catering","customerScale":"500","channel":"wechat","budget":3000}},
+  {"code":"F2","endpoint":"/api/private/community-sop","payload":{"industry":"catering","platform":"wechat","groupSize":"200人"}},
+  {"code":"F3","endpoint":"/api/private/cac-ltv","payload":{"industry":"catering","newCustomerCost":50,"avgOrderValue":80,"repeatRate":30}},
+  {"code":"F4","endpoint":"/api/private/full-strategy","payload":{"industry":"catering","budget":5000,"duration":"3个月","goal":"私域营收提升"}}
+]
