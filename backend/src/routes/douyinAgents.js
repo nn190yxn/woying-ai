@@ -5,6 +5,7 @@ import { isAiAvailabilityError } from '../services/failover.js'
 import { getKBContextWithMeta, getMaxTokensForLevel, getTemperatureForTool } from '../services/kbService.js'
 import { createDomainToolResult } from '../services/resultSchema.js'
 import { getJwtSecret, isGuestModeEnabled } from '../middleware/auth.js'
+import { buildIndustryAwarePrompt, getIndustryProfile, getIndustryKpis, getIndustryPainPoints, getIndustryForbiddenPhrases, getIndustryToneStyle } from '../services/industryPromptProfile.js'
 
 const router = express.Router()
 
@@ -17,10 +18,24 @@ const industryLabelMap = {
   restaurant: '餐饮',
   beauty: '美业',
   education: '教培',
-  service: '生活服务'
+  service: '生活服务',
+  retail: '零售'
 }
 
 const getIndustryLabel = (industry) => industryLabelMap[industry] || '本地门店'
+
+function buildIndustryContext(value) {
+  const profile = getIndustryProfile(value)
+  if (!profile) return null
+  return {
+    industryCode: profile.code,
+    industryName: profile.name,
+    coreKpis: getIndustryKpis(value),
+    painPoints: getIndustryPainPoints(value),
+    forbiddenPhrases: getIndustryForbiddenPhrases(value),
+    toneStyle: getIndustryToneStyle(value)
+  }
+}
 
 const AGENT_KB_TOOL = {
   diagnosis: 'douyin-growth',
@@ -148,10 +163,13 @@ async function runKnowledgeAiAgent(agentKey, req, fallbackBuilder, promptBuilder
   const kbToolCode = AGENT_KB_TOOL[agentKey] || 'douyin-growth'
   const memberLevel = req.userLevel || 'free'
   const kbResult = getKBContextWithMeta(kbToolCode, memberLevel, req.body)
-  const industry = getIndustryLabel(req.body?.industry)
+  const industryRaw = req.body?.industry
+  const industry = getIndustryLabel(industryRaw)
+  const industryProfile = getIndustryProfile(industryRaw)
   const systemPrompt = `你是抖音本地生活经营顾问，服务对象是中小商家老板。
+${industryProfile ? buildIndustryAwarePrompt(industryRaw, req.body) : ''}
 
-你的输出必须基于“知识库上下文 + 用户输入”生成。
+你的输出必须基于"知识库上下文 + 用户输入"生成。
 如果知识库上下文不足，要明确哪些结论需要用账号后台、门店经营数据或投放后台二次复核。
 不要虚构平台官方规则、绝对转化率或统一行业硬基准。
 必须输出 JSON 对象，不要输出 Markdown。`
@@ -443,7 +461,7 @@ router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) =>
 }`
   )
   const domainResult = getDomainPayload('diagnosis', payload)
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: domainResult.diagnosis || domainResult.suggestions?.[0] || '抖音经营诊断已生成',
     sections: [],
     actions: domainResult.suggestions || [],
@@ -484,7 +502,7 @@ router.post('/product-pricing', checkAccess, requireLevel('pro'), async (req, re
 }`
   )
   const domainResult = getDomainPayload('product_pricing', payload)
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: '组品定价方案已生成',
     sections: [],
     actions: [],
@@ -518,7 +536,7 @@ router.post('/content-planner', checkAccess, requireLevel('starter'), async (req
 }`
   )
   const domainResult = getDomainPayload('content_planner', payload)
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: '内容策划选题已生成',
     sections: [],
     actions: [],
@@ -561,7 +579,7 @@ router.post('/script-generator', checkAccess, requireLevel('starter'), async (re
 }`
   )
   const domainResult = getDomainPayload('script_generator', payload)
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: '短视频脚本已生成',
     sections: [],
     actions: [],
@@ -607,7 +625,7 @@ router.post('/data-diagnoser', checkAccess, requireLevel('pro'), async (req, res
 }`
   )
   const domainResult = getDomainPayload('data_diagnoser', payload)
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: '视频数据诊断已生成',
     sections: [],
     actions: domainResult.analysis?.suggestions || [],
@@ -644,7 +662,7 @@ CPC：${formData.cpc || '未说明'}
 }`
   )
   const domainResult = getDomainPayload('ad_calculator', payload)
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: '投流测算已生成',
     sections: [],
     actions: [],
@@ -688,7 +706,7 @@ router.post('/full-strategy', checkAccess, requireLevel('annual'), async (req, r
 }`
   )
   const domainResult = getDomainPayload('full_strategy', payload)
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: '抖音 90 天完整战略已生成',
     sections: [],
     actions: [],

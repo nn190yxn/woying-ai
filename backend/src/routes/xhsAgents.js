@@ -5,6 +5,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { getJwtSecret, isGuestModeEnabled } from '../middleware/auth.js'
 import { createDomainToolResult } from '../services/resultSchema.js'
+import { getIndustryProfile, getIndustryKpis, getIndustryPainPoints, getIndustryForbiddenPhrases, getIndustryToneStyle, getIndustryName } from '../services/industryPromptProfile.js'
 
 const router = express.Router()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -107,7 +108,20 @@ const industryMap = {
 }
 
 function getIndustryLabel(value) {
-  return industryMap[value] || value || '小红书账号'
+  return industryMap[value] || getIndustryName(value) || value || '小红书账号'
+}
+
+function buildIndustryContext(value) {
+  const profile = getIndustryProfile(value)
+  if (!profile) return null
+  return {
+    industryCode: profile.code,
+    industryName: profile.name,
+    coreKpis: getIndustryKpis(value),
+    painPoints: getIndustryPainPoints(value),
+    forbiddenPhrases: getIndustryForbiddenPhrases(value),
+    toneStyle: getIndustryToneStyle(value)
+  }
 }
 
 function toNumber(value, fallback = 0) {
@@ -304,6 +318,16 @@ function buildAgentResponse(agent, req) {
   }
 }
 
+// 将行业上下文附加到结果（供前端展示行业 KPI/痛点/禁忌语）
+function attachIndustryContext(raw, body) {
+  const ctx = buildIndustryContext(body.industry)
+  if (!ctx) return raw
+  return {
+    ...raw,
+    industryContext: ctx
+  }
+}
+
 // 1. 账号体检表
 router.post('/account-diagnosis', checkAccess, requireLevel('free'), async (req, res) => {
   const { industry, verticalityPains, interactionPains, activityPains, violationStatus } = req.body
@@ -317,8 +341,10 @@ router.post('/account-diagnosis', checkAccess, requireLevel('free'), async (req,
   
   const total = Math.round(vScore * 0.3 + iScore * 0.25 + aScore * 0.2 + violationScore * 0.15 + completenessScore * 0.1)
   
+  const industryCtx = buildIndustryContext(req.body.industry)
   const domainResult = {
     agent: 'account_diagnosis',
+    industryContext: industryCtx,
     radar: [
       { name: '内容垂直度', score: vScore, color: vScore < 50 ? '#ef4444' : vScore < 80 ? '#f59e0b' : '#10b981' },
       { name: '互动质量', score: iScore, color: iScore < 50 ? '#ef4444' : iScore < 80 ? '#f59e0b' : '#10b981' },
@@ -354,6 +380,7 @@ router.post('/topic-generator', checkAccess, requireLevel('starter'), async (req
 
   const domainResult = {
     agent: 'topic_generator',
+    industryContext: buildIndustryContext(industry),
     topics: examples.slice(0, 5).map((t, i) => ({
       ...t,
       id: i + 1,
@@ -384,6 +411,7 @@ router.post('/title-generator', checkAccess, requireLevel('starter'), async (req
 
   const domainResult = {
     agent: 'title_generator',
+    industryContext: buildIndustryContext(industry),
     titles: selected.slice(0, 6).map(f => ({
       title: f.examples[industry] || f.examples.restaurant,
       type: f.name,
@@ -413,6 +441,7 @@ router.post('/shutiao-calculator', checkAccess, requireLevel('free'), async (req
   
   const domainResult = {
     agent: 'shutiao_calculator',
+    industryContext: buildIndustryContext(req.body.industry),
     isWorthInvesting,
     screeningResult: isWorthInvesting ? '符合投放标准，建议投放' : '数据未达标，建议优化内容后再投',
     exposures,
@@ -440,12 +469,13 @@ const structuredAgents = [
 
 structuredAgents.forEach(agent => {
   router.post(`/${agent}`, checkAccess, requireLevel(AGENT_ACCESS[agent] || 'pro'), (req, res) => {
-    const raw = buildAgentResponse(agent, req)
+    const raw = attachIndustryContext(buildAgentResponse(agent, req), req.body || {})
     res.json(createDomainToolResult(raw, {
       summary: raw.summary,
       sections: raw.sections,
       actions: raw.actions,
       riskNotes: raw.riskNotes,
+      industryContext: raw.industryContext,
       engineType: 'rule-based-knowledge',
       toolCode: agent,
       meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }

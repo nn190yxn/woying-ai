@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 import { createDomainToolResult } from '../services/resultSchema.js'
 import { getKBContextWithMeta } from '../services/kbService.js'
 import { getJwtSecret, isGuestModeEnabled } from '../middleware/auth.js'
+import { getIndustryProfile, getIndustryKpis, getIndustryPainPoints, getIndustryForbiddenPhrases, getIndustryToneStyle, getIndustryName } from '../services/industryPromptProfile.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const KB_DIR = path.resolve(__dirname, '../../knowledge-base/07_私域运营专项库')
@@ -230,6 +231,19 @@ const parseKPIFromKB = (kb, industry) => {
   return kpis
 }
 
+function buildIndustryContext(value) {
+  const profile = getIndustryProfile(value)
+  if (!profile) return null
+  return {
+    industryCode: profile.code,
+    industryName: profile.name,
+    coreKpis: getIndustryKpis(value),
+    painPoints: getIndustryPainPoints(value),
+    forbiddenPhrases: getIndustryForbiddenPhrases(value),
+    toneStyle: getIndustryToneStyle(value)
+  }
+}
+
 // ===== 行业基准数据 =====
 
 const INDUSTRY_BENCHMARKS = {
@@ -329,7 +343,7 @@ router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) =>
     suggestions,
     upgradeHint: '获取《15 天针对性私域提升方案》+《行业对标报告》需成为进阶会员，或预约专家 1v1 深度诊断'
   }
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: domainResult.diagnosis,
     engineType: 'rule-based-knowledge',
     toolCode: 'diagnosis',
@@ -386,7 +400,7 @@ router.post('/member-design', checkAccess, requireLevel('pro'), async (req, res)
       '建立会员等级权益差异，高等级客户享受专属服务'
     ]
   }
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: `${bm.name}会员体系设计：${tierAnalysis.length}档储值方案，预期客单价提升15-35%`,
     engineType: 'rule-based-knowledge',
     toolCode: 'member-design',
@@ -458,7 +472,7 @@ router.post('/retention-plan', checkAccess, requireLevel('pro'), async (req, res
       activation: hasSnippetKeyword(activationScript, '好久不见') ? '沉睡激活话术已就绪' : ''
     }
   }
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: `${bm.name}复购留存方案：目标留存率${projectedRetention}%，预期增收¥${additionalRevenue}`,
     engineType: 'rule-based-knowledge',
     toolCode: 'retention-plan',
@@ -514,7 +528,7 @@ router.post('/fission-plan', checkAccess, requireLevel('annual'), async (req, re
       groupBuy: hasSnippetKeyword(referralScript, '拼团') ? '拼团活动话术已就绪' : ''
     }
   }
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: `${bm.name}裂变增长方案：推荐${bestModel.name}模式，K值${projectedK}，预期新增${projectedNewCustomers}客户`,
     engineType: 'rule-based-knowledge',
     toolCode: 'fission-plan',
@@ -624,7 +638,7 @@ router.post('/community-sop', checkAccess, requireLevel('starter'), async (req, 
       weeklyReport: 'SOP_私域数据周报模板'
     }
   }
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: `${bm.name}社群运营SOP：${sop.dailySchedule.length}项日程+4项周活动`,
     engineType: 'rule-based-knowledge',
     toolCode: 'community-sop',
@@ -678,7 +692,7 @@ router.post('/cac-ltv', checkAccess, requireLevel('free'), async (req, res) => {
       `行业CAC基准：优秀≤¥${cacBm.best}，平均¥${cacBm.avg}，警惕>¥${cacBm.worst}`
     ]
   }
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: `CAC vs LTV分析：LTV/CAC=${ltvCacRatio}，状态${domainResult.healthStatus}，最优渠道「${cacData[0].name}」`,
     engineType: 'rule-based-knowledge',
     toolCode: 'cac-ltv',
@@ -770,7 +784,7 @@ router.post('/full-strategy', checkAccess, requireLevel('annual'), async (req, r
     note: '详细执行方案（含每日SOP、话术模板、活动物料）基于知识库22+文件自动生成',
     upgradeHint: '预约专家1v1定制全案，包含：行业诊断+90天执行SOP+每周复盘指导+话术模板库'
   }
-  res.json(createDomainToolResult(domainResult, {
+  res.json(createDomainToolResult({ ...domainResult, industryContext: buildIndustryContext(req.body.industry) }, {
     summary: `${bm.name}90天私域战略：3阶段执行方案（基础搭建→运营深化→裂变增长）`,
     engineType: 'rule-based-knowledge',
     toolCode: 'full-strategy',

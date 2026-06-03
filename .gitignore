@@ -1,0 +1,7 @@
+# Knowledge base (large, typically managed outside git)
+backend/knowledge-base/
+backend/data/eval-*.json
+backend/test-reports/
+node_modules/
+*.log
+.DS_Store
