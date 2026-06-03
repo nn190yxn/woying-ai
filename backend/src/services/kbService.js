@@ -135,7 +135,7 @@ function readFileWithCache(filePath) {
       fileCache.set(filePath, { content: '', timestamp: now })
       return ''
     }
-    const content = readFileSync(filePath, 'utf-8')
+    const content = readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n')
     fileCache.set(filePath, { content, timestamp: now })
     return content
   } catch {
