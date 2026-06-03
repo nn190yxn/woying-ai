@@ -5,7 +5,7 @@ export function getJwtSecret() {
 }
 
 export function isGuestModeEnabled() {
-  return process.env.NODE_ENV !== 'production' && process.env.GUEST_MODE !== 'false'
+  return process.env.GUEST_MODE === 'true'
 }
 
 function attachGuestUser(req) {
