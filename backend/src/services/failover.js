@@ -82,6 +82,53 @@ export function getFallbackResponse(toolName, toolCode) {
   }
 }
 
+export function isAiAvailabilityError(error) {
+  const message = String(error?.message || '').toLowerCase()
+  const code = String(error?.code || '').toLowerCase()
+
+  return [message, code].some(value =>
+    value.includes('api key') ||
+    value.includes('apikey') ||
+    value.includes('unauthorized') ||
+    value.includes('401') ||
+    value.includes('403') ||
+    value.includes('rate limit') ||
+    value.includes('timeout') ||
+    value.includes('network') ||
+    value.includes('fetch failed') ||
+    value.includes('econn')
+  )
+}
+
+export function createRagFallbackResult(toolConfig = {}, formData = {}, error = null) {
+  const toolName = toolConfig.name || toolConfig.code || '智能工具'
+  const toolCode = toolConfig.code || 'unknown'
+  const fallback = typeof toolConfig.fallbackBuilder === 'function'
+    ? toolConfig.fallbackBuilder(formData, error)
+    : getFallbackResponse(toolName, toolCode)
+
+  return {
+    status: 'fallback',
+    degraded: true,
+    engineType: toolConfig.engineType || 'rag',
+    toolCode,
+    summary: fallback.summary || `${toolName}已生成基础版结果`,
+    sections: fallback.sections || [],
+    actions: fallback.actions || [],
+    riskNotes: fallback.riskNotes || [],
+    benchmarks: fallback.benchmarks || null,
+    scores: fallback.scores || null,
+    recommendedTools: fallback.recommendedTools || [],
+    customizationCTA: fallback.customizationCTA || '\n---\n升级会员即可获得专属深度定制服务及优先处理通道。',
+    meta: {
+      ...(fallback.meta || {}),
+      ...(fallback.extra || {}),
+      fallbackType: isAiAvailabilityError(error) ? 'ai_unavailable' : 'rag_fallback',
+      fallbackReason: error?.message || 'RAG fallback generated'
+    }
+  }
+}
+
 // Wrap tool execution with failover
 export async function executeWithFailover(toolConfig, formData, executeFn) {
   const toolName = toolConfig.name || toolConfig.code || '未知工具'
