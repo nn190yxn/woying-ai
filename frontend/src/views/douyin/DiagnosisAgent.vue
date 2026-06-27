@@ -113,6 +113,9 @@
             <div class="loading-spinner"></div>
             <p>AI 正在生成健康度诊断...</p>
           </div>
+          <div v-else-if="errorMessage" class="error-state">
+            {{ errorMessage }}
+          </div>
           <div v-else-if="result" class="result-state">
             <div class="radar-container">
               <h3 class="radar-title">五维健康度雷达</h3>
@@ -169,6 +172,7 @@ const router = useRouter()
 const currentStep = ref(0)
 const loading = ref(false)
 const result = ref(null)
+const errorMessage = ref('')
 
 const steps = [
   { label: '行业分轨' },
@@ -204,37 +208,35 @@ const canProceed = computed(() => {
   return false
 })
 
-const scoreClassFor = (score) => (score < 40 ? 'low' : score < 70 ? 'mid' : 'high')
+const scoreClass = (score) => score < 40 ? 'low' : score < 70 ? 'mid' : 'high'
 
-const radarColorMap = {
-  traffic: '#3b82f6',
-  content: '#8b5cf6',
-  conversion: '#f59e0b',
-  retention: '#10b981',
-  profit: '#ef4444'
-}
-
-const radarNameMap = {
-  traffic: '流量力',
-  content: '内容力',
-  conversion: '转化力',
-  retention: '留存力',
-  profit: '投流力'
-}
+const buildRadar = (radarData = {}) => [
+  { name: '流量力', score: radarData.traffic ?? 60, color: '#3b82f6' },
+  { name: '内容力', score: radarData.content ?? 60, color: '#8b5cf6' },
+  { name: '转化力', score: radarData.conversion ?? 60, color: '#f59e0b' },
+  { name: '留存力', score: radarData.retention ?? 60, color: '#10b981' },
+  { name: '投流力', score: radarData.ads ?? radarData.profit ?? 60, color: '#ef4444' }
+].map(item => ({
+  ...item,
+  score: Math.max(0, Math.min(100, Math.round(Number(item.score) || 0))),
+  scoreClass: scoreClass(Number(item.score) || 0)
+}))
 
 const generate = async () => {
   loading.value = true
+  errorMessage.value = ''
   try {
+    const painPoints = {
+      traffic: form.trafficPains,
+      content: form.contentPains,
+      conversion: form.conversionPains,
+      retention: form.retentionPains,
+      ads: form.adsPains
+    }
     const response = await request.post('/douyin/diagnosis', {
       industry: form.industry,
       mode: form.mode,
-      painPoints: {
-        traffic: form.trafficPains,
-        content: form.contentPains,
-        conversion: form.conversionPains,
-        retention: form.retentionPains,
-        ads: form.adsPains
-      },
+      painPoints,
       metrics: {
         monthlyViews: form.monthlyViews,
         monthlyFollowers: form.monthlyFollowers,
@@ -242,23 +244,17 @@ const generate = async () => {
         monthlyAdBudget: form.monthlyAdBudget
       }
     })
-
-    const domainResult = response.result || response
-    const radar = Object.entries(domainResult.radarData || {}).map(([key, score]) => ({
-      key,
-      name: radarNameMap[key] || key,
-      score,
-      color: radarColorMap[key] || '#6366f1',
-      scoreClass: scoreClassFor(score)
-    }))
-
+    const diagnosisResult = response.result || {}
     result.value = {
-      ...domainResult,
-      radar
+      radar: buildRadar(diagnosisResult.radarData),
+      diagnosis: diagnosisResult.diagnosis || '抖音经营诊断已生成，请优先处理分数最低的经营维度。',
+      suggestions: diagnosisResult.suggestions || []
     }
     currentStep.value = 3
   } catch (error) {
     console.error('诊断失败:', error)
+    errorMessage.value = error.message || '诊断失败，请稍后重试'
+    currentStep.value = 3
   } finally {
     loading.value = false
   }
@@ -349,6 +345,15 @@ const bookConsult = () => {
 .radar-score.low { color: #dc2626; }
 .radar-score.mid { color: #d97706; }
 .radar-score.high { color: #059669; }
+
+.error-state {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: var(--text-body-sm);
+}
 
 .diagnosis-summary {
   padding: 16px;

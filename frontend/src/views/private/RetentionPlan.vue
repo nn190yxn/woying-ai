@@ -36,6 +36,7 @@
         <button class="generate-btn" @click="generate" :disabled="loading">
           {{ loading ? '生成中...' : '生成复购留存方案' }}
         </button>
+        <div v-if="errorMessage" class="error-state">{{ errorMessage }}</div>
       </div>
 
       <div v-if="loading" class="loading-state">
@@ -122,6 +123,7 @@ import request from '@/api/request'
 const router = useRouter()
 const loading = ref(false)
 const result = ref(null)
+const errorMessage = ref('')
 
 const form = reactive({
   industry: '',
@@ -132,16 +134,19 @@ const form = reactive({
 
 const generate = async () => {
   loading.value = true
+  errorMessage.value = ''
+  result.value = null
   try {
-    const response = await request.post('/private/retention-plan', {
+    const data = await request.post('/private/retention-plan', {
       industry: form.industry,
       currentRetention: form.currentRetention || 30,
       avgPurchaseCycle: form.avgPurchaseCycle || 30,
       customerCount: form.customerCount || 1000
     })
-    result.value = response.result || response
+    result.value = data.result
   } catch (error) {
-    console.error('生成失败:', error)
+    console.error('复购留存方案生成失败:', error)
+    errorMessage.value = error.message || '复购留存方案生成失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -204,6 +209,15 @@ const bookConsult = () => {
 .generate-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.error-state {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: var(--text-body-sm);
 }
 
 .summary-cards {

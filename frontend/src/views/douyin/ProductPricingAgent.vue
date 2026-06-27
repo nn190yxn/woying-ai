@@ -107,6 +107,9 @@
             <div class="loading-spinner"></div>
             <p>AI 正在结合知识库生成方案...</p>
           </div>
+          <div v-else-if="errorMessage" class="error-state">
+            {{ errorMessage }}
+          </div>
           <div v-else-if="result" class="result-state">
             <div class="result-header">
               <span class="result-type">{{ result.type }}</span>
@@ -169,6 +172,7 @@ const router = useRouter()
 const currentStep = ref(0)
 const loading = ref(false)
 const result = ref(null)
+const errorMessage = ref('')
 
 const steps = [
   { label: '行业分轨' },
@@ -230,18 +234,23 @@ const nextStep = () => {
 
 const generate = async () => {
   loading.value = true
+  errorMessage.value = ''
+  result.value = null
   try {
     const response = await request.post('/douyin/product-pricing', {
       industry: form.industry,
       stage: form.stage,
-      products: form.products,
+      currentProducts: form.products,
       costStructure: { rate: form.costRate },
-      competitorRange: { min: form.competitorMin, max: form.competitorMax }
+      competitorRange: { min: form.competitorMin, max: form.competitorMax },
+      pricingStrategy: form.pricingStrategy
     })
-    result.value = response.result || response
+    result.value = response.result
     currentStep.value = 4
   } catch (error) {
     console.error('生成失败:', error)
+    errorMessage.value = error.message || '组品定价方案生成失败，请稍后重试'
+    currentStep.value = 4
   } finally {
     loading.value = false
   }
@@ -496,6 +505,14 @@ const generate = async () => {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
+}
+
+.error-state {
+  padding: 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: var(--text-body-sm);
 }
 
 @keyframes spin {

@@ -89,10 +89,8 @@
             <div class="loading-spinner"></div>
             <p>正在分析账号健康度...</p>
           </div>
-          <div v-else-if="error" class="result-container">
-            <p class="error-text">{{ error }}</p>
-          </div>
           <div v-else class="result-container">
+            <div v-if="errorMessage" class="error-state">{{ errorMessage }}</div>
             <div class="score-overview">
               <div class="score-circle" :style="{ borderColor: levelColor }">
                 <span class="score-num">{{ result.totalScore }}</span>
@@ -101,7 +99,7 @@
               <div class="level-badge" :style="{ backgroundColor: levelColor }">{{ result.level }}级 · {{ levelText }}</div>
             </div>
             <p class="diagnosis-text">{{ result.diagnosis }}</p>
-            <div class="radar-chart" ref="radarChart"></div>
+            <div v-if="result" class="radar-chart" ref="radarChart"></div>
             <div class="suggestion-list">
               <h3>🔧 优化建议</h3>
               <ul>
@@ -124,14 +122,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
-import * as echarts from 'echarts/core'
-import { RadarChart } from 'echarts/charts'
-import { RadarComponent } from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
+import { ref, reactive, computed, nextTick } from 'vue'
 import request from '@/api/request'
-
-echarts.use([RadarChart, RadarComponent, CanvasRenderer])
 
 const steps = [
   { label: '基础信息' },
@@ -142,7 +134,7 @@ const currentStep = ref(0)
 const loading = ref(false)
 const result = ref(null)
 const radarChart = ref(null)
-const error = ref('')
+const errorMessage = ref('')
 
 const pains = {
   verticality: ['内容杂乱，赛道不聚焦', '选题跟风，缺乏主线', '笔记类型混乱（图文/视频混发无规律）', '标签/话题使用不精准'],
@@ -178,16 +170,21 @@ const levelText = computed(() => {
 const nextStep = async () => {
   if (currentStep.value === 1) {
     loading.value = true
-    error.value = ''
+    errorMessage.value = ''
+    result.value = null
+    currentStep.value++
     try {
-      const response = await request.post('/xhs/account-diagnosis', { ...form })
+      const response = await request.post('/xhs/account-diagnosis', form)
       result.value = response.result
+      await nextTick()
       await renderRadar(result.value.radar)
-    } catch (err) {
-      error.value = err.message || '生成体检报告失败'
+    } catch (error) {
+      console.error('账号体检失败:', error)
+      errorMessage.value = error.message || '账号体检失败，请稍后重试'
     } finally {
       loading.value = false
     }
+    return
   }
   currentStep.value++
 }
@@ -195,7 +192,18 @@ const nextStep = async () => {
 const renderRadar = async (radarData) => {
   await new Promise(r => setTimeout(r, 50))
   if (!radarChart.value) return
-  const chart = echarts.init(radarChart.value)
+  const [echartsCore, charts, components, renderers] = await Promise.all([
+    import('echarts/core'),
+    import('echarts/lib/chart/radar'),
+    import('echarts/lib/component/radar'),
+    import('echarts/renderers')
+  ])
+  echartsCore.use([
+    charts.RadarChart,
+    components.RadarComponent,
+    renderers.CanvasRenderer
+  ])
+  const chart = echartsCore.init(radarChart.value)
   chart.setOption({
     radar: {
       indicator: radarData.map(d => ({ name: d.name, max: 100 })),
@@ -220,5 +228,4 @@ const renderRadar = async (radarData) => {
 
 <style scoped>
 @import '../agent-common.css';
-.error-text { color: #dc2626; }
 </style>

@@ -45,7 +45,12 @@
         <button class="generate-btn" :disabled="!canGenerate || loading" @click="generate">
           {{ loading ? '正在生成选题...' : '生成今日选题' }}
         </button>
-        <p v-if="error" class="error-text">{{ error }}</p>
+        <div v-if="errorMessage" class="error-state">
+          {{ errorMessage }}
+        </div>
+        <div v-if="upgradeHint" class="upgrade-hint">
+          {{ upgradeHint }}
+        </div>
       </div>
 
       <div v-if="topics.length" class="result-list">
@@ -80,7 +85,8 @@ import request from '@/api/request'
 const router = useRouter()
 const loading = ref(false)
 const topics = ref([])
-const error = ref('')
+const errorMessage = ref('')
+const upgradeHint = ref('')
 
 const methods = [
   { value: 'formula', label: '爆款公式法' },
@@ -96,14 +102,34 @@ const form = reactive({
 
 const canGenerate = computed(() => form.industry && form.audience)
 
+const normalizeTopic = (topic, index) => ({
+  id: topic.id || index + 1,
+  title: topic.title || topic.topic || '待补充选题',
+  formula: topic.formula || topic.type || '爆款公式',
+  tags: Array.isArray(topic.tags) && topic.tags.length ? topic.tags : ['搜索', '互动', '收藏'],
+  searchVolume: Number(topic.searchVolume) || 10000,
+  competition: topic.competition || '中'
+})
+
 const generate = async () => {
   loading.value = true
-  error.value = ''
+  errorMessage.value = ''
+  upgradeHint.value = ''
+  topics.value = []
   try {
-    const response = await request.post('/xhs/topic-generator', { ...form })
-    topics.value = response.topics || []
-  } catch (err) {
-    error.value = err.message || '生成选题失败'
+    const response = await request.post('/xhs/topic-generator', {
+      industry: form.industry,
+      audience: form.audience,
+      method: form.method
+    })
+    topics.value = (response.topics || []).map(normalizeTopic)
+    upgradeHint.value = response.upgradeHint || ''
+    if (!topics.value.length) {
+      throw new Error('后端未返回可展示的选题')
+    }
+  } catch (error) {
+    console.error('选题生成失败:', error)
+    errorMessage.value = error.message || '选题生成失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -116,5 +142,6 @@ const useTopic = (topic) => {
 
 <style scoped>
 @import '../agent-common.css';
-.error-text { color: #dc2626; margin-top: 12px; }
+.error-state { margin-top: 16px; padding: 12px 16px; background: #fef2f2; color: #b91c1c; border-radius: 8px; font-size: var(--text-body-sm); }
+.upgrade-hint { margin-top: 16px; padding: 12px 16px; background: #fff7ed; color: #9a3412; border-radius: 8px; font-size: var(--text-body-sm); }
 </style>

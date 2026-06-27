@@ -3,8 +3,7 @@ import { query } from '../models/db.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { getJwtSecret, isGuestModeEnabled } from '../middleware/auth.js'
-import { createDomainToolResult } from '../services/resultSchema.js'
+import { generateStructured } from '../services/ai.js'
 
 const router = express.Router()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -16,22 +15,13 @@ const xhsKnowledge = JSON.parse(
 const checkAccess = async (req, res, next) => {
   const authHeader = req.headers.authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    if (isGuestModeEnabled()) {
-      req.userLevel = 'annual'
-      req.userId = null
-      return next()
-    }
     return res.status(401).json({ error: '未授权', requiredLevel: 'free' })
   }
 
   try {
     const jwt = await import('jsonwebtoken')
     const token = authHeader.split(' ')[1]
-    const jwtSecret = getJwtSecret()
-    if (!jwtSecret) {
-      return res.status(500).json({ error: '服务端认证配置缺失' })
-    }
-    const decoded = jwt.default.verify(token, jwtSecret)
+    const decoded = jwt.default.verify(token, process.env.JWT_SECRET)
 
     const users = await query('SELECT member_level FROM users WHERE id = ?', [decoded.userId])
     if (users.length === 0) return res.status(403).json({ error: '用户不存在' })
@@ -40,11 +30,6 @@ const checkAccess = async (req, res, next) => {
     req.userId = decoded.userId
     next()
   } catch (error) {
-    if (isGuestModeEnabled()) {
-      req.userLevel = 'annual'
-      req.userId = null
-      return next()
-    }
     res.status(401).json({ error: '无效的 Token' })
   }
 }
@@ -52,39 +37,22 @@ const checkAccess = async (req, res, next) => {
 // 智能体权限映射
 const AGENT_ACCESS = {
   account_diagnosis: 'free',
-  'account-diagnosis': 'free',
   quick_start_plan: 'pro',
-  'quick-start-plan': 'pro',
   growth_strategy: 'annual',
-  'growth-strategy': 'annual',
   topic_generator: 'starter',
-  'topic-generator': 'starter',
   script_generator: 'starter',
-  'script-generator': 'starter',
   title_generator: 'starter',
-  'title-generator': 'starter',
   cover_helper: 'starter',
-  'cover-helper': 'starter',
   note_diagnoser: 'pro',
-  'note-diagnoser': 'pro',
   account_reviewer: 'pro',
-  'account-reviewer': 'pro',
   seo_optimizer: 'pro',
-  'seo-optimizer': 'pro',
   conversion_optimizer: 'pro',
-  'conversion-optimizer': 'pro',
   competitor_analyzer: 'annual',
-  'competitor-analyzer': 'annual',
   grass_converter: 'pro',
-  'grass-converter': 'pro',
   shutiao_calculator: 'free',
-  'shutiao-calculator': 'free',
   juguang_strategy: 'pro',
-  'juguang-strategy': 'pro',
   ip_positioning: 'annual',
-  'ip-positioning': 'annual',
-  ip_consistency: 'annual',
-  'ip-consistency': 'annual'
+  ip_consistency: 'annual'
 }
 
 const requireLevel = (requiredLevel) => (req, res, next) => {
@@ -95,212 +63,216 @@ const requireLevel = (requiredLevel) => (req, res, next) => {
   next()
 }
 
-const industryMap = {
+const parseJsonValue = (text) => {
+  const trimmed = (text || '').trim()
+  if (!trimmed) return null
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    const match = trimmed.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
+    return match ? JSON.parse(match[0]) : null
+  }
+}
+
+const industryNameMap = {
+  restaurant: '餐饮探店',
   beauty: '美妆护肤',
   fashion: '穿搭时尚',
   food: '美食探店',
-  restaurant: '餐饮门店',
   education: '知识教育',
   home: '家居家装',
-  parenting: '母婴育儿',
-  fitness: '运动健身'
+  service: '生活服务'
 }
 
-function getIndustryLabel(value) {
-  return industryMap[value] || value || '小红书账号'
+const audienceNameMap = {
+  beginner: '新手小白',
+  professional: '专业进阶人群',
+  bargain: '价格敏感人群',
+  quality: '品质追求人群'
 }
 
-function toNumber(value, fallback = 0) {
-  const number = Number(value)
-  return Number.isFinite(number) ? number : fallback
+const methodNameMap = {
+  formula: '爆款公式法',
+  search: '搜索意图法',
+  hotspot: '热点借势法'
 }
 
-function getTitleExamples(industry, count = 4) {
-  const key = industry === 'food' ? 'restaurant' : industry
-  return xhsKnowledge.titleFormulas.slice(0, count).map(formula => ({
-    formula: formula.name,
-    example: formula.examples[key] || formula.examples.restaurant
+const deterministicVolume = (seed, index) => {
+  const base = String(seed || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  return 12000 + ((base + index * 7919) % 48000)
+}
+
+const normalizeCompetition = (index) => ['低', '中', '高'][index % 3]
+
+const getFormulaExample = (formula, industry, topic) => {
+  const example = formula.examples?.[industry] || formula.examples?.restaurant || formula.name
+  if (!topic) return example
+  return example.replace(/XX|xx/g, topic).replace(/这 3 /g, `这 3 个${topic}`)
+}
+
+const buildTopicFallback = ({ industry, audience, method, hotspot }) => {
+  const industryName = industryNameMap[industry] || industry || '小红书'
+  const audienceName = audienceNameMap[audience] || '目标用户'
+  const methodName = methodNameMap[method] || '爆款公式法'
+  const formulas = xhsKnowledge.titleFormulas || []
+
+  return formulas.slice(0, 5).map((formula, index) => ({
+    id: index + 1,
+    title: hotspot
+      ? `${hotspot}下，${audienceName}最想收藏的${industryName}清单`
+      : getFormulaExample(formula, industry),
+    formula: formula.name || methodName,
+    tags: [methodName, audienceName, industryName],
+    searchVolume: deterministicVolume(`${industry}-${audience}-${method}-${index}`, index),
+    competition: normalizeCompetition(index),
+    reason: `围绕${audienceName}的搜索意图，用${formula.name || methodName}提高点击和收藏。`,
+    isRuleFallback: true
   }))
 }
 
-function buildAgentResponse(agent, req) {
-  const body = req.body || {}
-  const industry = getIndustryLabel(body.industry)
-  const topic = body.topic || body.product || body.positioning || `${industry}内容`
-  const audience = body.audience || body.targetAudience || '目标用户'
-  const notes = toNumber(body.notes || body.noteCount, 12)
-  const views = toNumber(body.views || body.avgViews || body.reads, 0)
-  const likes = toNumber(body.likes, 0)
-  const collects = toNumber(body.collects || body.saves, 0)
-  const comments = toNumber(body.comments, 0)
-  const follows = toNumber(body.follows, 0)
-  const orders = toNumber(body.orders || body.deals, 0)
-  const revenue = toNumber(body.revenue, 0)
-  const cost = toNumber(body.cost || body.budget, 0)
-  const interactionRate = views > 0 ? ((likes + collects + comments) / views * 100) : 0
-  const collectRate = views > 0 ? (collects / views * 100) : 0
-  const conversionRate = views > 0 ? (orders / views * 100) : 0
-  const roi = cost > 0 ? revenue / cost : 0
+const buildTitleFallback = ({ industry, topic, formulaType }) => {
+  const formulas = xhsKnowledge.titleFormulas || []
+  const selected = formulaType ? formulas.filter(formula => formula.id === formulaType) : formulas
+  const source = selected.length ? selected : formulas
 
-  const commonMeta = {
-    engineType: 'rule-based-knowledge',
-    knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json',
-    degraded: false
-  }
+  return source.slice(0, 6).map((formula, index) => ({
+    title: getFormulaExample(formula, industry, topic),
+    type: formula.name || '爆款公式',
+    ctr: `${8 + ((index * 3) % 12)}%`,
+    reason: `使用${formula.name || '爆款公式'}放大搜索关键词和点击动机。`,
+    isRuleFallback: true
+  }))
+}
 
-  const responses = {
-    'quick-start-plan': {
-      title: '15 天起号计划',
-      summary: `${industry}新号冷启动计划已生成`,
-      sections: [
-        { title: '第 1-3 天：账号定盘', items: ['明确单一赛道、人群和转化目标', '完成昵称、简介、置顶笔记和视觉模板统一', '拆解 10 个同赛道高互动账号，沉淀选题库'] },
-        { title: '第 4-10 天：标签建立', items: ['每天发布 1 篇垂直笔记，标题使用搜索关键词', '每篇只解决一个具体问题，优先教程、避坑、清单结构', '评论区固定引导收藏、提问或私信咨询'] },
-        { title: '第 11-15 天：数据复盘', items: ['按阅读、赞藏、评论、私信四类指标筛选样本', '保留互动率高于 3% 的主题继续迭代', '将低互动笔记复盘为封面、标题、正文和话题四类问题'] }
-      ],
-      actions: ['今天完成账号定位表', '3 天内发布首批 3 篇垂直笔记', '第 15 天形成下一轮选题清单'],
-      recommendedTools: ['topic-generator', 'title-generator', 'cover-helper']
-    },
-    'growth-strategy': {
-      title: '90 天增长战略',
-      summary: `${industry}90 天增长框架已生成`,
-      sections: [
-        { title: '0-30 天：定位与标签', items: ['锁定 1 个主赛道和 2 个内容栏目', '建立标题、封面、正文和话题模板', '重点看账号垂直度、互动率和收藏率'] },
-        { title: '31-60 天：爆款复制', items: ['围绕高收藏主题做系列化扩展', '把评论区问题转成选题', '对封面和标题做双版本测试'] },
-        { title: '61-90 天：转化承接', items: ['搭建私信关键词和咨询 SOP', '用案例笔记承接高意向用户', '每周复盘阅读到成交的漏斗数据'] }
-      ],
-      actions: ['先完成近 30 天数据整理', '每周固定复盘一次内容漏斗', '高阶全案建议结合专家 1v1 深化'],
-      recommendedTools: ['account-reviewer', 'conversion-optimizer', 'ip-positioning']
-    },
-    'script-generator': {
-      title: '正文脚本生成',
-      summary: `${topic}正文脚本已生成`,
-      sections: [
-        { title: '图文结构', items: [`标题：${topic}，${audience}先收藏`, `开头：先指出一个具体场景痛点`, `正文：按问题、原因、判断方法、行动建议展开`, `结尾：引导评论关键词或私信咨询`] },
-        { title: '视频结构', items: ['0-3 秒抛出反常识或结果', '3-15 秒展示真实场景', '15-40 秒给出步骤或对比', '结尾提醒收藏并给出下一步动作'] }
-      ],
-      actions: ['把脚本替换为真实案例', '拍摄前准备 3 张关键画面', '发布后记录完读率和收藏率'],
-      recommendedTools: ['title-generator', 'cover-helper', 'seo-optimizer']
-    },
-    'cover-helper': {
-      title: '封面文案助手',
-      summary: `${topic}封面文案已生成`,
-      sections: [
-        { title: '封面标题', items: [`${audience}必看`, `${topic}避坑清单`, `这 3 点先确认`, `收藏这份攻略`] },
-        { title: '视觉建议', items: ['3:4 竖版构图，主体占画面 60% 以上', '主标题控制在 8-14 字', '使用统一字体、底色和栏目标签'] }
-      ],
-      actions: ['优先做 2 个封面版本测试', '封面文字只保留一个核心利益点', '把关键词放在首屏可见位置'],
-      recommendedTools: ['title-generator', 'script-generator']
-    },
-    'note-diagnoser': {
-      title: '笔记数据诊断',
-      summary: `${topic}笔记数据诊断已完成`,
-      metrics: { views, interactionRate: `${interactionRate.toFixed(1)}%`, collectRate: `${collectRate.toFixed(1)}%` },
-      sections: [
-        { title: '数据判断', items: [`互动率：${interactionRate.toFixed(1)}%，图文优秀线参考 5% 以上，视频优秀线参考 8% 以上`, `收藏率：${collectRate.toFixed(1)}%，优秀线参考 3% 以上`, views < 500 ? '当前阅读样本偏小，先检查封面、标题和发布时间' : '当前已有可复盘样本，重点拆互动与收藏来源'] },
-        { title: '优化方向', items: ['封面先给结果或清单', '正文前三行讲清适合人群', '评论区置顶一个具体问题引导互动'] }
-      ],
-      actions: ['复盘同主题前 5 篇笔记', '保留高收藏段落并改写成系列', '48 小时后复查互动质量'],
-      recommendedTools: ['seo-optimizer', 'title-generator']
-    },
-    'account-reviewer': {
-      title: '账号复盘助手',
-      summary: `${industry}账号阶段复盘已生成`,
-      metrics: { notes, avgViews: views, interactionRate: `${interactionRate.toFixed(1)}%` },
-      sections: [
-        { title: '复盘结论', items: [`近阶段笔记数：${notes}`, `平均阅读：${views}`, `互动率：${interactionRate.toFixed(1)}%`, '优先找出高收藏、高评论、高私信三类样本'] },
-        { title: '下阶段重点', items: ['固定 2 个主栏目', '把爆款主题做系列化', '用搜索关键词提升长尾流量'] }
-      ],
-      actions: ['建立周复盘表', '每周保留 3 个有效选题', '低质主题暂停连续发布'],
-      recommendedTools: ['topic-generator', 'seo-optimizer', 'growth-strategy']
-    },
-    'seo-optimizer': {
-      title: 'SEO 关键词优化',
-      summary: `${topic}关键词方案已生成`,
-      sections: [
-        { title: '关键词布局', items: [`核心词：${topic}`, `人群词：${audience}`, `场景词：新手、避坑、教程、清单、测评`, `地域词：本地门店可加入城市和商圈`] },
-        { title: '正文位置', items: ['标题放 1 个核心关键词', '正文前 100 字重复核心词和人群词', '话题保留 3-5 个精准标签'] }
-      ],
-      actions: ['先整理 20 个搜索词', '每篇笔记只主攻 1 个核心词', '7 天后查看搜索来源占比'],
-      recommendedTools: ['title-generator', 'topic-generator']
-    },
-    'conversion-optimizer': {
-      title: '转化链路优化',
-      summary: `${industry}小红书转化链路方案已生成`,
-      sections: [
-        { title: '合规承接', items: ['评论区引导用户提出具体问题', '私信首轮先做需求确认', '资料、预约、体验权益要写清使用条件'] },
-        { title: '漏斗指标', items: ['阅读量到主页访问', '主页访问到私信咨询', '私信咨询到预约或成交', '成交后复购和转介绍'] }
-      ],
-      actions: ['整理 5 条高频私信回复', '设置咨询分层标签', '每周复盘咨询到成交比例'],
-      recommendedTools: ['grass-converter', 'account-reviewer']
-    },
-    'competitor-analyzer': {
-      title: '竞对分析器',
-      summary: `${industry}竞对拆解框架已生成`,
-      sections: [
-        { title: '拆解维度', items: ['账号定位和人设', '高互动选题结构', '封面标题风格', '评论区需求', '转化入口与权益表达'] },
-        { title: '差异化方向', items: [`围绕${topic}寻找更细分人群`, '使用真实案例提升信任', '用本地场景或专业经验形成记忆点'] }
-      ],
-      actions: ['选择 5 个同赛道账号', '记录近 30 天高互动笔记', '提炼 3 个可借鉴但需原创表达的方向'],
-      recommendedTools: ['ip-positioning', 'topic-generator']
-    },
-    'grass-converter': {
-      title: '种草转化计算器',
-      summary: `${industry}种草转化测算已完成`,
-      metrics: { views, orders, revenue, cost, conversionRate: `${conversionRate.toFixed(2)}%`, roi: roi.toFixed(2) },
-      sections: [
-        { title: '漏斗结果', items: [`阅读量：${views}`, `成交数：${orders}`, `阅读到成交率：${conversionRate.toFixed(2)}%`, `ROI：${roi.toFixed(2)}`] },
-        { title: '经营判断', items: [roi >= 2 ? '当前 ROI 具备继续放大观察价值' : '当前 ROI 需要先优化内容和承接', '同步关注成交毛利、复购和咨询质量'] }
-      ],
-      actions: ['拆分自然流量和投放流量', '记录每篇笔记的咨询数', '用高转化笔记反推选题公式'],
-      recommendedTools: ['conversion-optimizer', 'juguang-strategy']
-    },
-    'juguang-strategy': {
-      title: '聚光投放策略',
-      summary: `${industry}聚光投放框架已生成`,
-      sections: [
-        { title: '投前筛选', items: ['先选自然互动表现较好的笔记', '封面点击和收藏率达标后再放量', '评论区负反馈较多的笔记暂停投放'] },
-        { title: '投放结构', items: ['测试期小预算验证关键词和人群', '放量期保留高转化人群包', '复盘期按咨询成本和成交质量判断'] }
-      ],
-      actions: ['准备 3 篇候选笔记', '先跑 1-2 天小预算测试', '按咨询成本决定加预算'],
-      recommendedTools: ['note-diagnoser', 'grass-converter']
-    },
-    'ip-positioning': {
-      title: '博主 IP 定位',
-      summary: `${industry}IP 定位已生成`,
-      sections: [
-        { title: '定位公式', items: [`我是面向${audience}的${industry}经验分享者`, `核心内容围绕${topic}`, '表达风格保持真实、专业、可执行'] },
-        { title: '内容栏目', items: ['避坑清单', '真实案例', '教程步骤', '行业观察'] }
-      ],
-      actions: ['确定一句话定位', '固定头像、简介和置顶笔记', '连续 30 天保持栏目一致'],
-      recommendedTools: ['ip-consistency', 'topic-generator']
-    },
-    'ip-consistency': {
-      title: '人设一致性检查',
-      summary: `${industry}人设一致性检查已完成`,
-      sections: [
-        { title: '检查项', items: ['昵称和简介是否指向同一赛道', '封面风格是否统一', '正文语气是否稳定', '选题是否持续服务同一人群'] },
-        { title: '修正建议', items: [`围绕${topic}减少无关内容`, '用固定栏目增强识别度', '把个人经历和专业观点绑定'] }
-      ],
-      actions: ['清理偏离定位的内容', '统一封面模板', '每周检查一次选题偏移'],
-      recommendedTools: ['ip-positioning', 'account-reviewer']
-    }
-  }
-
-  const response = responses[agent] || {
-    title: agent,
-    summary: `${industry}小红书智能体结果已生成`,
-    sections: [{ title: '建议', items: ['聚焦垂直赛道', '保持稳定更新', '复盘互动和转化数据'] }],
-    actions: ['补齐真实业务数据后复盘'],
-    recommendedTools: ['account-diagnosis']
-  }
+const buildQuickStartFallback = ({ industry, currentFollowers, monthlyGoal, dailyTime }) => {
+  const industryName = industryNameMap[industry] || industry || '小红书'
+  const targetFollowers = Math.min(Number(currentFollowers || 0) + Number(monthlyGoal || 1000), 10000)
 
   return {
-    agent,
-    status: 'success',
-    ...response,
-    titleExamples: getTitleExamples(body.industry, 3),
-    riskNotes: ['结果基于小红书结构化知识库和用户输入生成，需要结合账号后台真实数据复核。'],
-    meta: commonMeta
+    planName: `${industryName} 15 天起号计划`,
+    estimatedFollowers: targetFollowers,
+    weeklyPlan: [
+      { week: 1, phase: '账号基建与定位测试', tasks: ['完善头像、简介和置顶笔记', '确定 3 个内容栏目', '发布 3 篇不同角度测试内容', `每天投入${dailyTime || '1 小时'}做同赛道互动`] },
+      { week: 2, phase: '选题放量与爆款验证', tasks: ['复盘首周点击和收藏数据', '复制表现最好的标题结构', '发布 4 篇搜索型笔记', '建立 20 条可复用选题库'] },
+      { week: 3, phase: '转化承接与稳定更新', tasks: ['优化主页行动引导', '固定每周 4 篇发布节奏', '把高收藏笔记改成系列内容', '沉淀评论区高频问题'] }
+    ],
+    tips: ['新号前 15 天先测标签，再追求单篇爆发', '标题和封面保持同一赛道关键词', '每天固定互动同赛道优质笔记'],
+    isRuleFallback: true
+  }
+}
+
+const buildScriptFallback = ({ industry, topic, style, duration }) => {
+  const scriptDuration = Number(duration) || 60
+  const steps = xhsKnowledge.scriptTemplates?.[style] || xhsKnowledge.scriptTemplates?.vlog || ['开场 3 秒抓注意力', '提出问题/痛点', '展示解决方案', '结尾引导互动']
+
+  return {
+    topic: topic || `小红书${industryNameMap[industry] || industry || ''}种草脚本`,
+    duration: scriptDuration,
+    style: style || 'vlog',
+    script: steps.map((step, index) => ({
+      order: index + 1,
+      step,
+      duration: Math.round(scriptDuration / steps.length),
+      notes: `${step}，围绕「${topic || '核心主题'}」用真实体验和可收藏信息表达。`
+    })),
+    tips: ['前 3 秒直接给结论或痛点', '正文加入具体场景和真实细节', '结尾引导收藏、评论或私信'],
+    isRuleFallback: true
+  }
+}
+
+const buildCoverFallback = ({ industry, noteType, keywords }) => {
+  const colors = { restaurant: ['暖橙', '米黄', '深棕'], food: ['暖橙', '米黄', '深棕'], education: ['天蓝', '纯白', '深蓝'], beauty: ['粉白', '裸色', '金棕'], service: ['薄荷绿', '浅灰', '深绿'], fashion: ['黑白灰', '奶油色', '酒红'] }
+  const palette = colors[industry] || ['莫兰迪色', '奶油色', '高级灰']
+  const keyword = keywords || '核心主题'
+
+  return {
+    recommendedColors: palette,
+    layout: noteType === 'tutorial' ? '左右分栏：左侧放 6-8 字结论，右侧放步骤或产品图' : noteType === 'review' ? '上下结构：上方场景图，下方标题和对比卖点' : '中心构图：主体居中，标题压在上三分之一处',
+    fontStyle: '粗黑体标题 + 细黑体副标题，标题字号占画面宽度 35%-45%',
+    hooks: [`${keyword}避坑`, `${keyword}清单`, `${keyword}真实测评`, `${keyword}新手必看`],
+    tips: ['封面文字控制在 6-10 个字', '主标题只表达一个核心利益点', '人物或产品主体保持高亮', '标题关键词与正文首段保持一致'],
+    isRuleFallback: true
+  }
+}
+
+const normalizeTopics = (value, fallbackTopics) => {
+  const topics = Array.isArray(value) ? value : value?.topics
+  if (!Array.isArray(topics) || !topics.length) return fallbackTopics
+
+  return topics.slice(0, 8).map((topic, index) => ({
+    id: index + 1,
+    title: topic.title || topic.topic || fallbackTopics[index % fallbackTopics.length].title,
+    formula: topic.formula || topic.type || fallbackTopics[index % fallbackTopics.length].formula,
+    tags: Array.isArray(topic.tags) && topic.tags.length ? topic.tags.slice(0, 4) : fallbackTopics[index % fallbackTopics.length].tags,
+    searchVolume: Number(topic.searchVolume) || deterministicVolume(topic.title || topic.topic, index),
+    competition: topic.competition || normalizeCompetition(index),
+    reason: topic.reason || topic.recommendation || fallbackTopics[index % fallbackTopics.length].reason
+  }))
+}
+
+const normalizeTitles = (value, fallbackTitles) => {
+  const titles = Array.isArray(value) ? value : value?.titles
+  if (!Array.isArray(titles) || !titles.length) return fallbackTitles
+
+  return titles.slice(0, 8).map((title, index) => {
+    if (typeof title === 'string') {
+      return {
+        title,
+        type: fallbackTitles[index % fallbackTitles.length].type,
+        ctr: fallbackTitles[index % fallbackTitles.length].ctr,
+        reason: fallbackTitles[index % fallbackTitles.length].reason
+      }
+    }
+    return {
+      title: title.title || title.text || fallbackTitles[index % fallbackTitles.length].title,
+      type: title.type || title.formula || fallbackTitles[index % fallbackTitles.length].type,
+      ctr: title.ctr || title.estimatedCtr || fallbackTitles[index % fallbackTitles.length].ctr,
+      reason: title.reason || title.recommendation || fallbackTitles[index % fallbackTitles.length].reason
+    }
+  })
+}
+
+const normalizeQuickStartPlan = (value, fallbackPlan) => {
+  const plan = value?.result || value?.plan || value
+  if (!plan || !Array.isArray(plan.weeklyPlan)) return fallbackPlan
+  return {
+    planName: plan.planName || fallbackPlan.planName,
+    estimatedFollowers: Number(plan.estimatedFollowers) || fallbackPlan.estimatedFollowers,
+    weeklyPlan: plan.weeklyPlan.slice(0, 4).map((week, index) => ({
+      week: Number(week.week) || index + 1,
+      phase: week.phase || fallbackPlan.weeklyPlan[index % fallbackPlan.weeklyPlan.length].phase,
+      tasks: Array.isArray(week.tasks) && week.tasks.length ? week.tasks.slice(0, 5) : fallbackPlan.weeklyPlan[index % fallbackPlan.weeklyPlan.length].tasks
+    })),
+    tips: Array.isArray(plan.tips) && plan.tips.length ? plan.tips.slice(0, 5) : fallbackPlan.tips
+  }
+}
+
+const normalizeScript = (value, fallbackScript) => {
+  const script = value?.result || value?.scriptPlan || value
+  if (!script || !Array.isArray(script.script)) return fallbackScript
+  return {
+    topic: script.topic || fallbackScript.topic,
+    duration: Number(script.duration) || fallbackScript.duration,
+    style: script.style || fallbackScript.style,
+    script: script.script.slice(0, 6).map((step, index) => ({
+      order: Number(step.order) || index + 1,
+      step: step.step || step.title || fallbackScript.script[index % fallbackScript.script.length].step,
+      duration: Number(step.duration) || fallbackScript.script[index % fallbackScript.script.length].duration,
+      notes: step.notes || step.content || fallbackScript.script[index % fallbackScript.script.length].notes
+    })),
+    tips: Array.isArray(script.tips) && script.tips.length ? script.tips.slice(0, 5) : fallbackScript.tips
+  }
+}
+
+const normalizeCover = (value, fallbackCover) => {
+  const cover = value?.result || value?.cover || value
+  if (!cover) return fallbackCover
+  return {
+    recommendedColors: Array.isArray(cover.recommendedColors) && cover.recommendedColors.length ? cover.recommendedColors.slice(0, 5) : fallbackCover.recommendedColors,
+    layout: cover.layout || fallbackCover.layout,
+    fontStyle: cover.fontStyle || fallbackCover.fontStyle,
+    hooks: Array.isArray(cover.hooks) && cover.hooks.length ? cover.hooks.slice(0, 6) : fallbackCover.hooks,
+    tips: Array.isArray(cover.tips) && cover.tips.length ? cover.tips.slice(0, 5) : fallbackCover.tips
   }
 }
 
@@ -317,88 +289,115 @@ router.post('/account-diagnosis', checkAccess, requireLevel('free'), async (req,
   
   const total = Math.round(vScore * 0.3 + iScore * 0.25 + aScore * 0.2 + violationScore * 0.15 + completenessScore * 0.1)
   
-  const domainResult = {
+  res.json({
     agent: 'account_diagnosis',
-    radar: [
-      { name: '内容垂直度', score: vScore, color: vScore < 50 ? '#ef4444' : vScore < 80 ? '#f59e0b' : '#10b981' },
-      { name: '互动质量', score: iScore, color: iScore < 50 ? '#ef4444' : iScore < 80 ? '#f59e0b' : '#10b981' },
-      { name: '发布活跃度', score: aScore, color: aScore < 50 ? '#ef4444' : aScore < 80 ? '#f59e0b' : '#10b981' },
-      { name: '违规记录', score: violationScore, color: violationScore < 60 ? '#ef4444' : '#10b981' },
-      { name: '账号完善度', score: completenessScore, color: '#10b981' }
-    ],
-    totalScore: total,
-    level: total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 50 ? 'C' : 'D',
-    diagnosis: `您的账号整体健康度为${total}分，属于${total >= 85 ? '健康' : total >= 70 ? '良好' : total >= 50 ? '预警' : '危险'}状态。`,
-    suggestions: ['优化内容垂直度，聚焦单一赛道', '提高互动率，多引导收藏和评论', '保持每周 3-4 篇的稳定更新频率']
-  }
-
-  res.json(createDomainToolResult(domainResult, {
-    summary: `小红书账号健康度${total}分，${total >= 70 ? '良好' : '需优化'}`,
-    engineType: 'rule-based-knowledge',
-    toolCode: 'account-diagnosis',
-    meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
-  }))
+    result: {
+      radar: [
+        { name: '内容垂直度', score: vScore, color: vScore < 50 ? '#ef4444' : vScore < 80 ? '#f59e0b' : '#10b981' },
+        { name: '互动质量', score: iScore, color: iScore < 50 ? '#ef4444' : iScore < 80 ? '#f59e0b' : '#10b981' },
+        { name: '发布活跃度', score: aScore, color: aScore < 50 ? '#ef4444' : aScore < 80 ? '#f59e0b' : '#10b981' },
+        { name: '违规记录', score: violationScore, color: violationScore < 60 ? '#ef4444' : '#10b981' },
+        { name: '账号完善度', score: completenessScore, color: '#10b981' }
+      ],
+      totalScore: total,
+      level: total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 50 ? 'C' : 'D',
+      diagnosis: `您的账号整体健康度为${total}分，属于${total >= 85 ? '健康' : total >= 70 ? '良好' : total >= 50 ? '预警' : '危险'}状态。`,
+      suggestions: ['优化内容垂直度，聚焦单一赛道', '提高互动率，多引导收藏和评论', '保持每周 3-4 篇的稳定更新频率']
+    }
+  })
 })
 
 // 2. 爆款选题库
 router.post('/topic-generator', checkAccess, requireLevel('starter'), async (req, res) => {
   const { industry, audience, method, hotspot } = req.body
-  
-  const formulas = xhsKnowledge.titleFormulas
-  // 简单模拟根据行业生成
-  const examples = formulas.map(f => ({
-    title: f.examples[industry] || f.examples.restaurant,
-    formula: f.name,
-    tags: ['搜索', '互动', '收藏']
-  }))
+  const fallbackTopics = buildTopicFallback({ industry, audience, method, hotspot })
 
-  const domainResult = {
-    agent: 'topic_generator',
-    topics: examples.slice(0, 5).map((t, i) => ({
-      ...t,
-      id: i + 1,
-      searchVolume: Math.floor(Math.random() * 50000) + 10000,
-      competition: ['低', '中', '高'][Math.floor(Math.random() * 3)]
-    }))
+  try {
+    const content = await generateStructured({
+      systemPrompt: '你是小红书内容选题策划专家，擅长把行业、受众和搜索意图转成可发布的爆款选题。你必须输出 JSON，不输出 Markdown。',
+      userPrompt: `行业：${industryNameMap[industry] || industry || '小红书'}
+目标受众：${audienceNameMap[audience] || audience || '目标用户'}
+选题方法：${methodNameMap[method] || method || '爆款公式法'}
+热点关键词：${hotspot || '无'}
+
+请生成 5 个小红书选题，JSON 对象格式：
+{
+  "topics": [
+    { "title": "选题标题", "formula": "使用的爆款公式", "tags": ["标签"], "searchVolume": 32000, "competition": "低", "reason": "推荐理由" }
+  ]
+}
+
+要求：
+1. 标题必须适合小红书搜索和收藏。
+2. 结合目标受众的痛点、决策顾虑和种草场景。
+3. searchVolume 使用 10000-60000 的整数估算。
+4. competition 只能是低、中、高。`,
+      temperature: 0.82,
+      max_tokens: 2200
+    })
+    const topics = normalizeTopics(parseJsonValue(content), fallbackTopics)
+
+    res.json({
+      agent: 'topic_generator',
+      status: 'success',
+      topics,
+      upgradeHint: '升级进阶会员可获得行业关键词库、竞品选题拆解和 30 天发布日历。'
+    })
+  } catch (error) {
+    res.json({
+      agent: 'topic_generator',
+      status: 'success',
+      topics: fallbackTopics,
+      isRuleFallback: true,
+      upgradeHint: '升级进阶会员可获得行业关键词库、竞品选题拆解和 30 天发布日历。'
+    })
   }
-
-  res.json(createDomainToolResult(domainResult, {
-    summary: '小红书爆款选题已生成',
-    sections: [{ title: '推荐选题', items: domainResult.topics.map(t => `${t.title}（搜索量约${t.searchVolume}，竞争度${t.competition}）`) }],
-    actions: ['选择 2-3 个低竞争选题优先创作', '连续 3 天发布测试笔记验证数据'],
-    engineType: 'rule-based-knowledge',
-    toolCode: 'topic-generator',
-    meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
-  }))
 })
 
 // 3. 标题生成器
 router.post('/title-generator', checkAccess, requireLevel('starter'), async (req, res) => {
   const { industry, topic, formulaType } = req.body
-  const formulas = xhsKnowledge.titleFormulas
-  
-  let selected = formulas
-  if (formulaType) {
-    selected = formulas.filter(f => f.id === formulaType)
-  }
+  const fallbackTitles = buildTitleFallback({ industry, topic, formulaType })
 
-  const domainResult = {
-    agent: 'title_generator',
-    titles: selected.slice(0, 6).map(f => ({
-      title: f.examples[industry] || f.examples.restaurant,
-      type: f.name,
-      ctr: Math.floor(Math.random() * 15) + 5 + '%'
-    }))
-  }
+  try {
+    const content = await generateStructured({
+      systemPrompt: '你是小红书标题生成专家，擅长用搜索关键词、痛点和爆款公式生成高点击标题。你必须输出 JSON，不输出 Markdown。',
+      userPrompt: `行业：${industryNameMap[industry] || industry || '小红书'}
+主题关键词：${topic || '行业核心主题'}
+标题公式：${formulaType || '系统自动匹配'}
 
-  res.json(createDomainToolResult(domainResult, {
-    summary: '小红书标题公式已生成',
-    sections: [{ title: '标题建议', items: domainResult.titles.map(t => `[${t.type}] ${t.title}（预估CTR ${t.ctr}）`) }],
-    actions: ['优先测试 2 个标题做对比', '记录实际发布后的点击率'],
-    engineType: 'rule-based-knowledge',
-    toolCode: 'title-generator',
-    meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
-  }))
+请生成 6 个小红书标题，JSON 对象格式：
+{
+  "titles": [
+    { "title": "标题内容", "type": "公式类型", "ctr": "12%", "reason": "点击率逻辑" }
+  ]
+}
+
+要求：
+1. 每个标题控制在 32 字以内。
+2. 标题必须自然包含主题关键词或强相关表达。
+3. 覆盖数字、痛点、悬念、教程、清单、避坑等方向。
+4. 避免虚假承诺和空泛口号。`,
+      temperature: 0.85,
+      max_tokens: 2200
+    })
+    const titles = normalizeTitles(parseJsonValue(content), fallbackTitles)
+
+    res.json({
+      agent: 'title_generator',
+      status: 'success',
+      titles,
+      upgradeHint: '升级进阶会员可获得标题 A/B 测试、关键词评分和封面联动建议。'
+    })
+  } catch (error) {
+    res.json({
+      agent: 'title_generator',
+      status: 'success',
+      titles: fallbackTitles,
+      isRuleFallback: true,
+      upgradeHint: '升级进阶会员可获得标题 A/B 测试、关键词评分和封面联动建议。'
+    })
+  }
 })
 
 // 4. 薯条投放计算器
@@ -411,45 +410,326 @@ router.post('/shutiao-calculator', checkAccess, requireLevel('free'), async (req
   const cpm = (benchmarks.cpm.min + benchmarks.cpm.max) / 2
   const exposures = Math.round((budget / cpm) * 1000)
   
-  const domainResult = {
+  res.json({
     agent: 'shutiao_calculator',
     isWorthInvesting,
-    screeningResult: isWorthInvesting ? '符合投放标准，建议投放' : '数据未达标，建议优化内容后再投',
+    screeningResult: isWorthInvesting ? '✅ 符合投放标准，建议投放' : '⚠️ 数据未达标，建议优化内容后再投',
     exposures,
     cpm: cpm.toFixed(0),
     benchmark: benchmarks.screeningCriteria
-  }
-
-  res.json(createDomainToolResult(domainResult, {
-    summary: `薯条投放预估曝光 ${exposures} 次，CPM ${domainResult.cpm}`,
-    sections: [{ title: '投放判断', items: [domainResult.screeningResult, `预估曝光：${exposures}次`, `CPM基准：${domainResult.cpm}元`] }],
-    actions: isWorthInvesting ? ['选择自然数据较好的笔记开始投放', '先跑 1-2 天小预算测试'] : ['先优化封面点击率和互动率', '达标后再考虑投放'],
-    riskNotes: ['薯条投放效果受笔记质量和投放时段影响，需持续监控'],
-    engineType: 'rule-based-knowledge',
-    toolCode: 'shutiao-calculator',
-    meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
-  }))
+  })
 })
 
-// 5-17 端点使用规则知识库结构化生成
-const structuredAgents = [
-  'quick-start-plan', 'growth-strategy', 'script-generator', 'cover-helper',
-  'note-diagnoser', 'account-reviewer', 'seo-optimizer', 'conversion-optimizer',
-  'competitor-analyzer', 'grass-converter', 'juguang-strategy', 'ip-positioning', 'ip-consistency'
-]
+// 5. 快速起号计划
+router.post('/quick-start-plan', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { industry, currentFollowers, monthlyGoal, dailyTime } = req.body
+  const fallbackPlan = buildQuickStartFallback({ industry, currentFollowers, monthlyGoal, dailyTime })
 
-structuredAgents.forEach(agent => {
-  router.post(`/${agent}`, checkAccess, requireLevel(AGENT_ACCESS[agent] || 'pro'), (req, res) => {
-    const raw = buildAgentResponse(agent, req)
-    res.json(createDomainToolResult(raw, {
-      summary: raw.summary,
-      sections: raw.sections,
-      actions: raw.actions,
-      riskNotes: raw.riskNotes,
-      engineType: 'rule-based-knowledge',
-      toolCode: agent,
-      meta: { knowledgeSource: 'knowledge-base/structured/xhs/xhs-knowledge.json' }
-    }))
+  try {
+    const content = await generateStructured({
+      systemPrompt: '你是小红书账号冷启动增长顾问，擅长为新号制定可执行的起号计划。你必须输出 JSON，不输出 Markdown。',
+      userPrompt: `行业：${industryNameMap[industry] || industry || '小红书'}
+当前粉丝数：${currentFollowers || 0}
+月度涨粉目标：${monthlyGoal || 1000}
+每日可投入时间：${dailyTime || '1 小时'}
+
+请生成 15 天起号计划，JSON 对象格式：
+{
+  "planName": "计划名称",
+  "estimatedFollowers": 1200,
+  "weeklyPlan": [
+    { "week": 1, "phase": "阶段名称", "tasks": ["任务1", "任务2"] }
+  ],
+  "tips": ["关键提醒"]
+}
+
+要求：
+1. weeklyPlan 使用 3 周表达 15 天节奏。
+2. 每周 3-5 个任务，必须具体可执行。
+3. 结合行业、粉丝基础和每日投入时间。`,
+      temperature: 0.78,
+      max_tokens: 2200
+    })
+    const result = normalizeQuickStartPlan(parseJsonValue(content), fallbackPlan)
+    res.json({ agent: 'quick_start_plan', status: 'success', result, upgradeHint: '升级年度会员可获得 90 天账号增长路线图和投放节奏表。' })
+  } catch (error) {
+    res.json({ agent: 'quick_start_plan', status: 'success', result: fallbackPlan, isRuleFallback: true, upgradeHint: '升级年度会员可获得 90 天账号增长路线图和投放节奏表。' })
+  }
+})
+
+// 6. 增长策略
+router.post('/growth-strategy', checkAccess, requireLevel('annual'), async (req, res) => {
+  const { industry, currentStage, bottlenecks } = req.body
+  const stageMap = {
+    startup: { name: '冷启动期', strategies: ['内容铺量', '话题借势', '互推合作'] },
+    growth: { name: '增长期', strategies: ['爆款复制', '矩阵运营', '付费投放'] },
+    mature: { name: '成熟期', strategies: ['IP 深化', '私域导流', '品牌联名'] }
+  }
+  const stage = stageMap[currentStage] || stageMap.growth
+  res.json({
+    agent: 'growth_strategy',
+    result: {
+      currentStage: stage.name,
+      strategies: stage.strategies.map((name, i) => ({
+        name,
+        priority: i + 1,
+        description: `基于您的${industry || ''}行业，${name}策略将帮助突破${(bottlenecks && bottlenecks[i]) || '增长瓶颈'}`
+      })),
+      nextActions: ['本周优先执行优先级 1 策略', '两周后复盘数据调整']
+    }
+  })
+})
+
+// 7. 脚本生成器
+router.post('/script-generator', checkAccess, requireLevel('starter'), async (req, res) => {
+  const { industry, topic, style, duration } = req.body
+  const fallbackScript = buildScriptFallback({ industry, topic, style, duration })
+
+  try {
+    const content = await generateStructured({
+      systemPrompt: '你是小红书内容脚本策划专家，擅长生成真实、有细节、适合收藏和互动的图文/视频脚本。你必须输出 JSON，不输出 Markdown。',
+      userPrompt: `行业：${industryNameMap[industry] || industry || '小红书'}
+选题：${topic || '行业主题'}
+风格：${style || 'vlog'}
+时长：${duration || 60} 秒
+
+请生成正文脚本，JSON 对象格式：
+{
+  "topic": "脚本主题",
+  "duration": 60,
+  "style": "vlog",
+  "script": [
+    { "order": 1, "step": "开场", "duration": 8, "notes": "具体内容" }
+  ],
+  "tips": ["拍摄或发布建议"]
+}
+
+要求：
+1. script 生成 4-6 段。
+2. notes 必须是可直接照着拍或写的内容。
+3. 前段抓注意力，中段给细节，结尾引导收藏或评论。`,
+      temperature: 0.82,
+      max_tokens: 2200
+    })
+    const result = normalizeScript(parseJsonValue(content), fallbackScript)
+    res.json({ agent: 'script_generator', status: 'success', result, upgradeHint: '升级进阶会员可获得同选题多风格脚本和评论区引导话术。' })
+  } catch (error) {
+    res.json({ agent: 'script_generator', status: 'success', result: fallbackScript, isRuleFallback: true, upgradeHint: '升级进阶会员可获得同选题多风格脚本和评论区引导话术。' })
+  }
+})
+
+// 8. 封面助手
+router.post('/cover-helper', checkAccess, requireLevel('starter'), async (req, res) => {
+  const { industry, noteType, keywords } = req.body
+  const fallbackCover = buildCoverFallback({ industry, noteType, keywords })
+
+  try {
+    const content = await generateStructured({
+      systemPrompt: '你是小红书封面视觉和点击率优化专家，擅长设计封面标题、配色、版式和钩子词。你必须输出 JSON，不输出 Markdown。',
+      userPrompt: `行业：${industryNameMap[industry] || industry || '小红书'}
+笔记类型：${noteType || 'tutorial'}
+关键词：${keywords || '核心主题'}
+
+请生成封面方案，JSON 对象格式：
+{
+  "recommendedColors": ["颜色1", "颜色2"],
+  "layout": "版式建议",
+  "fontStyle": "字体建议",
+  "hooks": ["封面钩子词"],
+  "tips": ["执行提醒"]
+}
+
+要求：
+1. hooks 生成 4-6 个，每个控制在 10 字以内。
+2. layout 必须描述文字、主体、留白和视觉重心。
+3. tips 必须适合小红书 3:4 封面。`,
+      temperature: 0.8,
+      max_tokens: 1800
+    })
+    const result = normalizeCover(parseJsonValue(content), fallbackCover)
+    res.json({ agent: 'cover_helper', status: 'success', result, upgradeHint: '升级进阶会员可获得封面 A/B 测试和行业高点击模板库。' })
+  } catch (error) {
+    res.json({ agent: 'cover_helper', status: 'success', result: fallbackCover, isRuleFallback: true, upgradeHint: '升级进阶会员可获得封面 A/B 测试和行业高点击模板库。' })
+  }
+})
+
+// 9. 笔记诊断
+router.post('/note-diagnoser', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { noteUrl, noteType, views, likes, collects, comments, shares } = req.body
+  const totalInteraction = (Number(likes) || 0) + (Number(collects) || 0) + (Number(comments) || 0) + (Number(shares) || 0)
+  const interactionRate = Number(views) > 0 ? (totalInteraction / Number(views) * 100).toFixed(2) : '0'
+  const collectRate = Number(views) > 0 ? ((Number(collects) || 0) / Number(views) * 100).toFixed(2) : '0'
+  const diagnosis = Number(interactionRate) > 5 ? '优秀' : Number(interactionRate) > 2 ? '良好' : '需优化'
+  res.json({
+    agent: 'note_diagnoser',
+    result: {
+      metrics: { views: Number(views) || 0, likes: Number(likes) || 0, collects: Number(collects) || 0, comments: Number(comments) || 0, shares: Number(shares) || 0 },
+      interactionRate: `${interactionRate}%`,
+      collectRate: `${collectRate}%`,
+      diagnosis,
+      suggestions: diagnosis === '优秀' ? ['继续保持内容方向', '可尝试付费放大'] : diagnosis === '良好' ? ['优化封面吸引力', '增加互动引导话术'] : ['检查标题是否含搜索关键词', '优化首图视觉冲击力', '增加话题标签数量']
+    }
+  })
+})
+
+// 10. 账号复盘
+router.post('/account-reviewer', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { industry, periodDays, noteCount, avgViews, avgInteraction, followerGrowth } = req.body
+  const interactionScore = (Number(avgInteraction) || 0) > 100 ? 85 : (Number(avgInteraction) || 0) > 50 ? 60 : 35
+  const growthScore = (Number(followerGrowth) || 0) > 200 ? 90 : (Number(followerGrowth) || 0) > 50 ? 60 : 30
+  const frequencyScore = (Number(noteCount) || 0) >= Number(periodDays || 30) * 0.5 ? 80 : 40
+  const totalScore = Math.round(interactionScore * 0.4 + growthScore * 0.35 + frequencyScore * 0.25)
+  res.json({
+    agent: 'account_reviewer',
+    result: {
+      period: `过去 ${periodDays || 30} 天`,
+      scores: { interaction: interactionScore, growth: growthScore, frequency: frequencyScore, total: totalScore },
+      level: totalScore >= 80 ? 'A' : totalScore >= 60 ? 'B' : 'C',
+      summary: totalScore >= 80 ? '账号运营状态良好，建议加大内容投入' : totalScore >= 60 ? '运营中等偏上，需优化薄弱环节' : '账号需重点调整，建议从内容质量入手',
+      suggestions: frequencyScore < 60 ? ['提高发布频率至每周 3-4 篇'] : [],
+      highlights: growthScore >= 80 ? ['粉丝增长势头强劲'] : []
+    }
+  })
+})
+
+// 11. SEO 优化器
+router.post('/seo-optimizer', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { industry, topic, targetKeywords } = req.body
+  const kw = targetKeywords || `${industry || ''} 推荐 种草 攻略`
+  const longTail = kw.split(/\s+/).flatMap(w => [`${w}推荐`, `${w}测评`, `${w}怎么选`, `${w}攻略`])
+  res.json({
+    agent: 'seo_optimizer',
+    result: {
+      titleTemplate: `【${kw.split(/\s+/)[0] || '核心词'}】+ 数字 + 痛点 + 解决方案`,
+      recommendedKeywords: longTail.slice(0, 8),
+      tagStrategy: ['1-2 个大词带流量', '3-4 个长尾词带精准搜索', '1 个品牌词/地域词'],
+      seoTips: ['标题前 20 字含核心关键词', '正文首段自然植入 2-3 个关键词', '话题标签选搜索量 10w+ 的中腰部标签']
+    }
+  })
+})
+
+// 12. 转化优化器
+router.post('/conversion-optimizer', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { industry, currentConversion, trafficSource } = req.body
+  const rate = Number(currentConversion) || 2
+  const suggestions = rate < 3
+    ? ['在笔记末尾增加明确的 CTA 引导', '设置评论区自动回复引导私信', '笔记中加入限时优惠信息']
+    : rate < 5
+      ? ['优化落地页加载速度', 'A/B 测试不同 CTA 文案', '增加用户评价/买家秀板块']
+      : ['转化率良好，可尝试提价测试', '建立会员体系锁定复购']
+  res.json({
+    agent: 'conversion_optimizer',
+    result: {
+      currentRate: `${rate}%`,
+      benchmark: '行业平均 2-5%',
+      level: rate >= 5 ? '优秀' : rate >= 3 ? '良好' : '待优化',
+      suggestions,
+      expectedImprovement: rate < 3 ? '预计可提升至 4-6%' : '预计可提升至 7-10%'
+    }
+  })
+})
+
+// 13. 竞品分析器
+router.post('/competitor-analyzer', checkAccess, requireLevel('annual'), async (req, res) => {
+  const { industry, competitorAccounts } = req.body
+  const accounts = competitorAccounts || [{ name: '竞品A', followers: '5000', avgInteraction: '80' }, { name: '竞品B', followers: '3000', avgInteraction: '120' }]
+  res.json({
+    agent: 'competitor_analyzer',
+    result: {
+      analyzedAccounts: accounts.map((a, i) => ({
+        name: a.name,
+        followers: a.followers,
+        avgInteraction: a.avgInteraction,
+        strengths: [`内容定位清晰`, `封面风格统一`],
+        weaknesses: [`发布时间不稳定`, `互动回复率低`]
+      })),
+      opportunities: [`竞品未覆盖的${industry || ''}细分赛道`, `内容形式差异化（如竞品图文多则可做视频）`],
+      threats: [`头部竞品投放预算高`, `内容同质化严重`]
+    }
+  })
+})
+
+// 14. 种草转化
+router.post('/grass-converter', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { industry, productName, price, targetAudience } = req.body
+  res.json({
+    agent: 'grass_converter',
+    result: {
+      angles: [
+        { type: '痛点切入', script: `还在为${productName ? productName + '的选择' : '选择'}发愁？看完这篇省下${price ? '¥' + price : '一笔钱'}` },
+        { type: '场景种草', script: `${targetAudience || '打工人'}的${productName || '宝藏'}好物，用了就回不去` },
+        { type: '对比种草', script: `对比了 5 款${productName || '产品'}，这款性价比最高` }
+      ],
+      ctaTemplates: ['评论区扣1发链接', '私信我发优惠券', '主页有更多测评'],
+      notes: ['种草笔记禁止硬广，以真实体验为主', '配合信息流投放效果更佳']
+    }
+  })
+})
+
+// 15. 聚光投放策略
+router.post('/juguang-strategy', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { industry, budget, objective } = req.body
+  const dailyBudget = Number(budget) || 200
+  res.json({
+    agent: 'juguang_strategy',
+    result: {
+      budgetAllocation: {
+        noteInteraction: Math.round(dailyBudget * 0.5),
+        followerGrowth: Math.round(dailyBudget * 0.3),
+        conversion: Math.round(dailyBudget * 0.2)
+      },
+      targeting: {
+        interest: industry ? [`${industry}相关兴趣`] : ['泛生活兴趣'],
+        age: '22-40 岁',
+        region: '一二线城市为主'
+      },
+      bidStrategy: dailyBudget < 300 ? '自动出价，控制成本' : '手动出价，优先跑量',
+      optimizationTips: ['投放前 3 天为学习期不宜频繁调整', '每 200 元消耗后评估 ROI', '优质笔记可追加预算放大']
+    }
+  })
+})
+
+// 16. IP 定位
+router.post('/ip-positioning', checkAccess, requireLevel('annual'), async (req, res) => {
+  const { industry, founderBackground, brandStory, expertise } = req.body
+  res.json({
+    agent: 'ip_positioning',
+    result: {
+      persona: {
+        archetype: expertise ? '专家型IP' : founderBackground ? '创始人IP' : '生活方式IP',
+        tagline: `${industry || '行业'}${expertise ? '资深' + expertise : '创业者'}的真诚分享`,
+        tone: '专业 + 真诚 + 有温度'
+      },
+      contentMatrix: [
+        { pillar: '专业干货', ratio: '40%', examples: ['行业洞察', '避坑指南', '方法论分享'] },
+        { pillar: '个人故事', ratio: '30%', examples: ['创业经历', '成长心得', '幕后花絮'] },
+        { pillar: '产品种草', ratio: '20%', examples: ['用户好评', '使用场景', '产品理念'] },
+        { pillar: '互动话题', ratio: '10%', examples: ['投票互动', '问答合集', '粉丝投稿'] }
+      ],
+      differentiation: `以${founderBackground || expertise || '真实'}为核心差异点，区别于纯干货博主`
+    }
+  })
+})
+
+// 17. IP 一致性检测
+router.post('/ip-consistency', checkAccess, requireLevel('annual'), async (req, res) => {
+  const { notes } = req.body
+  const sample = (notes || []).slice(0, 5)
+  const checkResults = sample.map((n) => ({
+    title: n.title || '未命名笔记',
+    toneScore: Math.floor(60 + Math.random() * 30),
+    visualScore: Math.floor(60 + Math.random() * 30),
+    contentScore: Math.floor(60 + Math.random() * 30),
+    issues: n.title ? [] : ['缺少标题']
+  }))
+  res.json({
+    agent: 'ip_consistency',
+    result: {
+      overallScore: sample.length ? Math.floor(checkResults.reduce((s, r) => s + r.toneScore + r.visualScore + r.contentScore, 0) / (sample.length * 3)) : 75,
+      checks: checkResults,
+      summary: '建议保持封面色调统一（同一滤镜/色板），标题风格一致（同一种公式），发文时间固定',
+      tips: ['封面统一使用品牌主色调', '标题风格保持一致性', '简介突出核心定位不轻易改动']
+    }
   })
 })
 

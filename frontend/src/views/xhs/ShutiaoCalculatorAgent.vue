@@ -31,10 +31,10 @@
             <span class="input-suffix">元</span>
           </div>
         </div>
-        <button class="generate-btn" :disabled="!canCalculate" @click="calculate">
-          计算投放效果
+        <button class="generate-btn" :disabled="!canCalculate || loading" @click="calculate">
+          {{ loading ? '正在计算...' : '计算投放效果' }}
         </button>
-        <p v-if="error" class="error-text">{{ error }}</p>
+        <div v-if="errorMessage" class="error-state">{{ errorMessage }}</div>
       </div>
 
       <div v-if="result" class="result-card">
@@ -82,7 +82,8 @@ import { ref, reactive, computed } from 'vue'
 import request from '@/api/request'
 
 const result = ref(null)
-const error = ref('')
+const loading = ref(false)
+const errorMessage = ref('')
 
 const form = reactive({
   exposures: 500,
@@ -114,16 +115,24 @@ const benchmarkRows = computed(() => {
 })
 
 const calculate = async () => {
-  error.value = ''
+  loading.value = true
+  errorMessage.value = ''
+  result.value = null
   try {
-    result.value = await request.post('/xhs/shutiao-calculator', { ...form })
-  } catch (err) {
-    error.value = err.message || '计算投放效果失败'
+    const response = await request.post('/xhs/shutiao-calculator', {
+      ...form,
+      goal: '曝光与转化评估'
+    })
+    result.value = response
+  } catch (error) {
+    console.error('薯条投放计算失败:', error)
+    errorMessage.value = error.message || '薯条投放计算失败，请稍后重试'
+  } finally {
+    loading.value = false
   }
 }
 </script>
 
 <style scoped>
 @import '../agent-common.css';
-.error-text { color: #dc2626; margin-top: 12px; }
 </style>

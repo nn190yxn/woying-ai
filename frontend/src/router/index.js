@@ -12,7 +12,7 @@ const routes = [
     path: '/tools',
     name: 'Tools',
     component: () => import('@/views/Tools.vue'),
-    meta: { title: '表格中心' }
+    meta: { title: '所有工具' }
   },
   {
     path: '/industries/:slug',
@@ -33,6 +33,60 @@ const routes = [
   {
     path: '/modules/xiaohongshu',
     redirect: '/xhs'
+  },
+  {
+    path: '/tools/poster',
+    name: 'PosterGenerator',
+    component: () => import('@/views/tool/PosterGenerator.vue'),
+    meta: { title: '海报生成器' }
+  },
+  {
+    path: '/tools/xiaohongshu-education',
+    name: 'EducationXiaohongshuGenerator',
+    component: () => import('@/views/tools/EducationXiaohongshuGenerator.vue'),
+    meta: { title: '教培小红书运营专版' }
+  },
+  {
+    path: '/tools/douyin-education',
+    name: 'EducationDouyinGenerator',
+    component: () => import('@/views/tools/EducationDouyinGenerator.vue'),
+    meta: { title: '教培抖音运营专版' }
+  },
+  {
+    path: '/tools/xiaohongshu-beauty',
+    name: 'BeautyXiaohongshuGenerator',
+    component: () => import('@/views/tools/BeautyXiaohongshuGenerator.vue'),
+    meta: { title: '美业小红书运营专版' }
+  },
+  {
+    path: '/tools/douyin-beauty',
+    name: 'BeautyDouyinGenerator',
+    component: () => import('@/views/tools/BeautyDouyinGenerator.vue'),
+    meta: { title: '美业抖音运营专版' }
+  },
+  {
+    path: '/tools/xiaohongshu-restaurant',
+    name: 'RestaurantXiaohongshuGenerator',
+    component: () => import('@/views/tools/RestaurantXiaohongshuGenerator.vue'),
+    meta: { title: '餐饮小红书运营专版' }
+  },
+  {
+    path: '/tools/douyin-restaurant',
+    name: 'RestaurantDouyinGenerator',
+    component: () => import('@/views/tools/RestaurantDouyinGenerator.vue'),
+    meta: { title: '餐饮抖音运营专版' }
+  },
+  {
+    path: '/tools/xiaohongshu-service',
+    name: 'ServiceXiaohongshuGenerator',
+    component: () => import('@/views/tools/ServiceXiaohongshuGenerator.vue'),
+    meta: { title: '生活服务小红书运营专版' }
+  },
+  {
+    path: '/tools/douyin-service',
+    name: 'ServiceDouyinGenerator',
+    component: () => import('@/views/tools/ServiceDouyinGenerator.vue'),
+    meta: { title: '生活服务抖音运营专版' }
   },
   {
     path: '/tools/:code',
@@ -251,22 +305,22 @@ const routes = [
     meta: { title: '小红书增长智能体' }
   },
   { path: '/xhs/account-diagnosis', name: 'XhsAccountDiagnosis', component: () => import('@/views/xhs/AccountDiagnosisAgent.vue'), meta: { title: '账号体检表' } },
-  { path: '/xhs/quick-start-plan', name: 'XhsQuickStartPlan', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '15 天起号计划', agentCode: 'quick-start-plan' } },
-  { path: '/xhs/growth-strategy', name: 'XhsGrowthStrategy', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '90 天增长战略', agentCode: 'growth-strategy' } },
+  { path: '/xhs/quick-start-plan', name: 'XhsQuickStartPlan', component: () => import('@/views/xhs/QuickStartPlanAgent.vue'), meta: { title: '15 天起号计划' } },
+  { path: '/xhs/growth-strategy', name: 'XhsGrowthStrategy', component: () => import('@/views/xhs/GrowthStrategyAgent.vue'), meta: { title: '90 天增长战略' } },
   { path: '/xhs/topic-generator', name: 'XhsTopicGenerator', component: () => import('@/views/xhs/TopicGeneratorAgent.vue'), meta: { title: '爆款选题库' } },
-  { path: '/xhs/script-generator', name: 'XhsScriptGenerator', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '正文脚本生成', agentCode: 'script-generator' } },
+  { path: '/xhs/script-generator', name: 'XhsScriptGenerator', component: () => import('@/views/xhs/ScriptGeneratorAgent.vue'), meta: { title: '正文脚本生成' } },
   { path: '/xhs/title-generator', name: 'XhsTitleGenerator', component: () => import('@/views/xhs/TitleGeneratorAgent.vue'), meta: { title: '标题生成器' } },
-  { path: '/xhs/cover-helper', name: 'XhsCoverHelper', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '封面文案助手', agentCode: 'cover-helper' } },
-  { path: '/xhs/note-diagnoser', name: 'XhsNoteDiagnoser', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '笔记数据诊断', agentCode: 'note-diagnoser' } },
-  { path: '/xhs/account-reviewer', name: 'XhsAccountReviewer', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '账号复盘助手', agentCode: 'account-reviewer' } },
-  { path: '/xhs/seo-optimizer', name: 'XhsSeoOptimizer', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: 'SEO 关键词优化', agentCode: 'seo-optimizer' } },
-  { path: '/xhs/conversion-optimizer', name: 'XhsConversionOptimizer', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '转化链路优化', agentCode: 'conversion-optimizer' } },
-  { path: '/xhs/competitor-analyzer', name: 'XhsCompetitorAnalyzer', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '竞对分析器', agentCode: 'competitor-analyzer' } },
-  { path: '/xhs/grass-converter', name: 'XhsGrassConverter', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '种草转化计算器', agentCode: 'grass-converter' } },
+  { path: '/xhs/cover-helper', name: 'XhsCoverHelper', component: () => import('@/views/xhs/CoverHelperAgent.vue'), meta: { title: '封面文案助手' } },
+  { path: '/xhs/note-diagnoser', name: 'XhsNoteDiagnoser', component: () => import('@/views/xhs/NoteDiagnoserAgent.vue'), meta: { title: '笔记数据诊断' } },
+  { path: '/xhs/account-reviewer', name: 'XhsAccountReviewer', component: () => import('@/views/xhs/AccountReviewerAgent.vue'), meta: { title: '账号复盘助手' } },
+  { path: '/xhs/seo-optimizer', name: 'XhsSeoOptimizer', component: () => import('@/views/xhs/SeoOptimizerAgent.vue'), meta: { title: 'SEO 关键词优化' } },
+  { path: '/xhs/conversion-optimizer', name: 'XhsConversionOptimizer', component: () => import('@/views/xhs/ConversionOptimizerAgent.vue'), meta: { title: '转化链路优化' } },
+  { path: '/xhs/competitor-analyzer', name: 'XhsCompetitorAnalyzer', component: () => import('@/views/xhs/CompetitorAnalyzerAgent.vue'), meta: { title: '竞对分析器' } },
+  { path: '/xhs/grass-converter', name: 'XhsGrassConverter', component: () => import('@/views/xhs/GrassConverterAgent.vue'), meta: { title: '种草转化计算器' } },
   { path: '/xhs/shutiao-calculator', name: 'XhsShutiaoCalculator', component: () => import('@/views/xhs/ShutiaoCalculatorAgent.vue'), meta: { title: '薯条投放计算器' } },
-  { path: '/xhs/juguang-strategy', name: 'XhsJuguangStrategy', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '聚光投放策略', agentCode: 'juguang-strategy' } },
-  { path: '/xhs/ip-positioning', name: 'XhsIPPositioning', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '博主 IP 定位', agentCode: 'ip-positioning' } },
-  { path: '/xhs/ip-consistency', name: 'XhsIPConsistency', component: () => import('@/views/xhs/GenericAgent.vue'), meta: { title: '人设一致性检查', agentCode: 'ip-consistency' } }
+  { path: '/xhs/juguang-strategy', name: 'XhsJuguangStrategy', component: () => import('@/views/xhs/JuguangStrategyAgent.vue'), meta: { title: '聚光投放策略' } },
+  { path: '/xhs/ip-positioning', name: 'XhsIPPositioning', component: () => import('@/views/xhs/IPPositioningAgent.vue'), meta: { title: '博主 IP 定位' } },
+  { path: '/xhs/ip-consistency', name: 'XhsIPConsistency', component: () => import('@/views/xhs/IPConsistencyAgent.vue'), meta: { title: '人设一致性检查' } }
 ]
 
 const router = createRouter({

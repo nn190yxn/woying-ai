@@ -51,6 +51,10 @@
           <p>AI 正在编写脚本...</p>
         </div>
 
+        <div v-else-if="errorMessage" class="error-state">
+          {{ errorMessage }}
+        </div>
+
         <div v-else-if="script" class="script-result">
           <div class="script-header">
             <h3>{{ script.title }}</h3>
@@ -89,6 +93,7 @@ import request from '@/api/request'
 
 const loading = ref(false)
 const script = ref(null)
+const errorMessage = ref('')
 
 const form = reactive({
   template: 'talking',
@@ -97,45 +102,20 @@ const form = reactive({
   target: 'young'
 })
 
-const templateLabelMap = {
-  talking: '口播',
-  story: '剧情',
-  showcase: '种草',
-  comparison: '对比',
-  tutorial: '教程'
-}
-
-const sceneTimeKeys = ['0-3s', '3-15s', '15-30s', '30-45s']
-
 const generate = async () => {
   loading.value = true
+  errorMessage.value = ''
   try {
     const response = await request.post('/douyin/script-generator', {
-      industry: 'restaurant',
       topic: form.topic,
       format: form.template,
-      duration: Number(form.duration)
+      duration: Number(form.duration),
+      target: form.target
     })
-    const domainResult = response.result || response
-    const scriptResult = domainResult.script || {}
-    const scenes = sceneTimeKeys
-      .filter((key) => scriptResult[key])
-      .map((key) => ({
-        time: key,
-        action: '按该时段安排对应画面与镜头切换',
-        text: scriptResult[key],
-        bgm: ''
-      }))
-
-    script.value = {
-      title: scriptResult.title || `${form.topic}脚本方案`,
-      duration: scriptResult.duration || Number(form.duration),
-      template: templateLabelMap[scriptResult.format] || templateLabelMap[form.template] || scriptResult.format || '脚本',
-      scenes,
-      tips: response.riskNotes?.length ? response.riskNotes : ['拍摄前请结合真实门店场景、素材和可履约承诺再次润色脚本。']
-    }
+    script.value = response.script
   } catch (error) {
     console.error('生成失败:', error)
+    errorMessage.value = error.message || '生成失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -147,6 +127,7 @@ const generate = async () => {
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .generate-btn { padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; font-weight: var(--font-weight-semibold); cursor: pointer; }
 .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.error-state { margin-top: 20px; padding: 12px 16px; background: #fef2f2; color: #b91c1c; border-radius: 8px; font-size: var(--text-body-sm); }
 .script-header { margin-bottom: 24px; }
 .script-header h3 { font-size: var(--text-h4); margin-bottom: 8px; }
 .script-meta { display: flex; gap: 8px; }

@@ -15,8 +15,25 @@ export default defineConfig({
     allowedHosts: ['.monkeycode-ai.online'],
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_API_TARGET || 'http://localhost:3000',
         changeOrigin: true
+      }
+    }
+  },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('/node_modules/echarts/')) return 'vendor-echarts'
+            if (id.includes('/node_modules/zrender/')) return 'vendor-zrender'
+            if (id.includes('vue') || id.includes('pinia')) return 'vendor-vue'
+            if (id.includes('axios') || id.includes('dayjs')) return 'vendor-utils'
+            return 'vendor'
+          }
+          if (id.includes('/src/constants/toolCatalog')) return 'tool-catalog'
+        }
       }
     }
   }

@@ -28,6 +28,8 @@
         <button class="generate-btn" @click="generate" style="width:100%; margin-top:20px;">
           查看 90 天战略框架
         </button>
+        <div v-if="errorMessage" class="error-state">{{ errorMessage }}</div>
+        <div v-if="upgradeHint" class="upgrade-hint">{{ upgradeHint }}</div>
 
         <div v-if="strategy" class="strategy-result">
           <div class="strategy-header">
@@ -79,40 +81,25 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import request from '@/api/request'
-
 const strategy = ref(null)
+const errorMessage = ref('')
+const upgradeHint = ref('')
 const form = reactive({ industry: 'restaurant', stage: 'new' })
 
-const phaseBadgeClassMap = ['badge-phase-1', 'badge-phase-2', 'badge-phase-3']
-
 const generate = async () => {
+  errorMessage.value = ''
+  upgradeHint.value = ''
+  strategy.value = null
   try {
-    const response = await request.post('/douyin/full-strategy', {
-      industry: form.industry,
-      stage: form.stage
-    })
-    const domainResult = response.result || response
-    const phases = (domainResult.phases || []).map((phase, index) => ({
-      badge: `Phase ${index + 1}`,
-      badgeClass: phaseBadgeClassMap[index] || 'badge-phase-3',
-      name: phase.name,
-      desc: phase.detail || '详细执行策略需结合门店现状、预算和目标继续细化。',
-      tasks: phase.detail ? phase.detail.split(/；|。|\n/).map((item) => item.trim()).filter(Boolean).slice(0, 5) : ['结合经营目标拆解阶段任务'],
-      metrics: [
-        { label: '阶段目标', target: '结合门店目标复核' },
-        { label: '执行重点', target: '按阶段拆解' }
-      ],
-      locked: true
-    }))
-
+    const response = await request.post('/douyin/full-strategy', form)
     strategy.value = {
-      title: `${form.industry === 'restaurant' ? '餐饮' : form.industry === 'beauty' ? '美业' : '教培'}行业 90 天周期倒推战略`,
-      summary: response.summary || '本战略采用分阶段推进框架，详细执行 SOP 与预算表需继续定制化展开。',
-      phases,
-      upgradePath: domainResult.upgradePath || null
+      title: response.title || '90 天周期战略',
+      summary: response.summary || '',
+      phases: response.phases || []
     }
+    upgradeHint.value = response.upgradePath?.description || ''
   } catch (error) {
-    console.error('生成失败:', error)
+    errorMessage.value = error.message || '战略框架生成失败，请稍后重试'
   }
 }
 </script>
@@ -121,6 +108,8 @@ const generate = async () => {
 @import './agent-common.css';
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .generate-btn { padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 8px; font-weight: var(--font-weight-semibold); cursor: pointer; }
+.error-state { margin-top: 16px; padding: 12px 16px; background: #fef2f2; color: #b91c1c; border-radius: 8px; font-size: var(--text-body-sm); }
+.upgrade-hint { margin-top: 16px; padding: 12px 16px; background: #fff7ed; color: #9a3412; border-radius: 8px; font-size: var(--text-body-sm); }
 .strategy-result { margin-top: 24px; }
 .strategy-header { margin-bottom: 24px; text-align: center; }
 .strategy-header h3 { font-size: var(--text-h4); margin-bottom: 8px; }

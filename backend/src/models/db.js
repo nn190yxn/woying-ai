@@ -56,4 +56,18 @@ export async function getConnection() {
 
 export async function initDB() {
   logger.info('db', 'initDB called (MySQL mode)')
+  try {
+    await query(`CREATE TABLE IF NOT EXISTS user_sheets (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id VARCHAR(64) NOT NULL,
+      sheet_code VARCHAR(128) NOT NULL,
+      sheet_data JSON,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE INDEX idx_user_sheet (user_id, sheet_code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
+    logger.info('db', 'user_sheets table ready')
+  } catch (err) {
+    logger.warn('db', `user_sheets table init skipped: ${err.message}`)
+  }
 }

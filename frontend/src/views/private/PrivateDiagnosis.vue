@@ -109,6 +109,7 @@
             <div class="loading-spinner"></div>
             <p>AI 正在基于知识库生成私域健康度诊断...</p>
           </div>
+          <div v-else-if="errorMessage" class="error-state">{{ errorMessage }}</div>
           <div v-else-if="result" class="result-state">
             <div class="result-header">
               <div class="industry-badge">{{ result.industry }}</div>
@@ -186,6 +187,7 @@ const router = useRouter()
 const currentStep = ref(0)
 const loading = ref(false)
 const result = ref(null)
+const errorMessage = ref('')
 
 const steps = [
   { label: '行业分轨' },
@@ -224,6 +226,7 @@ const canProceed = computed(() => {
 const generate = async () => {
   loading.value = true
   result.value = null
+  errorMessage.value = ''
   try {
     const data = await request.post('/private/diagnosis', {
       industry: form.industry,
@@ -242,8 +245,8 @@ const generate = async () => {
         monthlyNewFriends: form.monthlyNewFriends
       }
     })
-    if (data.status === 'ok' || data.status === 'success') {
-      const r = data.result || data
+    if (data.status === 'success') {
+      const r = data.result
       r.radar = r.radar.map(d => ({
         ...d,
         color: getDimColor(d.key),
@@ -254,6 +257,8 @@ const generate = async () => {
     currentStep.value = 3
   } catch (error) {
     console.error('诊断失败:', error)
+    errorMessage.value = error.message || '私域体检生成失败，请稍后重试'
+    currentStep.value = 3
   } finally {
     loading.value = false
   }
@@ -304,6 +309,14 @@ const bookConsult = () => {
   background: linear-gradient(135deg, #f0f9ff, #e0e7ff);
   border-radius: 12px;
   margin-bottom: 24px;
+}
+
+.error-state {
+  padding: 12px 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: var(--text-body-sm);
 }
 
 .industry-badge {

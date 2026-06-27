@@ -40,7 +40,12 @@
         <button class="generate-btn" :disabled="!canGenerate || loading" @click="generate">
           {{ loading ? '正在生成标题...' : '生成爆款标题' }}
         </button>
-        <p v-if="error" class="error-text">{{ error }}</p>
+        <div v-if="errorMessage" class="error-state">
+          {{ errorMessage }}
+        </div>
+        <div v-if="upgradeHint" class="upgrade-hint">
+          {{ upgradeHint }}
+        </div>
       </div>
 
       <div v-if="titles.length" class="result-list">
@@ -66,7 +71,8 @@ import request from '@/api/request'
 
 const loading = ref(false)
 const titles = ref([])
-const error = ref('')
+const errorMessage = ref('')
+const upgradeHint = ref('')
 
 const form = reactive({
   industry: '',
@@ -78,12 +84,23 @@ const canGenerate = computed(() => form.industry)
 
 const generate = async () => {
   loading.value = true
-  error.value = ''
+  errorMessage.value = ''
+  upgradeHint.value = ''
+  titles.value = []
   try {
-    const response = await request.post('/xhs/title-generator', { ...form })
+    const response = await request.post('/xhs/title-generator', {
+      industry: form.industry,
+      topic: form.topic,
+      formulaType: form.formulaType
+    })
     titles.value = response.titles || []
-  } catch (err) {
-    error.value = err.message || '生成标题失败'
+    upgradeHint.value = response.upgradeHint || ''
+    if (!titles.value.length) {
+      throw new Error('后端未返回可展示的标题')
+    }
+  } catch (error) {
+    console.error('标题生成失败:', error)
+    errorMessage.value = error.message || '标题生成失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -96,5 +113,6 @@ const copyTitle = (t) => {
 
 <style scoped>
 @import '../agent-common.css';
-.error-text { color: #dc2626; margin-top: 12px; }
+.error-state { margin-top: 16px; padding: 12px 16px; background: #fef2f2; color: #b91c1c; border-radius: 8px; font-size: var(--text-body-sm); }
+.upgrade-hint { margin-top: 16px; padding: 12px 16px; background: #fff7ed; color: #9a3412; border-radius: 8px; font-size: var(--text-body-sm); }
 </style>
