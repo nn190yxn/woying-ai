@@ -4,6 +4,8 @@
   --brand-primary-weak: #3B82F6;
   --brand-accent: #F97316;
   --brand-accent-weak: #FB923C;
+  --brand-primary-soft: #EFF6FF;
+  --brand-accent-soft: #FFF7ED;
 
   /* 8 大板块专属色 */
   --pillar-management: #d97706;
@@ -25,13 +27,27 @@
   --bg-base: #FFFFFF;
   --bg-soft: #FAF8F5;
   --bg-subtle: #F8FAFC;
+  --bg-page: #F6F8FB;
+  --bg-workbench: #F3F6FA;
+  --bg-card: #FFFFFF;
+  --bg-card-muted: #F8FAFC;
+  --bg-panel: #F1F5F9;
   --text-main: #0F172A;
   --text-secondary: #475569;
   --text-muted: #94A3B8;
   --line-default: #E2E8F0;
+  --line-soft: #EEF2F7;
+  --line-strong: #CBD5E1;
+  --state-info: #2563EB;
+  --state-info-bg: #DBEAFE;
   --state-success: #16A34A;
+  --state-success-bg: #DCFCE7;
   --state-warning: #D97706;
+  --state-warning-bg: #FEF3C7;
   --state-danger: #DC2626;
+  --state-danger-bg: #FEE2E2;
+  --state-locked: #64748B;
+  --state-locked-bg: #F1F5F9;
 
   /* ==================== 字体系统 ==================== */
   --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -70,17 +86,22 @@
   --space-7: 40px;
   --space-8: 48px;
   --space-9: 64px;
+  --space-10: 80px;
 
   /* ==================== 圆角 ==================== */
   --radius-btn: 10px;
   --radius-input: 10px;
   --radius-card: 14px;
   --radius-modal: 16px;
+  --radius-panel: 12px;
+  --radius-pill: 9999px;
 
   /* ==================== 阴影 ==================== */
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
   --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10);
   --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.14);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-panel: 0 12px 32px rgba(15, 23, 42, 0.08);
 
   /* ==================== 动效 ==================== */
   --duration-fast: 150ms;
@@ -92,4 +113,32 @@
   --page-padding-mobile: 16px;
   --page-padding-tablet: 24px;
   --page-padding-desktop: 32px;
+  --page-max-width: 1200px;
+  --workbench-max-width: 1360px;
+  --content-readable-width: 760px;
+  --sidebar-width: 280px;
+  --aside-width: 320px;
+  --grid-gap-sm: 16px;
+  --grid-gap-md: 24px;
+  --grid-gap-lg: 32px;
+  --breakpoint-mobile: 640px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1024px;
+  --breakpoint-wide: 1200px;
+
+  /* ==================== 工作台组件尺寸 ==================== */
+  --button-height-sm: 36px;
+  --button-height-md: 40px;
+  --button-height-lg: 48px;
+  --input-height-md: 44px;
+  --input-height-lg: 48px;
+  --tag-height: 26px;
+  --card-padding-sm: 16px;
+  --card-padding-md: 20px;
+  --card-padding-lg: 24px;
+  --section-gap-sm: 24px;
+  --section-gap-md: 32px;
+  --section-gap-lg: 48px;
+  --workbench-rail-width: 220px;
+  --workbench-action-width: 280px;
 }

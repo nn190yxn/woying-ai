@@ -145,6 +145,7 @@ ${knowledge}
   festival: {
     name: '节日营销策划',
     engineType: 'rag',
+    requiresStructuredResult: true,
     knowledgeScope: {
       includeIndustry: true,
       includeFestival: true
@@ -188,12 +189,14 @@ ${knowledge}
 每条标注适用场景和发圈时间建议。`
     },
     temperature: 0.8,
-    max_tokens: 2000
+    max_tokens: 2000,
+    fallbackBuilder: async (formData) => generateFestivalFallback(formData)
   },
 
   'business-plan': {
     name: '商业计划书生成器',
     engineType: 'rag',
+    requiresStructuredResult: true,
     knowledgeScope: {
       includeIndustry: true,
       includeBusinessPlan: true
@@ -217,14 +220,15 @@ ${knowledge}
 - 营收预测完全脱离行业基准(如餐饮说月营收100万但只有5张桌子)
 - 只列目标不给执行路径`,
     userPromptTemplate: (formData, ind, knowledge) => {
-      const plan = getBusinessPlanByCapital(formData.capital || '10', ind.key)
+      const capitalWan = normalizeCapitalWan(formData.capital || '10')
+      const plan = getBusinessPlanByCapital(capitalWan, ind.key)
       return `项目名称：${formData.projectName || '未命名'}
 行业：${ind.name}
 发展阶段：${formData.stage || '初创期'}
 产品/服务：${formData.product || '未说明'}
 目标客户：${formData.targetCustomer || '未说明'}
 预计首年营收：${formData.revenue || plan.year1Revenue[0]}-${plan.year1Revenue[1]}万
-启动资金：${formData.capital || '10'}万
+启动资金：${capitalWan}万
 创始人背景：${formData.founderBackground || '未说明'}
 团队规模：${formData.teamSize || '未说明'}
 
@@ -235,15 +239,19 @@ ${knowledge}
 - 商业模式画布：获客渠道、收入来源、成本结构、核心资源
 - 营收预测：首年/第2年/第3年的营收区间和关键假设
 - 阶段性目标：3个月/6个月/12个月的具体指标和执行动作
-- 风险与应对：行业常见的3个风险和你的应对策略`
+- 风险与应对：行业常见的3个风险和你的应对策略
+
+请控制输出长度，sections 使用4-5个分节，每个分节2-4条，避免长段落。`
     },
     temperature: 0.7,
-    max_tokens: 4000
+    max_tokens: 2500,
+    fallbackBuilder: async (formData) => generateBusinessPlanFallback(formData)
   },
 
   fission: {
     name: '裂变活动方案',
     engineType: 'rag',
+    requiresStructuredResult: true,
     knowledgeScope: {
       includeIndustry: true,
       includeFission: true
@@ -286,12 +294,14 @@ ${knowledge}
 - 分阶段执行：前3天预热、活动期爆发、后3天收尾复盘`
     },
     temperature: 0.8,
-    max_tokens: 3000
+    max_tokens: 3000,
+    fallbackBuilder: async (formData) => generateFissionFallback(formData)
   },
 
   salary: {
     name: '薪酬方案设计器',
     engineType: 'rag',
+    requiresStructuredResult: true,
     knowledgeScope: {
       includeIndustry: true,
       includeSalary: true
@@ -315,10 +325,11 @@ ${knowledge}
 - 只列概念不给计算公式和数字示例
 - 不同岗位用同一套薪酬结构`,
     userPromptTemplate: (formData, ind, knowledge) => {
-      const salaryInfo = getSalaryByIndustry(ind.key, [formData.position || '服务员'])
+      const position = getPrimaryRole(formData)
+      const salaryInfo = getSalaryByIndustry(ind.key, [position])
       return `行业类型：${ind.name}
 门店规模：${formData.storeScale || '未知'}
-目标岗位：${formData.position || '服务员'}
+目标岗位：${position}
 参考薪酬：${salaryInfo.length ? `${salaryInfo[0].name} 底薪${salaryInfo[0].baseRange[0]}-${salaryInfo[0].baseRange[1]}元` : '暂无参考'}
 
 ${knowledge}
@@ -331,12 +342,14 @@ ${knowledge}
 - 实施建议：新老员工过渡方案和沟通话术`
     },
     temperature: 0.7,
-    max_tokens: 3000
+    max_tokens: 3000,
+    fallbackBuilder: async (formData) => generateSalaryFallback(formData)
   },
 
   'ip-agent': {
     name: 'IP 打造智能体',
     engineType: 'rag',
+    requiresStructuredResult: true,
     knowledgeScope: {
       includeIndustry: true,
       includePlatform: true
@@ -377,7 +390,8 @@ ${knowledge}
 - 表达风格指南：语气、用词、镜头语言
 - 首月内容日历：前4周的选题规划`,
     temperature: 0.8,
-    max_tokens: 3000
+    max_tokens: 3000,
+    fallbackBuilder: async (formData) => generateIpAgentFallback(formData)
   },
 
   competitor: {
@@ -3661,6 +3675,7 @@ router.post('/:toolCode', authMiddleware, async (req, res, next) => {
     if (!toolDef) {
       return res.status(400).json({ error: `Unknown tool: ${toolCode}` })
     }
+    const executableToolDef = { ...toolDef, code: toolCode }
 
     const memberLevel = await getUserMemberLevel(userId)
     const requiredLevel = getRequiredMemberLevel(toolCode)
@@ -3672,7 +3687,7 @@ router.post('/:toolCode', authMiddleware, async (req, res, next) => {
     await trackEvent(userId, EVENT_TYPES.TOOL_SUBMIT, { toolCode })
 
     // Apply input validation based on tool engine type
-    const validationRules = getValidationRulesForTool(toolDef.engineType)
+    const validationRules = getValidationRulesForTool(executableToolDef.engineType)
     const validateMiddleware = validationMiddleware(validationRules)
 
     // Run validation
@@ -3690,7 +3705,7 @@ router.post('/:toolCode', authMiddleware, async (req, res, next) => {
     }
 
     // Execute with failover
-    const result = await executeWithFailover(toolDef, validationReq.body, executeTool)
+    const result = await executeWithFailover(executableToolDef, validationReq.body, executeTool)
 
     await trackUsage(userId, toolCode)
 
@@ -3709,6 +3724,316 @@ router.post('/:toolCode', authMiddleware, async (req, res, next) => {
 })
 
 // 生成失败时的兜底函数
+function getFallbackIndustry(formData) {
+  return getIndustryData(formData.industry || 'catering')
+}
+
+function normalizeCapitalWan(value) {
+  const numeric = Number(value || 10)
+  if (!Number.isFinite(numeric) || numeric <= 0) return 10
+  return numeric >= 10000 ? Math.round(numeric / 10000) : numeric
+}
+
+function getPrimaryRole(formData, defaultRole = '服务员') {
+  if (formData.position) return formData.position
+  const roles = Array.isArray(formData.roles)
+    ? formData.roles
+    : String(formData.roles || '').split(/[,，、]/)
+  return roles.map(role => String(role).trim()).filter(Boolean)[0] || defaultRole
+}
+
+function generateBusinessPlanFallback(formData) {
+  const industry = getFallbackIndustry(formData)
+  const capital = normalizeCapitalWan(formData.capital || '10')
+  const plan = getBusinessPlanByCapital(capital, industry.key)
+  const projectName = formData.projectName || `${industry.name}项目`
+  const product = formData.product || '核心产品/服务'
+  const targetCustomer = formData.targetCustomer || '本地高频消费客户'
+
+  return buildUnifiedResponse({
+    summary: `${projectName}商业计划书已生成（规则兜底版），重点围绕获客、盈利和3阶段落地指标展开。`,
+    sections: [
+      { title: '项目定位', items: [
+        `${projectName}面向${targetCustomer}，提供${product}，核心竞争点是用稳定体验和本地信任提升复购。`,
+        `行业基准：${industry.name}市场规模${industry.marketSize}，常见获客渠道为${industry.commonChannels.join('、')}。`,
+        `启动资金${capital}万元建议优先投向门店/产品打磨、首批获客和现金流安全垫。`
+      ]},
+      { title: '商业模式画布', items: [
+        `获客渠道：主渠道选择${industry.commonChannels.slice(0, 2).join(' + ')}，私域承接复购和转介绍。`,
+        `收入来源：首单收入、复购套餐、会员储值、老客转介绍带来的新增订单。`,
+        `成本结构：固定成本控制在月营收30%以内，营销获客成本参考${industry.avgCAC}，复购客户贡献覆盖前期投放。`,
+        `核心资源：创始人专业背书、稳定交付流程、可持续复购的客户池。`
+      ]},
+      { title: '三年营收预测', items: [
+        `第1年：营收${plan.year1Revenue[0]}-${plan.year1Revenue[1]}万元，核心假设是完成产品验证和本地口碑启动。`,
+        `第2年：营收${plan.year2Revenue[0]}-${plan.year2Revenue[1]}万元，核心假设是复购率达到${industry.repurchaseRate}并形成稳定获客渠道。`,
+        `第3年：营收${plan.year3Revenue[0]}-${plan.year3Revenue[1]}万元，核心假设是单店模型稳定后扩品类或扩区域。`,
+        `毛利率目标：${Math.round(plan.grossMargin[0] * 100)}%-${Math.round(plan.grossMargin[1] * 100)}%，低于区间下限时先优化定价和成本。`
+      ]},
+      { title: '阶段目标', items: [
+        '3个月：跑通首批100个种子客户，沉淀10条真实客户反馈，完成标准服务流程。',
+        '6个月：稳定1个主获客渠道，月复购客户占比达到30%以上，建立员工考核表。',
+        '12个月：月营收达到首年目标月均值，单客获客成本进入行业基准区间，形成可复制运营手册。'
+      ]},
+      { title: '风险与应对', items: [
+        '获客成本过高：每周复盘渠道ROI，连续2周低于1.5时停投并转向私域转介绍。',
+        '现金流压力：固定成本按3个月安全垫预留，促销活动先测小样本再放量。',
+        '服务质量波动：把关键交付环节写成SOP，每日抽查客户反馈和异常订单。'
+      ]}
+    ],
+    actions: [
+      { priority: 'critical', title: '确定首月验证指标', description: '锁定客单价、获客成本、复购率3个指标，每周记录一次', owner: '老板', timeline: '今天' },
+      { priority: 'high', title: '制作渠道测试表', description: '为2个主渠道设置预算、线索数、成交数和ROI字段', owner: '运营负责人', timeline: '3天内' },
+      { priority: 'medium', title: '建立现金流台账', description: '按周记录收入、固定成本、营销支出和可用现金', owner: '财务/老板', timeline: '1周内' }
+    ],
+    riskNotes: ['营收预测使用行业基准和启动资金估算，实际结果需结合城市、面积、客单价和团队能力校准。'],
+    benchmarks: {
+      avgCAC: industry.avgCAC,
+      avgLTV: industry.avgLTV,
+      repurchaseRate: industry.repurchaseRate,
+      grossMargin: `${Math.round(plan.grossMargin[0] * 100)}%-${Math.round(plan.grossMargin[1] * 100)}%`
+    },
+    scores: { clarity: 86, feasibility: 82, financialDiscipline: 84 },
+    recommendedTools: ['gross-margin-restaurant', 'fission', 'store-health'],
+    extra: { isRuleFallback: true, fallbackType: 'business_plan_rule' }
+  }, { degraded: true, engineType: 'rag', toolCode: 'business-plan', fallbackType: 'business_plan_rule' })
+}
+
+function generateFissionFallback(formData) {
+  const industry = getFallbackIndustry(formData)
+  const benchmarks = getFissionBenchmarks(industry.key)
+  const budget = Number(formData.budget || 1000)
+  const newGift = benchmarks.newUserGiftCost[1]
+  const referral = benchmarks.referralReward[1]
+  const estimatedParticipants = Math.max(30, Math.floor(budget / Math.max(newGift + referral, 1)))
+  const estimatedNewCustomers = Math.max(8, Math.floor(estimatedParticipants * benchmarks.phase3PurchaseRate[0]))
+  const cac = Math.round(budget / Math.max(estimatedNewCustomers, 1))
+
+  return buildUnifiedResponse({
+    summary: `${industry.name}裂变活动方案已生成（规则兜底版），预算${budget}元预计触达${estimatedParticipants}人，新增客户约${estimatedNewCustomers}人。`,
+    sections: [
+      { title: '诱饵设计', items: [
+        `老客奖励：推荐1名新客到店核销，获得${benchmarks.referralReward[0]}-${benchmarks.referralReward[1]}元等值权益。`,
+        `新客权益：首次体验礼控制在${benchmarks.newUserGiftCost[0]}-${benchmarks.newUserGiftCost[1]}元成本内，降低首次决策门槛。`,
+        `社交理由：把活动包装成“老客专属福利”，让分享行为更像推荐好店。`
+      ]},
+      { title: '活动规则', items: [
+        '老客转发专属海报或邀请码，新客扫码登记即可领取体验权益。',
+        '新客完成首单后，老客奖励自动发放到会员账户。',
+        '同一新客仅能参与一次，奖励仅限活动期后7天内使用。'
+      ]},
+      { title: '传播路径', items: [
+        '触发场景：结账后、服务完成后、微信群老客互动后发起邀请。',
+        '分享方式：老客海报 + 一句话推荐文案 + 店员私聊提醒。',
+        '接收体验：新客进入登记页，领取权益后由客服在24小时内预约到店。',
+        '核销闭环：到店核销后引导加企业微信，进入7天复购跟进。'
+      ]},
+      { title: '投入产出测算', items: [
+        `活动预算：${budget}元。`,
+        `预计参与人数：${estimatedParticipants}人，参考行业参与转化${Math.round(benchmarks.phase1Conversion[0] * 100)}%-${Math.round(benchmarks.phase1Conversion[1] * 100)}%。`,
+        `预计新增客户：${estimatedNewCustomers}人，单客获客成本约${cac}元。`,
+        `控制线：单客获客成本需低于客户首单利润的50%。`
+      ]},
+      { title: '7天执行节奏', items: [
+        '第1-2天：筛选100名高满意老客，准备海报、话术和登记表。',
+        '第3-5天：集中私聊触达，店员每天跟进未预约新客。',
+        '第6-7天：公布奖励进度，提醒权益过期，完成数据复盘。'
+      ]}
+    ],
+    actions: [
+      { priority: 'critical', title: '先圈定种子老客', description: '从近30天消费客户中筛选满意度高、复购强的100人', owner: '店长', timeline: '今天' },
+      { priority: 'high', title: '配置核销台账', description: '记录推荐人、新客手机号、预约时间、首单金额和奖励发放状态', owner: '前台/客服', timeline: '2天内' },
+      { priority: 'medium', title: '复盘ROI', description: '活动结束后计算新增客户、获客成本和7天复购', owner: '老板', timeline: '活动结束后1天' }
+    ],
+    riskNotes: ['权益成本需小于首单毛利的一半；推荐奖励延迟到新客核销后发放。'],
+    benchmarks: {
+      newUserGiftCost: `${benchmarks.newUserGiftCost[0]}-${benchmarks.newUserGiftCost[1]}元`,
+      referralReward: `${benchmarks.referralReward[0]}-${benchmarks.referralReward[1]}元`,
+      purchaseRate: `${Math.round(benchmarks.phase3PurchaseRate[0] * 100)}%-${Math.round(benchmarks.phase3PurchaseRate[1] * 100)}%`,
+      estimatedCAC: `${cac}元`
+    },
+    scores: { simplicity: 88, costControl: 84, conversionPotential: 82 },
+    recommendedTools: ['private-fission-plan', 'poster', 'close-deal'],
+    extra: { isRuleFallback: true, fallbackType: 'fission_rule' }
+  }, { degraded: true, engineType: 'rag', toolCode: 'fission', fallbackType: 'fission_rule' })
+}
+
+function generateFestivalFallback(formData) {
+  const industry = getFallbackIndustry(formData)
+  const fest = getFestival(formData.festival) || {
+    name: formData.festival || '节日',
+    marketingThemes: ['情感关怀', '限时权益', '老客回流'],
+    couponValue: '50-200元'
+  }
+  const goalMap = { promote: '促销推广', brand: '品牌宣传', customer: '客户关怀', product: '新品推广' }
+  const contentTypeMap = { poster: '朋友圈海报文案', video: '短视频文案', group: '微信群发消息', article: '公众号推文' }
+  const goal = goalMap[formData.goal] || formData.goal || '促销推广'
+  const contentType = contentTypeMap[formData.contentType] || formData.contentType || '朋友圈文案'
+
+  return buildUnifiedResponse({
+    summary: `${industry.name}${fest.name}营销方案已生成（规则兜底版），围绕${goal}设计情感钩子、限时权益和私域承接。`,
+    sections: [
+      { title: '活动定位', items: [
+        `节日主题：${fest.name}，主打${fest.marketingThemes.join('、')}。`,
+        `行业嵌入：${industry.name}优先突出本地信任、到店场景和复购理由。`,
+        `内容形式：${contentType}，核心目标是${goal}。`
+      ]},
+      { title: '三条文案方向', items: [
+        `情感共鸣型：把${fest.name}和顾客真实场景连接，先表达关怀，再引出${industry.name}服务价值。`,
+        `权益紧迫型：设置${fest.couponValue}区间内的限时权益，配合48小时截止和老客优先名额。`,
+        `实用攻略型：输出节日前后消费/保养/聚会小贴士，结尾引导进群领取清单或预约名额。`
+      ]},
+      { title: '渠道节奏', items: [
+        'T-7天：朋友圈和社群预热，先讲节日场景和客户痛点。',
+        'T-3天：发布正式权益，强调限时、限量和适用人群。',
+        'T当天：集中私聊高意向老客，提醒权益截止和预约档期。',
+        'T+2天：复盘未成交客户，转入二次触达和复购跟进。'
+      ]},
+      { title: '转化设计', items: [
+        `优惠钩子控制在${fest.couponValue}，避免透支毛利。`,
+        `承接动作使用“回复节日名 + 需求”领取权益，方便客服分层跟进。`,
+        `老客推荐新客时，奖励在新客核销后发放，降低无效成本。`
+      ]},
+      { title: '老板复盘指标', items: [
+        '曝光指标：朋友圈阅读、社群点击、短视频完播或私信数。',
+        '转化指标：领取人数、预约人数、到店核销、成交金额。',
+        '成本指标：权益成本、人工跟进成本、单客获客成本。'
+      ]}
+    ],
+    actions: [
+      { priority: 'critical', title: '确定节日权益', description: `把权益控制在${fest.couponValue}区间内，并写清适用门槛和截止时间`, owner: '老板', timeline: '今天' },
+      { priority: 'high', title: '准备三类素材', description: '分别准备情感海报、权益海报和实用攻略内容', owner: '运营', timeline: '2天内' },
+      { priority: 'medium', title: '建立跟进表', description: '记录领取权益、预约、到店、成交和复购状态', owner: '客服/店长', timeline: '活动开始前' }
+    ],
+    riskNotes: [
+      '权益力度需结合毛利率复核，低毛利产品优先用赠品或套餐升级替代直接打折。',
+      '文案不得编造虚假折扣、虚假顾客证言或制造过度紧迫感。'
+    ],
+    benchmarks: {
+      couponValue: fest.couponValue,
+      commonChannels: industry.commonChannels.join('、'),
+      avgCAC: industry.avgCAC,
+      repurchaseRate: industry.repurchaseRate
+    },
+    scores: { relevance: 86, conversionDesign: 84, executionClarity: 88 },
+    recommendedTools: ['friend', 'poster', 'private-retention-plan'],
+    extra: { isRuleFallback: true, fallbackType: 'festival_rule' }
+  }, { degraded: true, engineType: 'rag', toolCode: 'festival', fallbackType: 'festival_rule' })
+}
+
+function generateSalaryFallback(formData) {
+  const industry = getFallbackIndustry(formData)
+  const position = getPrimaryRole(formData)
+  const salaryInfo = getSalaryByIndustry(industry.key, [position])[0] || getSalaryByIndustry(industry.key, ['店长'])[0] || {
+    name: position,
+    baseRange: [4000, 7000],
+    perfRatio: 0.25,
+    commonKPI: ['营业额', '客户满意度', '复购率']
+  }
+  const baseLow = salaryInfo.baseRange[0]
+  const baseHigh = salaryInfo.baseRange[1]
+  const targetBase = Math.round((baseLow + baseHigh) / 2)
+  const perfPay = Math.round(targetBase * salaryInfo.perfRatio)
+  const bonus = Math.round(targetBase * 0.15)
+
+  return buildUnifiedResponse({
+    summary: `${industry.name}${position}薪酬方案已生成（规则兜底版），建议月收入区间${baseLow}-${baseHigh + perfPay + bonus}元。`,
+    sections: [
+      { title: '薪酬结构', items: [
+        `底薪：${baseLow}-${baseHigh}元，承担岗位基础职责和出勤稳定性。`,
+        `绩效：按目标底薪的${Math.round(salaryInfo.perfRatio * 100)}%设置，建议区间${Math.round(baseLow * salaryInfo.perfRatio)}-${Math.round(baseHigh * salaryInfo.perfRatio)}元。`,
+        `奖金：设置月度冲刺奖${bonus}元左右，绑定门店关键目标。`,
+        '结构原则：员工能按月自己算清，老板能按利润承受。'
+      ]},
+      { title: 'KPI 指标', items: salaryInfo.commonKPI.map((kpi, index) => `${index + 1}. ${kpi}：占绩效权重${index === 0 ? 50 : index === 1 ? 30 : 20}%`) },
+      { title: '计算示例', items: [
+        `达标员工：底薪${targetBase}元 + 绩效${perfPay}元 + 奖金0元 = ${targetBase + perfPay}元。`,
+        `冲刺员工：底薪${targetBase}元 + 绩效${perfPay}元 + 冲刺奖${bonus}元 = ${targetBase + perfPay + bonus}元。`,
+        `保底线：完成基础出勤和服务要求，收入不低于${baseLow}元。`
+      ]},
+      { title: '实施规则', items: [
+        '新员工前30天采用固定底薪+带教评价，避免一上岗就被复杂绩效劝退。',
+        '老员工设置2个月过渡期，用新老方案并行测算一次，选择更高值发放。',
+        '每月公示岗位目标和计算公式，减少薪酬争议。'
+      ]},
+      { title: '沟通话术', items: [
+        `这套方案让${position}的收入和真实贡献挂钩，完成基础目标有稳定收入，冲刺目标能拿到更高奖金。`,
+        '绩效指标会提前公布，月底按数据核算，过程里有问题每周可以复盘调整。'
+      ]}
+    ],
+    actions: [
+      { priority: 'critical', title: '确认岗位目标', description: `为${position}确定1个主KPI和2个辅助KPI`, owner: '老板/店长', timeline: '今天' },
+      { priority: 'high', title: '试算历史工资', description: '用过去3个月数据套入新方案，确认成本可控', owner: '财务', timeline: '3天内' },
+      { priority: 'medium', title: '安排员工沟通', description: '逐一解释公式、目标和过渡期规则', owner: '店长', timeline: '1周内' }
+    ],
+    riskNotes: ['绩效奖金应和门店毛利挂钩；门店淡季可降低冲刺目标但保留基础稳定性。'],
+    benchmarks: {
+      baseRange: `${baseLow}-${baseHigh}元`,
+      perfRatio: `${Math.round(salaryInfo.perfRatio * 100)}%`,
+      commonKPI: salaryInfo.commonKPI
+    },
+    scores: { fairness: 85, incentive: 86, costControl: 83 },
+    recommendedTools: ['store-health', 'sop', 'gross-margin-restaurant'],
+    extra: { isRuleFallback: true, fallbackType: 'salary_rule' }
+  }, { degraded: true, engineType: 'rag', toolCode: 'salary', fallbackType: 'salary_rule' })
+}
+
+function generateIpAgentFallback(formData) {
+  const industry = getFallbackIndustry(formData)
+  const name = formData.name || '老板'
+  const background = formData.background || `${industry.name}一线经营经验`
+  const targetCustomer = formData.targetCustomer || '本地目标客户'
+  const platforms = Array.isArray(formData.platforms) ? formData.platforms.join('、') : (formData.platforms || '抖音')
+  const style = formData.style || '专业但不端着'
+
+  return buildUnifiedResponse({
+    summary: `${name}的${industry.name}个人IP策略已生成（规则兜底版），定位为“懂经营、敢讲真话、能给结果”的老板型IP。`,
+    sections: [
+      { title: '3标签定位', items: [
+        `身份标签：${industry.name}一线老板/主理人。`,
+        `专长标签：基于${background}输出真实经验和避坑判断。`,
+        `性格标签：${style}，表达重点是讲实话、给方法、展示结果。`
+      ]},
+      { title: '差异化表达', items: [
+        `同行常见内容偏产品展示，你的差异化是把“为什么这样做”和“客户得到了什么结果”讲清楚。`,
+        `针对${targetCustomer}，每条内容都要回答一个真实决策问题：值不值、靠不靠谱、怎么选。`,
+        `结合${industry.name}行业渠道${industry.commonChannels.join('、')}，用平台内容引流到私域做复购。`
+      ]},
+      { title: '内容矩阵', items: [
+        '周一：行业避坑，讲一个客户容易踩的坑。',
+        '周三：真实案例，拆一单成交或服务前后变化。',
+        '周五：老板观点，讲同行不愿意明说的经营判断。',
+        '周日：门店日常，展示团队、流程和客户反馈。'
+      ]},
+      { title: '表达风格指南', items: [
+        '开头3秒先讲结论或冲突，比如“这类客户我建议先别买套餐”。',
+        '每条内容只讲一个点，结尾给一个可执行动作。',
+        '镜头语言以真实门店/真实服务场景为主，减少棚拍和空泛口号。'
+      ]},
+      { title: '首月内容日历', items: [
+        '第1周：3条避坑内容，建立专业可信感。',
+        '第2周：2条客户案例 + 1条门店日常，证明交付能力。',
+        '第3周：3条老板观点，形成记忆点。',
+        '第4周：2条福利转化内容 + 1条复盘内容，承接咨询和到店。'
+      ]}
+    ],
+    actions: [
+      { priority: 'critical', title: '确定一句话定位', description: `用“我是${industry.name}老板，专门帮${targetCustomer}解决一个核心问题”完成账号简介`, owner: name, timeline: '今天' },
+      { priority: 'high', title: '拍摄首批素材', description: '先拍10条真实门店、服务过程和客户问题素材', owner: name, timeline: '3天内' },
+      { priority: 'medium', title: '建立选题库', description: '按避坑、案例、观点、日常四类各准备10个标题', owner: '运营', timeline: '1周内' }
+    ],
+    riskNotes: ['老板IP需要长期稳定输出；前30天重点验证表达方向和咨询质量。'],
+    benchmarks: {
+      contentMix: '专业输出50% + 经营故事30% + 生活日常20%',
+      channels: platforms,
+      industryCAC: industry.avgCAC
+    },
+    scores: { positioning: 87, contentConsistency: 84, conversionReadiness: 82 },
+    recommendedTools: ['topic', 'headline', 'script'],
+    extra: { isRuleFallback: true, fallbackType: 'ip_agent_rule' }
+  }, { degraded: true, engineType: 'rag', toolCode: 'ip-agent', fallbackType: 'ip_agent_rule' })
+}
+
 function generateHeadlineFallback(formData) {
   const industry = formData.industry || '通用'
   const keywords = formData.keywords || '产品'

@@ -70,6 +70,8 @@ const iconComponent = computed(() => {
 
 .tool-card.locked {
   opacity: 0.7;
+  border-color: var(--line-strong);
+  background: var(--bg-card-muted);
 }
 
 .tool-card.locked:hover {
@@ -99,7 +101,7 @@ const iconComponent = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.58);
   border-radius: var(--radius-btn);
   display: flex;
   align-items: center;

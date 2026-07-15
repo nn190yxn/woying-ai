@@ -100,11 +100,11 @@ export function isAiAvailabilityError(error) {
   )
 }
 
-export function createRagFallbackResult(toolConfig = {}, formData = {}, error = null) {
+export async function createRagFallbackResult(toolConfig = {}, formData = {}, error = null) {
   const toolName = toolConfig.name || toolConfig.code || '智能工具'
   const toolCode = toolConfig.code || 'unknown'
   const fallback = typeof toolConfig.fallbackBuilder === 'function'
-    ? toolConfig.fallbackBuilder(formData, error)
+    ? await toolConfig.fallbackBuilder(formData, error)
     : getFallbackResponse(toolName, toolCode)
 
   return {
@@ -134,14 +134,16 @@ export async function executeWithFailover(toolConfig, formData, executeFn) {
   const toolName = toolConfig.name || toolConfig.code || '未知工具'
   const toolCode = toolConfig.code || 'unknown'
   const startTime = Date.now()
+  const maxRetries = toolConfig.maxRetries ?? (toolConfig.requiresStructuredResult ? 0 : 1)
+  const timeout = toolConfig.executionTimeoutMs ?? (toolConfig.requiresStructuredResult ? 55000 : 20000)
 
   try {
     const result = await retryWithBackoff(
       () => executeFn(toolConfig, formData),
       {
-        maxRetries: 1,
+        maxRetries,
         baseDelay: 500,
-        timeout: 20000,
+        timeout,
         onRetry: (attempt, error) => {
           logger.warn('failover', `Retrying ${toolCode}`, {
             attempt,

@@ -512,7 +512,7 @@ router.post('/generate', authMiddleware, async (req, res, next) => {
     const duration = Date.now() - startTime
     const inputEstimate = Math.ceil(JSON.stringify({ prompt, formData }).length / 3)
     const outputEstimate = Math.ceil(JSON.stringify(rawResult).length / 3)
-    const model = process.env.MCAI_LLM_MODEL || 'minimax-m2.7'
+    const model = process.env.USER_LLM_MODEL || process.env.MCAI_LLM_MODEL || 'minimax-m2.7'
 
     recordTokenUsage({
       toolCode: 'poster',

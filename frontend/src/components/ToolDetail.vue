@@ -497,6 +497,7 @@ function handleSave() {
 }
 
 .result-section {
+  min-width: 0;
   padding: var(--space-5);
 }
 
@@ -504,6 +505,8 @@ function handleSave() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
   margin-bottom: var(--space-4);
 }
 
@@ -513,6 +516,7 @@ function handleSave() {
 
 .result-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
@@ -538,7 +542,7 @@ function handleSave() {
   font-weight: var(--font-weight-medium);
   margin-bottom: var(--space-4);
   padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--line-default);
 }
 
 .result-scores {
@@ -556,8 +560,9 @@ function handleSave() {
   flex-direction: column;
   align-items: center;
   padding: var(--space-3);
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
 }
 
 .score-label {
@@ -595,8 +600,9 @@ function handleSave() {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
 }
 
 .benchmark-metric {
@@ -657,8 +663,9 @@ function handleSave() {
   gap: var(--space-2);
   padding: var(--space-3);
   margin-bottom: var(--space-2);
-  border-radius: var(--radius-md);
-  border-left: 3px solid var(--border-color);
+  border-radius: var(--radius-panel);
+  border-left: 3px solid var(--line-default);
+  background: var(--bg-card-muted);
 }
 
 .action-item.critical {
@@ -679,9 +686,9 @@ function handleSave() {
 }
 
 .action-priority-badge {
-  font-size: var(--text-body-xs);
+  font-size: var(--text-caption);
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-weight: var(--font-weight-medium);
 }
 
@@ -722,9 +729,9 @@ function handleSave() {
 .result-risks {
   margin-bottom: var(--space-4);
   padding: var(--space-3);
-  background: rgba(239, 68, 68, 0.05);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: var(--state-danger-bg);
+  border-radius: var(--radius-panel);
+  border: 1px solid rgba(239, 68, 68, 0.24);
 }
 
 .result-risks h4 {
@@ -762,7 +769,7 @@ function handleSave() {
   padding: var(--space-2) var(--space-3);
   background: var(--brand-primary);
   color: white;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-size: var(--text-body-sm);
   text-decoration: none;
   transition: opacity 0.2s;
@@ -776,7 +783,7 @@ function handleSave() {
   margin-top: var(--space-5);
   padding: var(--space-4);
   background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   text-align: center;
 }
 
@@ -830,10 +837,13 @@ function handleSave() {
 
 .spreadsheet-result {
   margin-bottom: var(--space-4);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .spreadsheet-table {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
   font-size: var(--text-body-sm);
 }
@@ -868,13 +878,14 @@ function handleSave() {
   margin-top: var(--space-6);
   padding: var(--space-4);
   background: linear-gradient(135deg, var(--pillar-private-bg), var(--pillar-ip-bg));
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   border: 1px solid var(--pillar-private);
 }
 
 .premium-cta-content {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-4);
 }
 
@@ -891,5 +902,25 @@ function handleSave() {
 .premium-text p {
   color: var(--pillar-private);
   font-size: var(--text-body-sm);
+}
+
+@media (max-width: 639px) {
+  .tool-meta,
+  .result-header,
+  .benchmark-item,
+  .premium-cta-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .result-actions,
+  .result-actions > *,
+  .premium-cta .btn {
+    width: 100%;
+  }
+
+  .scores-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

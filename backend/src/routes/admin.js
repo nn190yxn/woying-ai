@@ -381,9 +381,9 @@ router.get('/config', async (req, res) => {
         frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'http://localhost:5173'
       },
       llm: {
-        baseUrl: process.env.MCAI_LLM_BASE_URL || '未配置',
-        model: process.env.MCAI_LLM_MODEL || '未配置',
-        apiKey: process.env.MCAI_LLM_API_KEY ? '***已配置***' : '⚠️ 未配置'
+        baseUrl: process.env.USER_LLM_BASE_URL || process.env.MCAI_LLM_BASE_URL || '未配置',
+        model: process.env.USER_LLM_MODEL || process.env.MCAI_LLM_MODEL || '未配置',
+        apiKey: (process.env.USER_LLM_API_KEY || process.env.MCAI_LLM_API_KEY || process.env.OPENAI_API_KEY) ? '***已配置***' : '⚠️ 未配置'
       },
       database: {
         host: process.env.DB_HOST || 'localhost',

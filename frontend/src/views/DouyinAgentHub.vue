@@ -1,18 +1,44 @@
 <template>
   <div class="douyin-agent-hub">
-    <div class="hub-header container">
+    <div class="hub-header container-wide workbench-page-header">
+      <p class="section-eyebrow">抖音经营工作台</p>
       <h1 class="hub-title">抖音增长智能体矩阵</h1>
-      <p class="hub-desc">每个智能体专注一个环节，按需用，高频使用，深度输出</p>
+      <p class="hub-desc">每个智能体专注一个环节，按体检、计划、执行、复盘的顺序推进。</p>
     </div>
 
-    <div class="hub-grid container">
-      <div v-for="group in agentGroups" :key="group.id" class="agent-group">
+    <section class="mainline-section container-wide workbench-section">
+      <div class="mainline-head workbench-section-header">
+        <div>
+          <p class="section-eyebrow">主线作战路径</p>
+          <h2>先体检，再计划，执行后复盘</h2>
+        </div>
+        <p>围绕本地生活老板最常用的抖音经营链路，优先使用这 7 个入口。</p>
+      </div>
+      <div class="mainline-grid">
+        <button
+          v-for="agent in mainlineAgents"
+          :key="agent.code"
+          class="mainline-card"
+          :class="{ locked: getAgentLocked(agent) }"
+          @click="openAgent(agent)"
+        >
+          <span class="mainline-step">{{ agent.step }}</span>
+          <strong>{{ agent.name }}</strong>
+          <span>{{ agent.desc }}</span>
+          <em :class="agent.levelClass">{{ agent.levelText }}</em>
+          <small v-if="getAgentLocked(agent)" class="lock-hint">{{ getLockText(agent) }}</small>
+        </button>
+      </div>
+    </section>
+
+    <div class="hub-grid container-wide workbench-stack">
+      <div v-for="group in agentGroups" :key="group.id" class="agent-group card workbench-section">
         <h2 class="group-title">
           <span class="group-icon">{{ group.icon }}</span>
           {{ group.name }}
         </h2>
         <div class="agent-cards">
-          <div v-for="agent in group.agents" :key="agent.code" class="agent-card" @click="openAgent(agent)">
+          <div v-for="agent in group.agents" :key="agent.code" class="agent-card" :class="{ locked: getAgentLocked(agent) }" @click="openAgent(agent)">
             <div class="agent-card-header">
               <span class="agent-emoji">{{ agent.emoji }}</span>
               <span class="agent-name">{{ agent.name }}</span>
@@ -22,17 +48,17 @@
               <span class="agent-level" :class="agent.levelClass">{{ agent.levelText }}</span>
               <span v-if="agent.usageHint" class="agent-usage">{{ agent.usageHint }}</span>
             </div>
-            <div v-if="agent.locked" class="agent-lock-overlay">
+            <div v-if="getAgentLocked(agent)" class="agent-lock-overlay">
               <span class="lock-icon">🔒</span>
-              <span class="lock-text">升级解锁</span>
+              <span class="lock-text">{{ getLockText(agent) }}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="hub-cta container">
-      <div class="cta-card">
+    <div class="hub-cta container-wide">
+      <div class="cta-card card workbench-action-panel">
         <h3>需要完整运营方案？</h3>
         <p>AI 生成 80% 底稿 + 专家沟通润色 = 您的专属定制报告</p>
         <button class="cta-btn" @click="bookConsultation">预约专家 1v1 咨询</button>
@@ -44,21 +70,37 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { canAccessLevel, getMemberLevelLabel } from '@/constants/membership'
 
 const router = useRouter()
 const userStore = useUserStore()
-const userLevel = computed(() => userStore.memberLevel)
+
+const mainlineAgents = [
+  { step: '01', code: 'diagnosis', name: '经营体检', desc: '先判断账号、内容、转化和复盘短板', level: 'free', levelText: '免费体验', levelClass: 'level-free' },
+  { step: '02', code: 'quick-plan', name: '15 天速胜计划', desc: '把诊断结论拆成每天能做的动作', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '03', code: 'video-diagnoser', name: '数据复盘', desc: '记录播放、互动、咨询和成交，校准下一步动作', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '04', code: 'product-pricing', name: '组品定价', desc: '优化团购品、利润品和引流品结构', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '05', code: 'conversion-path', name: '转化链路', desc: '检查团购、私信、企微和到店承接', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '06', code: 'local-ad-strategy', name: '本地推策略', desc: '匹配投放目标、定向和素材方向', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '07', code: 'full-strategy', name: '90 天战略', desc: '从短期执行进入季度增长节奏', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
+]
 
 const agentGroups = [
   {
     id: 'diagnosis',
     icon: '📊',
-    name: '诊断规划',
+    name: '经营体检',
     agents: [
-      { code: 'diagnosis', name: '行业体检表', emoji: '🩺', desc: '勾选痛点，生成五维健康度雷达图', level: 'free', levelText: '免费体验', levelClass: 'level-free', usageHint: '限 2 次/天' },
+      { code: 'diagnosis', name: '行业体检表', emoji: '🩺', desc: '勾选痛点，生成五维健康度雷达图', level: 'free', levelText: '免费体验', levelClass: 'level-free', usageHint: '限 2 次/天' }
+    ]
+  },
+  {
+    id: 'planning',
+    icon: '📅',
+    name: '作战计划',
+    agents: [
       { code: 'quick-plan', name: '15 天速胜计划', emoji: '📅', desc: '生成短期打法节奏表，快速见效', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
       { code: 'full-strategy', name: '90 天周期战略', emoji: '🗺️', desc: '阶段骨架展示，详情引导 1v1', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
     ]
@@ -72,16 +114,6 @@ const agentGroups = [
       { code: 'script-generator', name: '脚本生成器', emoji: '📝', desc: '口播/剧情/种草模板，自动写分镜', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' },
       { code: 'title-optimizer', name: '标题优化器', emoji: '✍️', desc: '输入原标题，给出 5 个高点击率版本', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' },
       { code: 'cover-helper', name: '封面文案助手', emoji: '🎨', desc: '数字型/悬念型/痛点型钩子词', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' }
-    ]
-  },
-  {
-    id: 'data',
-    icon: '📈',
-    name: '数据监测',
-    agents: [
-      { code: 'video-diagnoser', name: '视频数据诊断', emoji: '🔍', desc: '输入播放/点赞/完播，AI 判断问题', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'live-review', name: '直播复盘助手', emoji: '📺', desc: '分析人货场短板，给优化建议', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'ad-evaluator', name: '投流效果评估', emoji: '📊', desc: 'DOU+/本地推 ROI 健康度判断', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' }
     ]
   },
   {
@@ -111,13 +143,26 @@ const agentGroups = [
       { code: 'ip-positioning', name: '老板 IP 定位器', emoji: '🌟', desc: '性格 + 行业，生成人设标签', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' },
       { code: 'ip-consistency', name: '人设一致性检查', emoji: '🔎', desc: '输入近期内容，评估人设是否跑偏', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
     ]
+  },
+  {
+    id: 'review',
+    icon: '📈',
+    name: '数据复盘',
+    agents: [
+      { code: 'video-diagnoser', name: '视频数据复盘', emoji: '🔍', desc: '输入播放、互动、咨询和成交数据，AI 判断下一步', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+      { code: 'live-review', name: '直播复盘助手', emoji: '📺', desc: '分析人货场短板，给优化建议', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+      { code: 'ad-evaluator', name: '投流效果评估', emoji: '📊', desc: 'DOU+/本地推 ROI 健康度判断', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' }
+    ]
   }
 ]
 
-const levelOrder = { free: 0, starter: 1, pro: 2, annual: 3 }
-
 const getAgentLocked = (agent) => {
-  return levelOrder[userLevel.value] < levelOrder[agent.level]
+  return !canAccessLevel(userStore.memberLevel, agent.level)
+}
+
+const getLockText = (agent) => {
+  const requiredLabel = getMemberLevelLabel(agent.level)
+  return userStore.isLoggedIn ? `需升级到${requiredLabel}` : `登录后查看${requiredLabel}权益`
 }
 
 const openAgent = (agent) => {
@@ -136,12 +181,14 @@ const bookConsultation = () => {
 <style scoped>
 .douyin-agent-hub {
   min-height: 100vh;
-  background: var(--bg-page);
-  padding-bottom: 60px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(239, 68, 68, 0.07), transparent 28rem),
+    var(--bg-workbench);
+  padding-bottom: var(--space-10);
 }
 
 .hub-header {
-  padding: 48px 0 24px;
+  padding: var(--space-7) var(--space-5) var(--space-5);
   text-align: center;
 }
 
@@ -149,20 +196,124 @@ const bookConsultation = () => {
   font-size: var(--text-h2);
   font-weight: var(--font-weight-bold);
   color: var(--text-main);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .hub-desc {
+  max-width: 680px;
+  margin: 0 auto;
   font-size: var(--text-body);
   color: var(--text-secondary);
 }
 
+.mainline-section {
+  padding: var(--space-5);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-card);
+}
+
+.mainline-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.section-eyebrow {
+  color: var(--brand-primary);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 6px;
+}
+
+.mainline-head h2 {
+  font-size: var(--text-h3);
+  color: var(--text-main);
+}
+
+.mainline-head p:last-child {
+  max-width: 420px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.mainline-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.mainline-card {
+  display: flex;
+  min-width: 0;
+  min-height: 184px;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-card);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.mainline-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: var(--shadow-card);
+}
+
+.mainline-card.locked {
+  background: var(--state-warning-bg);
+}
+
+.mainline-step {
+  color: var(--brand-primary);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-bold);
+}
+
+.mainline-card strong {
+  color: var(--text-main);
+  font-size: var(--text-body-lg);
+}
+
+.mainline-card span:not(.mainline-step) {
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+  line-height: 1.5;
+}
+
+.mainline-card em {
+  width: fit-content;
+  margin-top: auto;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: var(--text-caption);
+  font-style: normal;
+  font-weight: var(--font-weight-semibold);
+}
+
+.lock-hint {
+  color: var(--state-warning);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
 .hub-grid {
-  padding: 0 16px;
+  margin-top: var(--space-5);
 }
 
 .agent-group {
-  margin-bottom: 32px;
+  padding: var(--card-padding-md);
+  border-color: var(--line-soft);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-card);
 }
 
 .group-title {
@@ -182,23 +333,25 @@ const bookConsultation = () => {
 .agent-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .agent-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
+  min-height: 176px;
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
   cursor: pointer;
   position: relative;
   transition: all 0.2s;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--line-soft);
   overflow: hidden;
 }
 
 .agent-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: var(--shadow-card);
 }
 
 .agent-card-header {
@@ -221,7 +374,7 @@ const bookConsultation = () => {
 .agent-desc {
   font-size: var(--text-body-sm);
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   line-height: 1.5;
 }
 
@@ -239,23 +392,23 @@ const bookConsultation = () => {
 }
 
 .level-free {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
+  background: var(--state-success-bg);
+  color: var(--state-success);
 }
 
 .level-starter {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
+  background: var(--state-info-bg);
+  color: var(--state-info);
 }
 
 .level-pro {
-  background: rgba(168, 85, 247, 0.1);
-  color: #9333ea;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--brand-accent);
 }
 
 .level-annual {
-  background: rgba(251, 191, 36, 0.15);
-  color: #d97706;
+  background: var(--state-warning-bg);
+  color: var(--state-warning);
 }
 
 .agent-usage {
@@ -290,18 +443,19 @@ const bookConsultation = () => {
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--text-main);
+  text-align: center;
 }
 
 .hub-cta {
-  padding: 40px 16px 0;
+  padding-top: var(--space-5);
 }
 
 .cta-card {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border-radius: 16px;
-  padding: 32px;
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.96));
+  border-radius: var(--radius-panel);
+  padding: var(--space-6);
   text-align: center;
-  border: 1px solid #bae6fd;
+  border: 1px solid rgba(59, 130, 246, 0.18);
 }
 
 .cta-card h3 {
@@ -318,11 +472,12 @@ const bookConsultation = () => {
 }
 
 .cta-btn {
-  padding: 12px 32px;
+  min-height: var(--button-height-md);
+  padding: 0 var(--space-6);
   background: var(--brand-primary);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   font-size: var(--text-body);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
@@ -331,5 +486,23 @@ const bookConsultation = () => {
 
 .cta-btn:hover {
   background: var(--brand-primary-hover);
+}
+
+@media (max-width: 1180px) {
+  .mainline-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .mainline-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mainline-grid,
+  .agent-cards {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

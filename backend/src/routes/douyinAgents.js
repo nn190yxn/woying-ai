@@ -1,6 +1,16 @@
 import express from 'express'
 import { query } from '../models/db.js'
 import { generateStructured } from '../services/ai.js'
+import { getKBContextWithMeta } from '../services/kbService.js'
+import {
+  buildQuickPlanFromTemplates,
+  createQuickPlanInputHash,
+  migrateSavedPlan,
+  normalizeIndustryCode,
+  normalizeQuickPlanInput,
+  normalizeQuickPlanResultCompat,
+  validateQuickPlanResult
+} from '../services/douyin/index.js'
 
 const router = express.Router()
 
@@ -65,7 +75,213 @@ const parseJsonValue = (text) => {
     return JSON.parse(trimmed)
   } catch {
     const match = trimmed.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
-    return match ? JSON.parse(match[0]) : null
+    if (!match) return null
+    try {
+      return JSON.parse(match[0])
+    } catch {
+      return null
+    }
+  }
+}
+
+let quickPlanTableReady = false
+let reviewRecordTableReady = false
+
+const ensureQuickPlanColumn = async (columnName, definition) => {
+  const rows = await query(
+    `SELECT COUNT(*) AS count
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'douyin_quick_plans'
+       AND COLUMN_NAME = ?`,
+    [columnName]
+  )
+  const exists = Number(rows?.[0]?.count || rows?.[0]?.COUNT || 0) > 0
+  if (!exists) await query(`ALTER TABLE douyin_quick_plans ADD COLUMN ${definition}`)
+}
+
+const ensureQuickPlanTable = async () => {
+  if (quickPlanTableReady) return
+  await query(`CREATE TABLE IF NOT EXISTS douyin_quick_plans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(64) NOT NULL,
+    industry VARCHAR(64) NOT NULL,
+    goal VARCHAR(64) NOT NULL,
+    frequency VARCHAR(16) NOT NULL,
+    ad_support VARCHAR(32) NOT NULL,
+    plan_version INT NOT NULL DEFAULT 1,
+    input_hash VARCHAR(64),
+    diagnosis_context JSON,
+    plan JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_user_douyin_quick_plan (user_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
+  await ensureQuickPlanColumn('plan_version', 'plan_version INT NOT NULL DEFAULT 1')
+  await ensureQuickPlanColumn('input_hash', 'input_hash VARCHAR(64)')
+  quickPlanTableReady = true
+}
+
+const parseStoredJson = (value, fallback) => {
+  if (!value) return fallback
+  if (typeof value === 'object') return value
+  try {
+    return JSON.parse(value)
+  } catch {
+    return fallback
+  }
+}
+
+const formatSavedQuickPlan = (row) => {
+  const plan = normalizeQuickPlanResultCompat(migrateSavedPlan(row))
+  return {
+    id: row.id,
+    industry: normalizeIndustryCode(row.industry),
+    goal: row.goal,
+    frequency: row.frequency,
+    adSupport: row.ad_support,
+    planVersion: Number(row.plan_version || plan?.meta?.planVersion || 1),
+    inputHash: row.input_hash || plan?.meta?.inputHash || null,
+    diagnosisContext: parseStoredJson(row.diagnosis_context, {}),
+    plan,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
+}
+
+const ensureReviewRecordTable = async () => {
+  if (reviewRecordTableReady) return
+  await query(`CREATE TABLE IF NOT EXISTS douyin_review_records (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(64) NOT NULL,
+    industry VARCHAR(64),
+    goal VARCHAR(64),
+    source_context JSON,
+    input_data JSON NOT NULL,
+    result_data JSON NOT NULL,
+    effective_content_types JSON,
+    next_actions JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_douyin_review_created (user_id, created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
+  reviewRecordTableReady = true
+}
+
+const formatReviewRecord = (row) => ({
+  id: row.id,
+  industry: row.industry,
+  goal: row.goal,
+  sourceContext: parseStoredJson(row.source_context, {}),
+  inputData: parseStoredJson(row.input_data, {}),
+  resultData: parseStoredJson(row.result_data, null),
+  effectiveContentTypes: parseStoredJson(row.effective_content_types, []),
+  nextActions: parseStoredJson(row.next_actions, []),
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+})
+
+const toNumber = (value) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+const buildReviewInsights = (records) => {
+  const typeMap = new Map()
+  const totals = {
+    records: records.length,
+    views: 0,
+    completes: 0,
+    messages: 0,
+    inquiries: 0,
+    redemptions: 0,
+    revenue: 0,
+    adSpend: 0
+  }
+
+  for (const record of records) {
+    const input = record.inputData || {}
+    const views = toNumber(input.views)
+    const completes = toNumber(input.completes)
+    const messages = toNumber(input.messages)
+    const inquiries = toNumber(input.inquiries)
+    const redemptions = toNumber(input.redemptions)
+    const revenue = toNumber(input.revenue)
+    const adSpend = toNumber(input.adSpend)
+    const types = Array.isArray(record.effectiveContentTypes) ? record.effectiveContentTypes : []
+
+    totals.views += views
+    totals.completes += completes
+    totals.messages += messages
+    totals.inquiries += inquiries
+    totals.redemptions += redemptions
+    totals.revenue += revenue
+    totals.adSpend += adSpend
+
+    for (const type of types.map((item) => String(item || '').trim()).filter(Boolean)) {
+      const current = typeMap.get(type) || { type, count: 0, views: 0, completes: 0, inquiries: 0, redemptions: 0, revenue: 0, adSpend: 0 }
+      current.count += 1
+      current.views += views
+      current.completes += completes
+      current.inquiries += inquiries
+      current.redemptions += redemptions
+      current.revenue += revenue
+      current.adSpend += adSpend
+      typeMap.set(type, current)
+    }
+  }
+
+  const topContentTypes = Array.from(typeMap.values())
+    .map((item) => ({
+      ...item,
+      avgViews: Math.round(item.views / Math.max(item.count, 1)),
+      completionRate: item.views > 0 ? Number((item.completes / item.views * 100).toFixed(1)) : 0,
+      inquiryRate: item.views > 0 ? Number((item.inquiries / item.views * 100).toFixed(2)) : 0,
+      roi: item.adSpend > 0 ? Number((item.revenue / item.adSpend).toFixed(2)) : null
+    }))
+    .sort((a, b) => (b.count - a.count) || (b.avgViews - a.avgViews))
+    .slice(0, 5)
+
+  const completionRate = totals.views > 0 ? Number((totals.completes / totals.views * 100).toFixed(1)) : 0
+  const inquiryRate = totals.views > 0 ? Number((totals.inquiries / totals.views * 100).toFixed(2)) : 0
+  const redemptionRate = totals.inquiries > 0 ? Number((totals.redemptions / totals.inquiries * 100).toFixed(1)) : 0
+  const roi = totals.adSpend > 0 ? Number((totals.revenue / totals.adSpend).toFixed(2)) : null
+  const topNames = topContentTypes.map((item) => item.type)
+  const mainShortfall = completionRate < 25
+    ? '内容完播不足'
+    : inquiryRate < 0.5
+      ? '私信咨询不足'
+      : redemptionRate < 30
+        ? '到店核销不足'
+        : roi !== null && roi < 1.5
+          ? '投流效率不足'
+          : '有效内容可放大'
+
+  return {
+    recordCount: totals.records,
+    topContentTypes,
+    metrics: {
+      totalViews: totals.views,
+      completionRate,
+      inquiryRate,
+      redemptionRate,
+      roi
+    },
+    nextRoundSuggestion: {
+      title: topNames.length ? `下一轮优先放大：${topNames.slice(0, 3).join('、')}` : '下一轮先补充有效内容类型',
+      reason: topNames.length
+        ? `最近 ${totals.records} 次复盘中，这些内容类型出现频次最高，可作为下一轮 15 天计划的赛马起点。`
+        : '当前复盘记录还没有沉淀有效内容类型，建议先记录门店实拍、顾客案例、老板口播等可复用标签。',
+      recommendedGoal: mainShortfall === '有效内容可放大' ? 'conversion' : 'traffic',
+      focusContentTypes: topNames.slice(0, 3),
+      shortfall: mainShortfall,
+      actions: [
+        topNames.length ? `把 ${topNames[0]} 安排到下一轮前 3 天连续测试` : '每次复盘补充有效内容类型标签',
+        completionRate < 25 ? '下一轮优先优化前 3 秒钩子和视频节奏' : '保留当前完播表现较好的内容结构',
+        inquiryRate < 0.5 ? '在有效内容结尾增加私信或团购动作引导' : '继续复用能带来咨询的表达方式',
+        roi !== null && roi < 1.5 ? '投流先用小预算复测高完播素材' : '把预算集中给已验证内容类型'
+      ]
+    }
   }
 }
 
@@ -115,6 +331,287 @@ const industryNameMap = {
   service: '生活服务'
 }
 
+const modeNameMap = {
+  'group-buy': '团购交易型',
+  'lead-gen': '线索留资型',
+  brand: '品牌曝光型'
+}
+
+export const DIAGNOSIS_SCORING_VERSION = 'douyin-diagnosis-benchmark-v1'
+
+const localLifeBenchmarks = {
+  restaurant: {
+    avgViews: { cold: 300, stable: 1000, strong: 3000 },
+    weeklyPosts: { cold: 3, stable: 7, strong: 14 },
+    conversionRate: { cold: 8, stable: 18, strong: 35 },
+    inquiryRate: { stable: 3 },
+    followerRate: { cold: 8, strong: 20 },
+    cpa: { stable: 150, strong: 80 }
+  },
+  beauty: {
+    avgViews: { cold: 300, stable: 1200, strong: 3500 },
+    weeklyPosts: { cold: 3, stable: 7, strong: 14 },
+    conversionRate: { cold: 10, stable: 22, strong: 40 },
+    inquiryRate: { stable: 4 },
+    followerRate: { cold: 10, strong: 24 },
+    cpa: { stable: 180, strong: 100 }
+  },
+  education: {
+    avgViews: { cold: 200, stable: 800, strong: 2500 },
+    weeklyPosts: { cold: 3, stable: 6, strong: 12 },
+    conversionRate: { cold: 6, stable: 15, strong: 30 },
+    inquiryRate: { stable: 2 },
+    followerRate: { cold: 6, strong: 16 },
+    cpa: { stable: 220, strong: 120 }
+  },
+  service: {
+    avgViews: { cold: 250, stable: 900, strong: 2800 },
+    weeklyPosts: { cold: 3, stable: 7, strong: 14 },
+    conversionRate: { cold: 8, stable: 18, strong: 35 },
+    inquiryRate: { stable: 3 },
+    followerRate: { cold: 8, strong: 20 },
+    cpa: { stable: 180, strong: 90 }
+  }
+}
+
+const clampScore = (value) => Math.max(20, Math.min(95, Math.round(value)))
+
+const hasMetricValue = (metrics, key) => {
+  const value = metrics?.[key]
+  if (value === undefined || value === null || value === '') return false
+  const number = Number(value)
+  return Number.isFinite(number) && number >= 0
+}
+
+const metricNumber = (metrics, key) => {
+  const value = Number(metrics?.[key])
+  return Number.isFinite(value) && value >= 0 ? value : 0
+}
+
+const countPains = (painPoints, key) => Array.isArray(painPoints?.[key]) ? painPoints[key].length : 0
+
+export const buildDimensionInsights = ({ industry, mode, painPoints = {}, metrics = {}, interview = {} }) => {
+  const benchmark = localLifeBenchmarks[industry] || localLifeBenchmarks.restaurant
+  const weeklyPosts = metricNumber(metrics, 'weeklyPosts')
+  const avgViews = metricNumber(metrics, 'avgViewsPerVideo')
+  const monthlyViews = metricNumber(metrics, 'monthlyViews')
+  const monthlyFollowers = metricNumber(metrics, 'monthlyFollowers')
+  const inquiries = metricNumber(metrics, 'monthlyInquiries')
+  const conversions = metricNumber(metrics, 'monthlyConversions')
+  const adBudget = metricNumber(metrics, 'monthlyAdBudget')
+  const metricPresence = {
+    weeklyPosts: hasMetricValue(metrics, 'weeklyPosts'),
+    avgViews: hasMetricValue(metrics, 'avgViewsPerVideo'),
+    monthlyViews: hasMetricValue(metrics, 'monthlyViews'),
+    monthlyFollowers: hasMetricValue(metrics, 'monthlyFollowers'),
+    inquiries: hasMetricValue(metrics, 'monthlyInquiries'),
+    conversions: hasMetricValue(metrics, 'monthlyConversions'),
+    adBudget: hasMetricValue(metrics, 'monthlyAdBudget')
+  }
+  const filledMetrics = Object.values(metricPresence).filter(Boolean).length
+
+  const expectedMonthlyViews = Math.max(avgViews * Math.max(weeklyPosts * 4, 1), monthlyViews)
+  const inquiryRate = monthlyViews ? (inquiries / monthlyViews) * 1000 : 0
+  const conversionRate = inquiries ? (conversions / inquiries) * 100 : 0
+  const costPerConversion = adBudget && conversions ? adBudget / conversions : 0
+  const followerRate = monthlyViews ? (monthlyFollowers / monthlyViews) * 1000 : 0
+
+  const trafficPain = countPains(painPoints, 'traffic')
+  const contentPain = countPains(painPoints, 'content')
+  const conversionPain = countPains(painPoints, 'conversion')
+  const retentionPain = countPains(painPoints, 'retention')
+  const adsPain = countPains(painPoints, 'ads')
+  const hasTrafficGoal = interview.goal === 'traffic'
+  const hasConversionGoal = interview.goal === 'conversion'
+  const hasContentGoal = interview.goal === 'content'
+  const hasAdsGoal = interview.goal === 'ads'
+  const hasRetentionGoal = interview.goal === 'retention'
+
+  const trafficScore = clampScore(
+    (avgViews >= benchmark.avgViews.strong ? 82 : avgViews >= benchmark.avgViews.stable ? 68 : avgViews >= benchmark.avgViews.cold ? 48 : avgViews > 0 ? 34 : metricPresence.avgViews ? 28 : 50)
+    + (monthlyViews >= 100000 ? 8 : monthlyViews >= 30000 ? 4 : 0)
+    - trafficPain * 8
+    - (hasTrafficGoal ? 4 : 0)
+  )
+  const contentScore = clampScore(
+    (weeklyPosts >= benchmark.weeklyPosts.strong ? 82 : weeklyPosts >= benchmark.weeklyPosts.stable ? 68 : weeklyPosts >= benchmark.weeklyPosts.cold ? 52 : weeklyPosts > 0 ? 36 : metricPresence.weeklyPosts ? 30 : 48)
+    - contentPain * 9
+    - (hasContentGoal ? 4 : 0)
+  )
+  const conversionScore = clampScore(
+    (conversionRate >= benchmark.conversionRate.strong ? 82 : conversionRate >= benchmark.conversionRate.stable ? 66 : conversionRate >= benchmark.conversionRate.cold ? 50 : conversions > 0 ? 38 : inquiries >= 30 ? 42 : metricPresence.inquiries || metricPresence.conversions ? 30 : 48)
+    + (inquiryRate >= benchmark.inquiryRate.stable ? 4 : 0)
+    - conversionPain * 8
+    - (hasConversionGoal ? 4 : 0)
+  )
+  const retentionScore = clampScore(
+    (followerRate >= benchmark.followerRate.strong ? 78 : followerRate >= benchmark.followerRate.cold ? 62 : monthlyFollowers > 0 ? 48 : metricPresence.monthlyFollowers ? 34 : 50)
+    - retentionPain * 10
+    - (hasRetentionGoal ? 4 : 0)
+  )
+  const adsScore = clampScore(
+    adBudget > 0
+      ? (costPerConversion && costPerConversion <= benchmark.cpa.strong ? 74 : costPerConversion && costPerConversion <= benchmark.cpa.stable ? 58 : conversions > 0 ? 44 : 38) - adsPain * 8 - (hasAdsGoal ? 4 : 0)
+      : 46 - adsPain * 10 - (hasAdsGoal ? 4 : 0)
+  )
+
+  const radarData = {
+    traffic: trafficScore,
+    content: contentScore,
+    conversion: conversionScore,
+    retention: retentionScore,
+    ads: adsScore
+  }
+  const dimensionNames = {
+    traffic: '流量力',
+    content: '内容力',
+    conversion: mode === 'lead-gen' ? '留资转化力' : '团购转化力',
+    retention: '留存复购力',
+    ads: '投流效率'
+  }
+  const sortedDimensions = Object.entries(radarData).sort((a, b) => a[1] - b[1])
+  const [weakestKey, weakestScore] = sortedDimensions[0]
+  const secondWeakness = sortedDimensions[1]
+
+  const profileMap = {
+    traffic: avgViews < 300 ? '低播放冷启动型' : '流量放大不足型',
+    content: weeklyPosts < 3 ? '内容供给不足型' : '内容结构待优化型',
+    conversion: conversions === 0 ? '转化链路断点型' : '流量转化漏损型',
+    retention: monthlyFollowers === 0 ? '粉丝沉淀不足型' : '留存复购薄弱型',
+    ads: adBudget > 0 ? '投流效率待校准型' : '付费放大缺口型'
+  }
+  const confidence = filledMetrics >= 6 ? '高' : filledMetrics >= 4 ? '中' : '低'
+  const dimensionDetails = [
+    {
+      key: 'traffic',
+      name: dimensionNames.traffic,
+      score: trafficScore,
+      basis: `单条均播 ${metricPresence.avgViews ? avgViews : '未填'}，参考稳定线 ${benchmark.avgViews.stable}+；流量痛点 ${trafficPain} 项`
+    },
+    {
+      key: 'content',
+      name: dimensionNames.content,
+      score: contentScore,
+      basis: `近 7 天发布 ${metricPresence.weeklyPosts ? weeklyPosts : '未填'} 条，参考稳定线 ${benchmark.weeklyPosts.stable}+；内容痛点 ${contentPain} 项`
+    },
+    {
+      key: 'conversion',
+      name: dimensionNames.conversion,
+      score: conversionScore,
+      basis: `月咨询 ${metricPresence.inquiries ? inquiries : '未填'}，月成交/留资 ${metricPresence.conversions ? conversions : '未填'}，转化率 ${inquiries ? `${conversionRate.toFixed(1)}%` : '缺失'}，参考稳定线 ${benchmark.conversionRate.stable}%+`
+    },
+    {
+      key: 'retention',
+      name: dimensionNames.retention,
+      score: retentionScore,
+      basis: `月增粉 ${metricPresence.monthlyFollowers ? monthlyFollowers : '未填'}，千次播放增粉 ${monthlyViews ? followerRate.toFixed(1) : '缺失'}，留存痛点 ${retentionPain} 项`
+    },
+    {
+      key: 'ads',
+      name: dimensionNames.ads,
+      score: adsScore,
+      basis: `月投流 ${metricPresence.adBudget ? adBudget : '未填'} 元，${costPerConversion ? `单次成交/留资成本约 ${Math.round(costPerConversion)} 元，参考稳定线 ${benchmark.cpa.stable} 元以内` : '缺少可核算 CPA'}；投流痛点 ${adsPain} 项`
+    }
+  ].sort((a, b) => a.score - b.score)
+
+  return {
+    metrics: { weeklyPosts, avgViews, monthlyViews, monthlyFollowers, inquiries, conversions, adBudget, expectedMonthlyViews, inquiryRate, conversionRate, costPerConversion, followerRate, filledMetrics, metricPresence },
+    pains: { trafficPain, contentPain, conversionPain, retentionPain, adsPain },
+    radarData,
+    weakestKey,
+    weakestScore,
+    secondWeaknessKey: secondWeakness?.[0],
+    secondWeaknessScore: secondWeakness?.[1],
+    weakestName: dimensionNames[weakestKey],
+    secondWeaknessName: secondWeakness ? dimensionNames[secondWeakness[0]] : '',
+    profile: profileMap[weakestKey],
+    confidence,
+    dimensionNames,
+    benchmark,
+    dimensionDetails
+  }
+}
+
+export const buildDiagnosisFallback = ({ industry, mode, painPoints = {}, metrics = {}, interview = {} }) => {
+  const industryName = industryNameMap[industry] || '本地生活'
+  const modeName = modeNameMap[mode] || '综合经营型'
+  const insight = buildDimensionInsights({ industry, mode, painPoints, metrics, interview })
+  const { weeklyPosts, avgViews, monthlyViews, monthlyFollowers, inquiries, conversions, adBudget, inquiryRate, conversionRate, costPerConversion, filledMetrics, metricPresence } = insight.metrics
+  const isLowConfidence = insight.confidence === '低'
+  const conversionLabel = mode === 'lead-gen' ? '留资' : '核销/成交'
+
+  const suggestionMap = {
+    traffic: [
+      `先用 3 条同城痛点短视频测试流量入口，开头 3 秒直接点出${industryName}客户决策痛点`,
+      '把门店位置、价格锚点和服务结果放进前 5 秒，优先提升同城推荐识别'
+    ],
+    content: [
+      `未来 7 天至少发布 5 条内容，按“痛点解释、过程展示、顾客案例、套餐对比、老板观点”五类赛马`,
+      '每条视频只测试一个变量：开头钩子、主体结构或结尾行动指令，避免一次改太多看不出原因'
+    ],
+    conversion: [
+      `把主推${mode === 'lead-gen' ? '咨询入口' : '团购套餐'}固定到视频结尾和主页，评论区只引导一个动作`,
+      `用咨询到${conversionLabel}转化率做日复盘，低于 15% 时优先检查套餐利益点、客服回复和到店承接`
+    ],
+    retention: [
+      '把评论、私信和到店用户沉淀到老客池，设置 7 天二次触达话术',
+      '每周至少发布 1 条老客案例或复购福利内容，避免账号只做一次性获客'
+    ],
+    ads: [
+      adBudget > 0 ? `先按${costPerConversion ? `约 ${Math.round(costPerConversion)} 元/${conversionLabel}` : '单次转化成本'}复盘投流效率，暂停无转化素材` : '先不要放大预算，等自然流量内容跑出高互动素材后再小额投本地推',
+      '投流只放大已经验证过的素材，先测 3 个同城人群包和 2 个成交目标'
+    ]
+  }
+  const suggestions = [
+    ...suggestionMap[insight.weakestKey],
+    ...(suggestionMap[insight.secondWeaknessKey] || []),
+    '把本次体检转成 15 天计划，每天记录发布量、播放、咨询、成交和投流花费，7 天后只保留有效动作'
+  ].slice(0, 6)
+
+  return {
+    radarData: insight.radarData,
+    diagnosis: `${isLowConfidence ? '当前为初筛判断。' : ''}${industryName}${modeName}属于“${insight.profile}”，主短板是${insight.weakestName}（${insight.weakestScore}分）${insight.secondWeaknessName ? `，次短板是${insight.secondWeaknessName}（${insight.secondWeaknessScore}分）` : ''}。${interview.mainBottleneck ? `用户自述瓶颈为“${interview.mainBottleneck}”，` : ''}下一步应先修正最低分链路，再进入 15 天执行计划。`,
+    dataBasis: [
+      `数据完整度：${filledMetrics}/7，诊断置信度：${insight.confidence}`,
+      `流量依据：月播放 ${metricPresence.monthlyViews ? monthlyViews : '未填'}，单条均播 ${metricPresence.avgViews ? avgViews : '未填'}，流量力 ${insight.radarData.traffic} 分`,
+      `内容依据：近 7 天发布 ${metricPresence.weeklyPosts ? weeklyPosts : '未填'} 条，内容力 ${insight.radarData.content} 分`,
+      `转化依据：月咨询 ${metricPresence.inquiries ? inquiries : '未填'}，月${conversionLabel} ${metricPresence.conversions ? conversions : '未填'}，${inquiries ? `咨询转${conversionLabel}率约 ${conversionRate.toFixed(1)}%` : '转化率缺失'}`,
+      `沉淀与投流依据：月增粉 ${metricPresence.monthlyFollowers ? monthlyFollowers : '未填'}，月投流 ${metricPresence.adBudget ? adBudget : '未填'} 元${monthlyViews ? `，千次播放咨询约 ${inquiryRate.toFixed(1)} 次` : ''}`
+    ],
+    confidence: insight.confidence,
+    benchmarkSummary: `${industryName}${modeName}参考线：单条均播 ${insight.benchmark.avgViews.stable}+、近 7 天发布 ${insight.benchmark.weeklyPosts.stable}+、咨询转${conversionLabel}率 ${insight.benchmark.conversionRate.stable}%+、付费${conversionLabel}成本 ${insight.benchmark.cpa.stable} 元以内。`,
+    dimensionDetails: insight.dimensionDetails,
+    suggestions,
+    nextQuestions: [
+      `最低分维度“${insight.weakestName}”最近 7 天的原始数据明细是多少？`,
+      `当前主推${mode === 'lead-gen' ? '留资权益' : '团购套餐'}的价格、利润和成交路径是什么？`,
+      '过去 30 天有没有单条表现最好的视频？它的播放、完播、咨询和成交分别是多少？'
+    ],
+    riskBoundary: [
+      isLowConfidence ? '当前基础数据不足，本报告属于初筛判断，建议补齐近 7 天发布、播放、咨询、成交和投流数据后再生成执行计划。' : '本报告基于当前填写数据和痛点勾选生成，适合作为下一步排查顺序，不替代真实投放和成交数据复盘。',
+      '建议先小范围执行 3-5 天，观察播放、私信、咨询、核销和投流成本变化，再决定是否放大预算。'
+    ],
+    recommendedNext: ['douyin-quick-plan', 'douyin-script-generator', 'douyin-conversion-path'],
+    diagnosticProfile: insight.profile,
+    weakestDimension: insight.weakestKey,
+    scoringVersion: DIAGNOSIS_SCORING_VERSION,
+    isRuleFallback: true
+  }
+}
+
+const normalizeDiagnosisResult = (value, fallback) => {
+  if (!value || Array.isArray(value) || typeof value !== 'object') return fallback
+  const uniqueItems = (items) => [...new Set(items.filter(item => typeof item === 'string' && item.trim()).map(item => item.trim()))]
+  return {
+    ...fallback,
+    aiDiagnosis: typeof value.diagnosis === 'string' && value.diagnosis.trim() ? value.diagnosis.trim() : undefined,
+    suggestions: uniqueItems([...fallback.suggestions, ...(Array.isArray(value.suggestions) ? value.suggestions : [])]).slice(0, 6),
+    nextQuestions: uniqueItems([...fallback.nextQuestions, ...(Array.isArray(value.nextQuestions) ? value.nextQuestions : [])]).slice(0, 3),
+    riskBoundary: uniqueItems([...(Array.isArray(fallback.riskBoundary) ? fallback.riskBoundary : []), ...(Array.isArray(value.riskBoundary) ? value.riskBoundary : [])]).slice(0, 3),
+    recommendedNext: Array.isArray(value.recommendedNext) && value.recommendedNext.length ? value.recommendedNext : fallback.recommendedNext
+  }
+}
+
 const buildTitleFallback = ({ industry, originalTitle, style }) => {
   const baseTitle = originalTitle || '门店内容'
   const industryName = industryNameMap[industry] || '本地生活'
@@ -152,56 +649,6 @@ const buildCoverFallback = ({ topic, type }) => {
     { type: '对比型', text: `普通${coreTopic} vs 专业服务`, reason: '对比能放大价值差异' },
     { type: '信任型', text: `老板亲测的${coreTopic}清单`, reason: '老板视角增强真实感和信任感' }
   ].map(item => ({ ...item, isRuleFallback: true }))
-}
-
-const buildQuickPlanFallback = ({ industry, goal, frequency, adSupport }) => {
-  const industryName = industryNameMap[industry] || '本地生活'
-  const goalName = {
-    traffic: '快速起量',
-    conversion: '团购转化',
-    leads: '线索收集',
-    live: '直播预热'
-  }[goal] || '快速起量'
-  const frequencyCount = Number(frequency) || 1
-  const hasAd = adSupport && adSupport !== 'no'
-
-  return {
-    title: `${industryName}行业 15 天${goalName}速胜计划`,
-    summary: `本计划采用"测试-放大-收割"三阶段策略，配合每日${frequencyCount}条更新${hasAd ? '与投流辅助' : ''}，快速验证内容模型并放量。`,
-    phases: [
-      {
-        name: '第 1-5 天：测试期（验证内容模型）',
-        days: [
-          { day: 1, action: '发布第 1 条测试视频，选择知识科普型', content: '行业内幕/避坑指南类，测试完播率', ad: hasAd ? '投放 100 元 DOU+ 定向同城' : '', kpi: '完播率 > 25%' },
-          { day: 2, action: '发布第 2 条，选择过程展示型', content: '后厨/服务过程/效果对比', ad: '', kpi: '点赞率 > 3%' },
-          { day: 3, action: '分析前 2 条数据，确定优势内容方向', content: '根据数据反馈调整第 3 条选题', ad: '', kpi: '确定 1 个高潜力方向' },
-          { day: 4, action: '发布第 3 条（优势方向深化）', content: '延续高数据表现的内容模板', ad: hasAd ? '对高数据视频追投 200 元' : '', kpi: '播放量 > 前两条均值' },
-          { day: 5, action: '发布第 4 条，加入行动引导', content: '在结尾添加团购/留资引导话术', ad: '', kpi: '转化率 > 1%' }
-        ]
-      },
-      {
-        name: '第 6-10 天：放大期（赛马放量）',
-        days: [
-          { day: 6, action: '复制成功模板，批量制作 3 条同类内容', content: '同类型不同角度的变体', ad: hasAd ? '对跑量素材开启本地推' : '', kpi: '至少 1 条进入下一级流量池' },
-          { day: 7, action: '发布第 5 条（爆款复制）', content: '使用已验证的钩子 + 结构', ad: '', kpi: '收藏率 > 5%' },
-          { day: 8, action: '发布第 6 条（交叉测试新方向）', content: '尝试剧情/福利型内容', ad: '', kpi: '测试新方向可行性' },
-          { day: 9, action: '复盘数据，淘汰低效内容类型', content: '聚焦 1-2 个高 ROI 方向', ad: hasAd ? '加大高转化素材预算' : '', kpi: '确定主力内容方向' },
-          { day: 10, action: '发布第 7 条（主力方向深化）', content: '加入用户证言/案例背书', ad: '', kpi: '互动率提升 20%' }
-        ]
-      },
-      {
-        name: '第 11-15 天：收割期（转化变现）',
-        days: [
-          { day: 11, action: '发布第 8 条（强转化导向）', content: '限时套餐/福利+紧迫感话术', ad: hasAd ? '投放转化目标（下单/留资）' : '', kpi: '团购/留资数 > 10' },
-          { day: 12, action: '发布第 9 条（信任背书）', content: '顾客好评/效果展示/资质证明', ad: '', kpi: '主页访问量提升' },
-          { day: 13, action: '发布第 10 条（逼单型）', content: '最后一天/限量/涨价预告', ad: hasAd ? '最后冲刺投放' : '', kpi: '转化率 > 3%' },
-          { day: 14, action: '全量数据复盘，总结 15 天成果', content: '对比起始数据，评估 ROI', ad: '', kpi: '整体目标达成率' },
-          { day: 15, action: '制定下一周期计划', content: '固化成功 SOP，规划新内容方向', ad: '', kpi: '进入下一循环' }
-        ]
-      }
-    ],
-    isRuleFallback: true
-  }
 }
 
 const buildLocalAdFallback = ({ industry, goal, dailyBudget, range }) => {
@@ -475,20 +922,80 @@ const buildProductPricingFallback = ({ industry, stage }) => {
 
 // 1. 体检诊断智能体
 router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) => {
-  const { industry, mode, painPoints } = req.body
-  res.json({
-    agent: 'diagnosis',
-    status: 'success',
-    result: {
-      radarData: { conversion: 30, traffic: 65, content: 45, retention: 40, profit: 55 },
-      diagnosis: '您的门店在流量获取方面表现良好，但转化链路存在明显短板',
-      suggestions: [
-        '优化团购套餐的视觉呈现',
-        '增加私信自动回复引导',
-        '设置限时优惠提升紧迫感'
-      ]
-    }
-  })
+  const { industry, mode, painPoints = {}, metrics = {}, interview = {} } = req.body
+  const fallbackResult = buildDiagnosisFallback({ industry, mode, painPoints, metrics, interview })
+  const kbResult = getKBContextWithMeta('douyin-growth', req.userLevel || 'free', { industry, mode, painPoints, metrics, interview }, { rawFallback: true })
+
+  try {
+    const content = await generateStructured({
+      systemPrompt: '你是抖音本地生活经营顾问，擅长用知识库做门店体检、内容诊断、团购/留资转化和投流建议。你必须输出 JSON，不输出 Markdown。',
+      userPrompt: `知识库参考：
+${kbResult.context || '暂无命中知识库，请按抖音本地生活经营方法论分析。'}
+
+用户访谈：
+- 行业：${industryNameMap[industry] || industry || '本地生活'}
+- 经营模式：${modeNameMap[mode] || mode || '未提供'}
+- 当前目标：${interview.goal || '未提供'}
+- 最大瓶颈：${interview.mainBottleneck || '未提供'}
+- 当前做法：${interview.currentAction || '未提供'}
+- 目标客群：${interview.targetAudience || '未提供'}
+- 痛点勾选：${JSON.stringify(painPoints)}
+- 基础数据：${JSON.stringify(metrics)}
+
+系统已根据用户数据计算出的诊断底稿：
+${JSON.stringify({
+  radarData: fallbackResult.radarData,
+  diagnosticProfile: fallbackResult.diagnosticProfile,
+  weakestDimension: fallbackResult.weakestDimension,
+  confidence: fallbackResult.confidence,
+  dataBasis: fallbackResult.dataBasis,
+  ruleSuggestions: fallbackResult.suggestions
+}, null, 2)}
+
+请生成一个 JSON 对象，字段包含：
+- radarData: 对象，包含 traffic、content、conversion、retention、ads 五个 0-100 分数
+- diagnosis: 120 字以内诊断结论
+- dataBasis: 3-5 条诊断依据，必须说明使用了哪些数据、哪些字段缺失、哪些结论属于假设
+- confidence: 诊断置信度，只能是 高、中、低
+- suggestions: 4-6 条优先优化建议，每条必须可执行
+- nextQuestions: 3 个后续追问，用于进入 15 天计划前补充信息
+- recommendedNext: 2-3 个推荐下一步工具 code
+
+要求：
+1. 必须以“诊断底稿”为主，不得改写底稿中的最低分维度、置信度和核心依据。
+2. 必须结合行业、经营模式、痛点和用户访谈内容。
+3. 建议必须体现抖音同城、内容钩子、团购/留资承接、复购或投流至少 3 类能力。
+4. 基础数据缺失超过 3 项时，confidence 必须为 低，diagnosis 必须写明“当前为初筛判断”。
+5. 数据不足时给区间化判断，避免使用“明显短板”“严重缺失”等过度确定表达。
+6. 不同输入必须体现不同分型、不同主短板和不同优先动作。`,
+      temperature: 0.65,
+      max_tokens: 1800,
+      responseFormat: { type: 'json_object' }
+    })
+    const parsed = parseJsonValue(content)
+    const result = normalizeDiagnosisResult(parsed, fallbackResult)
+    res.json({
+      agent: 'diagnosis',
+      status: 'success',
+      result,
+      meta: {
+        kbEnhanced: Boolean(kbResult.context),
+        kbFilesUsed: kbResult.meta?.kbFilesUsed || []
+      },
+      isRuleFallback: !parsed
+    })
+  } catch (error) {
+    res.json({
+      agent: 'diagnosis',
+      status: 'success',
+      result: fallbackResult,
+      meta: {
+        kbEnhanced: Boolean(kbResult.context),
+        kbFilesUsed: kbResult.meta?.kbFilesUsed || []
+      },
+      isRuleFallback: true
+    })
+  }
 })
 
 // 2. 组品定价智能体（核心）
@@ -708,6 +1215,124 @@ router.post('/data-diagnoser', checkAccess, requireLevel('pro'), async (req, res
   })
 })
 
+router.get('/review-records/latest', checkAccess, requireLevel('pro'), async (req, res) => {
+  try {
+    await ensureReviewRecordTable()
+    const rows = await query(
+      `SELECT id, industry, goal, source_context, input_data, result_data, effective_content_types, next_actions, created_at, updated_at
+       FROM douyin_review_records
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [req.userId]
+    )
+
+    res.json({
+      agent: 'data-diagnoser',
+      status: rows.length ? 'success' : 'empty',
+      reviewRecord: rows.length ? formatReviewRecord(rows[0]) : null
+    })
+  } catch (error) {
+    res.status(500).json({ message: '读取最近复盘记录失败' })
+  }
+})
+
+router.get('/review-records', checkAccess, requireLevel('pro'), async (req, res) => {
+  try {
+    await ensureReviewRecordTable()
+    const rows = await query(
+      `SELECT id, industry, goal, source_context, input_data, result_data, effective_content_types, next_actions, created_at, updated_at
+       FROM douyin_review_records
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [req.userId]
+    )
+
+    res.json({
+      agent: 'data-diagnoser',
+      status: 'success',
+      reviewRecords: rows.map(formatReviewRecord)
+    })
+  } catch (error) {
+    res.status(500).json({ message: '读取复盘记录失败' })
+  }
+})
+
+router.get('/review-records/insights', checkAccess, requireLevel('pro'), async (req, res) => {
+  try {
+    await ensureReviewRecordTable()
+    const rows = await query(
+      `SELECT id, industry, goal, source_context, input_data, result_data, effective_content_types, next_actions, created_at, updated_at
+       FROM douyin_review_records
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [req.userId]
+    )
+    const records = rows.map(formatReviewRecord)
+
+    res.json({
+      agent: 'data-diagnoser',
+      status: records.length ? 'success' : 'empty',
+      insights: buildReviewInsights(records)
+    })
+  } catch (error) {
+    res.status(500).json({ message: '生成复盘洞察失败' })
+  }
+})
+
+router.post('/review-records', checkAccess, requireLevel('pro'), async (req, res) => {
+  const {
+    industry = null,
+    goal = null,
+    sourceContext = {},
+    inputData,
+    resultData,
+    effectiveContentTypes = [],
+    nextActions = []
+  } = req.body
+
+  if (!inputData || typeof inputData !== 'object' || !resultData || typeof resultData !== 'object') {
+    return res.status(400).json({ message: '复盘输入和诊断结果不能为空' })
+  }
+
+  try {
+    await ensureReviewRecordTable()
+    const inserted = await query(
+      `INSERT INTO douyin_review_records
+       (user_id, industry, goal, source_context, input_data, result_data, effective_content_types, next_actions)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.userId,
+        industry,
+        goal,
+        JSON.stringify(sourceContext || {}),
+        JSON.stringify(inputData),
+        JSON.stringify(resultData),
+        JSON.stringify(Array.isArray(effectiveContentTypes) ? effectiveContentTypes : []),
+        JSON.stringify(Array.isArray(nextActions) ? nextActions : [])
+      ]
+    )
+
+    const rows = await query(
+      `SELECT id, industry, goal, source_context, input_data, result_data, effective_content_types, next_actions, created_at, updated_at
+       FROM douyin_review_records
+       WHERE id = ? AND user_id = ?
+       LIMIT 1`,
+      [inserted.insertId, req.userId]
+    )
+
+    res.json({
+      agent: 'data-diagnoser',
+      status: 'success',
+      reviewRecord: rows.length ? formatReviewRecord(rows[0]) : null
+    })
+  } catch (error) {
+    res.status(500).json({ message: '保存复盘记录失败' })
+  }
+})
+
 // 8. 投流计算器智能体
 router.post('/ad-calculator', checkAccess, requireLevel('pro'), async (req, res) => {
   const { budget, platform, goal, cpc, conversionRate } = req.body
@@ -747,37 +1372,221 @@ router.post('/full-strategy-legacy', checkAccess, requireLevel('annual'), async 
   })
 })
 
-router.post('/quick-plan', checkAccess, requireLevel('starter'), async (req, res) => {
-  const { industry, goal, frequency, adSupport } = req.body
-  const fallbackPlan = buildQuickPlanFallback({ industry, goal, frequency, adSupport })
+router.post('/quick-plan', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { industry, goal, frequency, adSupport, diagnosisContext = {} } = req.body
+  const quickPlanInput = normalizeQuickPlanInput({ industry, goal, frequency, adSupport, diagnosisContext })
+  const rulePlan = buildQuickPlanFromTemplates(quickPlanInput)
+
+  if (diagnosisContext.source || diagnosisContext.metrics || diagnosisContext.profile || diagnosisContext.weakness) {
+    return res.json({
+      agent: 'quick-plan',
+      status: 'success',
+      plan: rulePlan,
+      isRuleFallback: true,
+      upgradeHint: '升级高阶会员可获得 30 天长期赛马表和投流复盘模板。'
+    })
+  }
 
   try {
     const content = await generateStructured({
       systemPrompt: '你是抖音本地生活 15 天速胜计划专家。你必须输出 JSON，不输出 Markdown。',
-      userPrompt: `行业：${industryNameMap[industry] || industry || '本地生活'}
-目标：${goal || 'conversion'}
-每日更新频率：${frequency || 1}
-投流方式：${adSupport || 'no'}
+      userPrompt: `行业：${industryNameMap[quickPlanInput.industryCode] || quickPlanInput.industryCode || '本地生活'}
+目标：${quickPlanInput.goalCode}
+每日更新频率：${quickPlanInput.frequency || 1}
+投流方式：${quickPlanInput.adSupport || 'no'}
+诊断上下文：
+- 来源：${quickPlanInput.diagnosisContext.source || '手动生成'}
+- 主短板：${quickPlanInput.diagnosisContext.weakness || '未提供'}
+- 诊断分型：${quickPlanInput.diagnosisContext.profile || '未提供'}
+- 置信度：${quickPlanInput.diagnosisContext.confidence || '未提供'}
+- 关键数据摘要：${quickPlanInput.diagnosisContext.metrics || '未提供'}
+- 用户自述瓶颈：${quickPlanInput.diagnosisContext.bottleneck || '未提供'}
+- 目标客户：${quickPlanInput.diagnosisContext.targetAudience || '未提供'}
+- 主推产品：${quickPlanInput.diagnosisContext.coreOffer || '未提供'}
+- 价格权益：${quickPlanInput.diagnosisContext.offerPrice || '未提供'}
+- 用户顾虑：${quickPlanInput.diagnosisContext.userObjection || '未提供'}
+- 可拍证明：${quickPlanInput.diagnosisContext.proofAssets || '未提供'}
+- 承接路径：${quickPlanInput.diagnosisContext.conversionPath || '未提供'}
+- 复盘沉淀的有效内容类型：${quickPlanInput.diagnosisContext.effectiveTypes || '未提供'}
+- 下一轮复盘建议：${quickPlanInput.diagnosisContext.reviewSuggestion || '未提供'}
 
-请生成一个 JSON 对象，字段包含 title、summary、phases。phases 为三个阶段数组，每个阶段包含 name、days，days 的每一项包含 day、action、content、ad、kpi。`,
+请生成一个 JSON 对象，字段包含 title、summary、riskBoundary、phases。
+riskBoundary 必须为 3 条字符串数组，覆盖数据复盘边界、投流放量边界、行业合规边界。
+phases 必须为三个阶段数组，每个阶段包含 name、days。
+days 的每一项必须包含以下字段：
+- day: 1-15 的数字
+- phase: 测试期、放大期或收割期
+- goal: 今日目标，老板能直接执行
+- action: 与 goal 保持一致，用于兼容旧版前端
+- workType: 作品类型，例如测试内容、赛马内容、转化内容、案例内容、复盘记录
+- videoFunction: 视频功能，例如同城拉新、信任建立、成交转化、数据复盘
+- shootingMethod: 拍摄方式，例如老板口播、门店实拍、顾客案例、口播 + 门店画面、数据表复盘
+- topicDirection: 内容方向，要具体到当天选题
+- content: 与 topicDirection 保持一致，用于兼容旧版前端
+- executionTool: 执行工具，优先从脚本生成器、标题优化器、封面助手、转化链路、本地推策略、投流评估、视频数据诊断中选择 1-3 个
+- adPlan: 投流安排，若不投流也要写自然流量执行安排
+- ad: 与 adPlan 保持一致，用于兼容旧版前端
+- customerNurture: 客户培育动作，例如评论承接、私信促单、企微跟进、到店提醒、复购提醒
+- reviewMetrics: 复盘指标，必须包含可观察指标
+- kpi: 与 reviewMetrics 保持一致，用于兼容旧版前端
+- shootingScript: 拍摄文案对象，必须包含 hook、shots、voiceover、cta、duration；shots 必须是 4 条镜头清单，voiceover 必须是当天可直接照读的口播文案
+- status: 固定使用未开始、进行中、已完成、已复盘之一，默认 Day 1 为进行中，其余为未开始
+
+要求：必须输出完整 15 天，不要省略任何字段，不要输出 Markdown。`,
       temperature: 0.78,
       max_tokens: 2600
     })
     const parsed = parseJsonValue(content)
+    const plan = validateQuickPlanResult(parsed, quickPlanInput, { generationMode: parsed ? 'ai' : 'ruleFallback' })
     res.json({
       agent: 'quick-plan',
       status: 'success',
-      plan: parsed || fallbackPlan,
+      plan,
       upgradeHint: '升级高阶会员可获得 30 天长期赛马表和投流复盘模板。'
     })
   } catch (error) {
     res.json({
       agent: 'quick-plan',
       status: 'success',
-      plan: fallbackPlan,
+      plan: validateQuickPlanResult(null, quickPlanInput, { generationMode: 'ruleFallback' }),
       isRuleFallback: true,
       upgradeHint: '升级高阶会员可获得 30 天长期赛马表和投流复盘模板。'
     })
+  }
+})
+
+router.get('/quick-plan/saved', checkAccess, requireLevel('pro'), async (req, res) => {
+  try {
+    await ensureQuickPlanTable()
+    const rows = await query(
+      'SELECT id, industry, goal, frequency, ad_support, plan_version, input_hash, diagnosis_context, plan, created_at, updated_at FROM douyin_quick_plans WHERE user_id = ? LIMIT 1',
+      [req.userId]
+    )
+
+    if (!rows.length) {
+      return res.json({ agent: 'quick-plan', status: 'empty', savedPlan: null })
+    }
+
+    res.json({
+      agent: 'quick-plan',
+      status: 'success',
+      savedPlan: formatSavedQuickPlan(rows[0])
+    })
+  } catch (error) {
+    res.status(500).json({ message: '读取已保存计划失败' })
+  }
+})
+
+router.post('/quick-plan/saved', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { industry, goal, frequency, adSupport, diagnosisContext = {}, plan } = req.body
+  const quickPlanInput = normalizeQuickPlanInput({ industry, goal, frequency, adSupport, diagnosisContext })
+
+  if (!plan || typeof plan !== 'object') {
+    return res.status(400).json({ message: '计划内容不能为空' })
+  }
+
+  const inputHash = createQuickPlanInputHash(quickPlanInput)
+  if (plan.meta?.inputHash && plan.meta.inputHash !== inputHash) {
+    return res.status(409).json({ message: '计划配置已变更，请重新生成后再保存' })
+  }
+
+  const normalizedPlan = validateQuickPlanResult(plan, quickPlanInput, { generationMode: plan?.meta?.generationMode || 'saved' })
+
+  try {
+    await ensureQuickPlanTable()
+    await query(
+      `INSERT INTO douyin_quick_plans (user_id, industry, goal, frequency, ad_support, plan_version, input_hash, diagnosis_context, plan)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         industry = VALUES(industry),
+         goal = VALUES(goal),
+         frequency = VALUES(frequency),
+         ad_support = VALUES(ad_support),
+         plan_version = VALUES(plan_version),
+         input_hash = VALUES(input_hash),
+         diagnosis_context = VALUES(diagnosis_context),
+         plan = VALUES(plan),
+         updated_at = CURRENT_TIMESTAMP`,
+      [
+        req.userId,
+        quickPlanInput.industryCode,
+        quickPlanInput.goalCode,
+        String(quickPlanInput.frequency || '1'),
+        quickPlanInput.adSupport || 'no',
+        normalizedPlan.meta?.planVersion || 1,
+        normalizedPlan.meta?.inputHash || null,
+        JSON.stringify(quickPlanInput.diagnosisContext || {}),
+        JSON.stringify(normalizedPlan)
+      ]
+    )
+
+    const rows = await query(
+      'SELECT id, industry, goal, frequency, ad_support, plan_version, input_hash, diagnosis_context, plan, created_at, updated_at FROM douyin_quick_plans WHERE user_id = ? LIMIT 1',
+      [req.userId]
+    )
+
+    res.json({
+      agent: 'quick-plan',
+      status: 'success',
+      savedPlan: rows.length ? formatSavedQuickPlan(rows[0]) : null
+    })
+  } catch (error) {
+    res.status(500).json({ message: '保存计划失败' })
+  }
+})
+
+router.patch('/quick-plan/saved/status', checkAccess, requireLevel('pro'), async (req, res) => {
+  const { day, status } = req.body
+  const allowedStatuses = ['未开始', '进行中', '已完成', '已复盘']
+
+  if (!Number(day) || !allowedStatuses.includes(status)) {
+    return res.status(400).json({ message: '任务状态参数无效' })
+  }
+
+  try {
+    await ensureQuickPlanTable()
+    const rows = await query(
+      'SELECT id, industry, goal, frequency, ad_support, plan_version, input_hash, diagnosis_context, plan, created_at, updated_at FROM douyin_quick_plans WHERE user_id = ? LIMIT 1',
+      [req.userId]
+    )
+
+    if (!rows.length) {
+      return res.status(404).json({ message: '尚未保存计划' })
+    }
+
+    const savedPlan = formatSavedQuickPlan(rows[0])
+    const nextPlan = savedPlan.plan
+    for (const phase of nextPlan?.phases || []) {
+      for (const item of phase.days || []) {
+        if (Number(item.day) === Number(day)) {
+          item.status = status
+        }
+      }
+    }
+
+    await query(
+      'UPDATE douyin_quick_plans SET plan = ?, plan_version = ?, input_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
+      [
+        JSON.stringify(nextPlan),
+        nextPlan.meta?.planVersion || savedPlan.planVersion || 1,
+        nextPlan.meta?.inputHash || savedPlan.inputHash || null,
+        req.userId
+      ]
+    )
+
+    res.json({
+      agent: 'quick-plan',
+      status: 'success',
+      savedPlan: {
+        ...savedPlan,
+        planVersion: nextPlan.meta?.planVersion || savedPlan.planVersion,
+        inputHash: nextPlan.meta?.inputHash || savedPlan.inputHash || null,
+        plan: nextPlan,
+        updatedAt: new Date().toISOString()
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ message: '更新任务状态失败' })
   }
 })
 

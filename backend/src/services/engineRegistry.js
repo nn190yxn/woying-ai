@@ -85,17 +85,35 @@ function normalizeRagResult(rawText, toolConfig) {
       }
     }
 
-    return {
-      summary: parsed.summary || `${toolConfig.name}已为您生成`,
-      sections: parsed.sections || [{ title: '生成结果', items: [rawText] }],
-      actions: parsed.actions || [],
-      recommendedTools: parsed.recommendedTools || [],
-      riskNotes: parsed.riskNotes || [],
-      meta: { ...(parsed.meta || {}), parseMode: 'json-object' }
-    }
+      return {
+        summary: parsed.summary || `${toolConfig.name}已为您生成`,
+        sections: parsed.sections || [{ title: '生成结果', items: [rawText] }],
+        actions: parsed.actions || [],
+        recommendedTools: parsed.recommendedTools || [],
+        riskNotes: parsed.riskNotes || [],
+        benchmarks: parsed.benchmarks || null,
+        scores: parsed.scores || null,
+        customizationCTA: parsed.customizationCTA,
+        meta: { ...(parsed.meta || {}), parseMode: 'json-object' }
+      }
   }
 
   return parseStructuredText(rawText)
+}
+
+function hasUsefulRagContent(normalized, toolConfig) {
+  const summary = String(normalized?.summary || '').trim()
+  const sections = Array.isArray(normalized?.sections) ? normalized.sections : []
+  const hasSectionItems = sections.some(section => Array.isArray(section.items) && section.items.some(item => String(item || '').trim()))
+  const failureText = `${summary} ${sections.map(section => section.items || []).flat().join(' ')}`
+  const hasStructuredDepth = Array.isArray(normalized?.actions) && normalized.actions.length > 0
+    && Array.isArray(normalized?.riskNotes) && normalized.riskNotes.length > 0
+    && Boolean(normalized?.benchmarks || normalized?.scores)
+
+  if (!summary && !hasSectionItems) return false
+  if (summary.includes('生成失败') || failureText.includes(`${toolConfig.name}生成失败`)) return false
+  if (toolConfig.requiresStructuredResult && !hasStructuredDepth) return false
+  return true
 }
 
 async function ragEngine(toolConfig, formData) {
@@ -104,10 +122,14 @@ async function ragEngine(toolConfig, formData) {
   const ind = getIndustryData(formData.industry || 'catering')
   const knowledgeContext = buildKnowledgeContext(knowledgeScope, formData, ind)
 
-  const userPrompt = typeof userPromptTemplate === 'function'
+  const baseUserPrompt = typeof userPromptTemplate === 'function'
     ? userPromptTemplate(formData, ind, knowledgeContext)
     : userPromptTemplate.replace('{用户输入}', JSON.stringify(formData))
                        .replace('{知识库检索结果}', knowledgeContext)
+
+  const userPrompt = toolConfig.requiresStructuredResult
+    ? `${baseUserPrompt}\n\n${buildStructuredOutputInstruction(toolConfig)}`
+    : baseUserPrompt
 
   const system = typeof systemPrompt === 'function'
     ? systemPrompt(ind)
@@ -117,10 +139,23 @@ async function ragEngine(toolConfig, formData) {
     systemPrompt: system,
     userPrompt,
     temperature: toolConfig.temperature || 0.8,
-    max_tokens: toolConfig.max_tokens || 3000
+    max_tokens: toolConfig.max_tokens || 3000,
+    responseFormat: toolConfig.requiresStructuredResult ? { type: 'json_object' } : null
   })
 
   const normalized = normalizeRagResult(rawResult, toolConfig)
+
+  if (!hasUsefulRagContent(normalized, toolConfig) && typeof toolConfig.fallbackBuilder === 'function') {
+    const fallback = await toolConfig.fallbackBuilder(formData, new Error('RAG returned empty or failed content'))
+    if (isUnifiedToolResult(fallback)) return fallback
+    return buildUnifiedResponse(fallback, {
+      engineType: toolConfig.engineType,
+      toolCode: toolConfig.code,
+      degraded: true,
+      fallbackType: 'empty_or_failed_rag',
+      includeCTA: fallback?.customizationCTA === null ? false : undefined
+    })
+  }
 
   return buildUnifiedResponse({
     ...normalized
@@ -131,6 +166,20 @@ async function ragEngine(toolConfig, formData) {
   })
 }
 
+function buildStructuredOutputInstruction(toolConfig) {
+  return `请严格输出一个 JSON 对象，不要输出 Markdown、代码块或解释性前后缀。JSON 必须包含以下字段：
+{
+  "summary": "一句话说明生成结果和核心判断",
+  "sections": [{ "title": "分节标题", "items": ["具体条目，包含数字、条件或操作细节"] }],
+  "actions": [{ "priority": "critical|high|medium|low", "title": "动作标题", "description": "动作说明", "owner": "负责人", "timeline": "完成时间" }],
+  "riskNotes": ["风险、边界或复核要求"],
+  "benchmarks": { "key": "行业基准、区间或阈值" },
+  "scores": { "clarity": 0, "feasibility": 0, "execution": 0 },
+  "recommendedTools": ["相关工具 code"]
+}
+sections 至少 4 个，每个 section 至少 2 条；actions 至少 3 条；riskNotes 至少 2 条；benchmarks 至少 3 个键。工具名称：${toolConfig.name}。`
+}
+
 function buildKnowledgeContext(scope, formData, industry) {
   const parts = []
 
@@ -139,8 +188,9 @@ function buildKnowledgeContext(scope, formData, industry) {
     parts.push(`典型渠道：${industry.commonChannels.join('、')}`)
   }
 
-  if (scope.includeSalary && formData.position) {
-    const salaryInfo = getSalaryByIndustry(scope.industryKey || industry.key, [formData.position])
+  if (scope.includeSalary && (formData.position || formData.roles)) {
+    const role = formData.position || String(Array.isArray(formData.roles) ? formData.roles[0] : formData.roles).split(/[,，、]/).map(item => item.trim()).filter(Boolean)[0]
+    const salaryInfo = getSalaryByIndustry(scope.industryKey || industry.key, [role])
     if (salaryInfo.length) {
       parts.push(`薪酬参考：${salaryInfo[0].name} 底薪${salaryInfo[0].baseRange[0]}-${salaryInfo[0].baseRange[1]}元，绩效占比${(salaryInfo[0].perfRatio * 100).toFixed(0)}%`)
     }
@@ -324,7 +374,7 @@ export async function executeTool(toolConfig, formData) {
     result = await handler(toolConfig, formData)
   } catch (error) {
     if (engineType === 'rag' && isAiAvailabilityError(error)) {
-      const fallback = createRagFallbackResult(toolConfig, formData, error)
+      const fallback = await createRagFallbackResult(toolConfig, formData, error)
       if (fallback) return fallback
     }
 

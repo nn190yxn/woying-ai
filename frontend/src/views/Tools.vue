@@ -1,69 +1,150 @@
 <template>
   <div class="tools-page">
-    <div class="container">
-      <div class="page-header">
+    <div class="container-wide workbench-stack">
+      <div class="page-header workbench-page-header">
         <div>
-          <p class="page-eyebrow">表格中心</p>
-          <h1>经营表格统一收口</h1>
-          <p class="page-desc">把输入模板、经营记录和输出报表放到同一入口，按行业快速找到能直接落地的数据表。</p>
+          <p class="page-eyebrow">经营数据表与工具库</p>
+          <h1>把每日数据、诊断工具和专项能力放进同一个经营入口</h1>
+          <p class="page-desc">先用数据表记录营收、客户、成本和复盘，再衔接体检报告推荐的内容、转化、投流和私域工具。</p>
         </div>
         <div v-if="userStore.isLoggedIn && quotaStore.globalRemain !== null" class="quota-card card">
           <span>今日剩余</span>
           <strong :class="{ unlimited: quotaStore.isUnlimited }">{{ quotaStore.isUnlimited ? '无限次' : quotaStore.globalRemain + ' / ' + quotaStore.globalTotal }}</strong>
-          <small>按当前会员等级展示可用范围</small>
+          <small>按当前会员等级展示数据表与工具可用范围</small>
         </div>
       </div>
 
-      <section v-if="standaloneCapabilities[0]" class="hero-card card">
+      <section v-if="standaloneCapabilities[0]" class="hero-card card workbench-action-panel">
         <div>
           <h2>{{ standaloneCapabilities[0].name }}</h2>
           <p>{{ standaloneCapabilities[0].description }}</p>
         </div>
-        <router-link :to="standaloneCapabilities[0].path" class="btn btn-secondary">查看企业增长</router-link>
+        <router-link :to="standaloneCapabilities[0].path" class="btn btn-secondary">进入经营诊断</router-link>
       </section>
 
-      <section class="panel card">
-        <div class="section-head compact">
+      <section class="templates-section workbench-section">
+        <div class="section-head workbench-section-header">
           <div>
-            <h2>行业场景</h2>
+            <h2>经营数据表</h2>
+            <p>优先记录每天会影响诊断和复盘的核心经营数据。</p>
           </div>
+          <button class="section-link inline-button" @click="setType('record')">查看全部记录表</button>
         </div>
-        <div class="industry-grid">
-          <button
-            v-for="industry in industryFilters"
-            :key="industry.slug"
-            class="industry-chip"
-            :class="{ active: activeIndustry === industry.slug }"
-            @click="setIndustry(industry.slug)"
+
+        <div class="templates-grid">
+          <router-link
+            v-for="template in featuredRecordTemplates"
+            :key="template.code"
+            :to="`/tools/${template.code}`"
+            class="template-card card"
           >
-            <span v-if="industry.slug !== 'all'" class="entry-dot" :style="{ backgroundColor: industry.accent }"></span>
-            <strong>{{ industry.shortName }}</strong>
-            <span>{{ industry.count }} 张</span>
-          </button>
+            <div class="template-top">
+              <div>
+                <h3>{{ template.name }}</h3>
+                <p class="template-subtitle">{{ getIndustryLabel(template.industry) }} · {{ template.group }} · {{ template.templateLabel }}</p>
+              </div>
+              <div class="template-badges">
+                <span class="badge" :class="template.badgeClass">{{ template.badge }}</span>
+                <span class="priority-badge" :class="template.priority === 'P0' ? 'hot' : 'steady'">{{ template.priority }}</span>
+              </div>
+            </div>
+            <p class="template-summary">{{ template.summary }}</p>
+            <div class="template-fields">
+              <span v-for="field in template.keyFields.slice(0, 4)" :key="field" class="field-tag">{{ field }}</span>
+            </div>
+            <div class="template-foot">
+              <span class="template-access" :class="canAccessTemplate(template) ? 'ready' : 'locked'">
+                {{ canAccessTemplate(template) ? '当前可用' : '升级后可用' }}
+              </span>
+              <span class="template-enter">进入表格</span>
+            </div>
+          </router-link>
         </div>
       </section>
 
-      <section class="panel card">
-        <div class="section-head compact">
+      <section class="panel card workbench-section">
+        <div class="section-head compact workbench-section-header">
           <div>
-            <h2>模板类型</h2>
+            <h2>诊断后推荐工具</h2>
+            <p>体检报告发现问题后，优先进入这些执行和复盘工具。</p>
           </div>
         </div>
-        <div class="filter-tabs">
-          <button v-for="tab in typeTabs" :key="tab.value" class="tab-btn" :class="{ active: activeType === tab.value }" @click="setType(tab.value)">
-            {{ tab.label }}
-            <span class="tab-count">{{ tab.count }}</span>
-          </button>
+        <div class="tool-grid">
+          <router-link
+            v-for="tool in recommendedTools"
+            :key="tool.code"
+            :to="tool.path"
+            class="tool-card"
+          >
+            <div class="special-top">
+              <strong>{{ tool.name }}</strong>
+              <span class="badge" :class="tool.badgeClass">{{ tool.badge }}</span>
+            </div>
+            <p>{{ tool.description }}</p>
+            <span class="special-audience">{{ tool.sceneTags.slice(0, 3).join(' · ') }}</span>
+          </router-link>
         </div>
       </section>
 
-      <section class="templates-section">
-        <div class="section-head">
+      <section class="panel card workbench-section">
+        <div class="section-head compact workbench-section-header">
           <div>
-            <h2>{{ sectionTitle }}</h2>
-            <p>{{ filteredTemplates.length }} 张表格可直接进入使用</p>
+            <h2>专项模块入口</h2>
+            <p>按抖音、小红书、私域进入专项体检、计划、执行和复盘链路。</p>
+          </div>
+        </div>
+        <div class="special-grid">
+          <router-link
+            v-for="entry in specialModuleEntries"
+            :key="entry.code"
+            :to="entry.path"
+            class="special-card"
+          >
+            <div class="special-top">
+              <strong>{{ entry.name }}</strong>
+              <span class="badge" :class="entry.badgeClass">{{ entry.badge }}</span>
+            </div>
+            <p>{{ entry.description }}</p>
+            <span class="special-audience">{{ entry.audience }}</span>
+          </router-link>
+        </div>
+      </section>
+
+      <section class="templates-section workbench-section">
+        <div class="section-head workbench-section-header">
+          <div>
+            <h2>全部能力索引</h2>
+            <p>{{ sectionTitle }} · {{ filteredTemplates.length }} 张数据表可直接进入使用</p>
           </div>
           <router-link to="/membership" class="section-link">查看会员权限</router-link>
+        </div>
+
+        <div class="index-filters card">
+          <div>
+            <h3>按行业场景筛选</h3>
+            <div class="industry-grid">
+              <button
+                v-for="industry in industryFilters"
+                :key="industry.slug"
+                class="industry-chip"
+                :class="{ active: activeIndustry === industry.slug }"
+                @click="setIndustry(industry.slug)"
+              >
+                <span v-if="industry.slug !== 'all'" class="entry-dot" :style="{ backgroundColor: industry.accent }"></span>
+                <strong>{{ industry.shortName }}</strong>
+                <span>{{ industry.count }} 张</span>
+              </button>
+            </div>
+          </div>
+          <div>
+            <h3>按数据表类型筛选</h3>
+            <div class="filter-tabs">
+              <button v-for="tab in typeTabs" :key="tab.value" class="tab-btn" :class="{ active: activeType === tab.value }" @click="setType(tab.value)">
+                {{ tab.label }}
+                <span class="tab-count">{{ tab.count }}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="templates-grid">
@@ -105,29 +186,6 @@
           </router-link>
         </div>
       </section>
-
-      <section class="panel card">
-        <div class="section-head compact">
-          <div>
-            <h2>专项能力</h2>
-          </div>
-        </div>
-        <div class="special-grid">
-          <router-link
-            v-for="entry in specialModuleEntries"
-            :key="entry.code"
-            :to="entry.path"
-            class="special-card"
-          >
-            <div class="special-top">
-              <strong>{{ entry.name }}</strong>
-              <span class="badge" :class="entry.badgeClass">{{ entry.badge }}</span>
-            </div>
-            <p>{{ entry.description }}</p>
-            <span class="special-audience">{{ entry.audience }}</span>
-          </router-link>
-        </div>
-      </section>
     </div>
   </div>
 </template>
@@ -139,6 +197,7 @@ import { useQuotaStore } from '@/stores/quota'
 import { useUserStore } from '@/stores/user'
 import { canAccessLevel } from '@/constants/membership'
 import {
+  allTools,
   getToolByCode,
   industryTemplateEntries,
   specialModuleEntries,
@@ -201,6 +260,19 @@ const filteredTemplates = computed(() => {
   return industryTemplateEntries.filter(template => matchesIndustry(template, activeIndustry.value) && matchesType(template, activeType.value))
 })
 
+const featuredRecordTemplates = computed(() => {
+  return industryTemplateEntries
+    .filter(template => template.templateType === 'record')
+    .slice(0, 6)
+})
+
+const recommendedTools = computed(() => {
+  const recommendedCodes = ['store-health', 'script', 'headline', 'close-deal', 'roi', 'campaign-roi']
+  return recommendedCodes
+    .map(code => allTools.find(tool => tool.code === code))
+    .filter(Boolean)
+})
+
 const sectionTitle = computed(() => {
   const industry = industryFilters.value.find(item => item.slug === activeIndustry.value)
   const type = typeTabs.value.find(item => item.value === activeType.value)
@@ -245,7 +317,10 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 
 <style scoped>
 .tools-page {
-  padding: var(--space-6) 0 var(--space-9);
+  padding: var(--space-7) 0 var(--space-10);
+  background:
+    radial-gradient(circle at top left, rgba(79, 70, 229, 0.08), transparent 28rem),
+    var(--bg-workbench);
 }
 
 .page-header,
@@ -261,7 +336,7 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 
 .page-header {
   align-items: flex-start;
-  margin-bottom: var(--space-6);
+  margin-bottom: 0;
 }
 
 .page-eyebrow {
@@ -275,6 +350,14 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 .section-head h2,
 .hero-card h2 {
   margin-bottom: var(--space-2);
+}
+
+.page-header h1 {
+  max-width: 880px;
+}
+
+.page-desc {
+  max-width: 720px;
 }
 
 .page-desc,
@@ -292,10 +375,12 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 
 .quota-card,
 .panel,
+.index-filters,
 .hero-card,
 .template-card,
+.tool-card,
 .special-card {
-  padding: var(--space-5);
+  padding: var(--card-padding-md);
 }
 
 .quota-card {
@@ -303,6 +388,8 @@ watch([activeIndustry, activeType], ([industry, type]) => {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  border-color: var(--line-soft);
+  background: var(--bg-card);
 }
 
 .quota-card strong {
@@ -317,11 +404,13 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 .hero-card,
 .panel,
 .templates-section {
-  margin-bottom: var(--space-5);
+  margin-bottom: 0;
 }
 
 .hero-card {
   align-items: center;
+  border-color: rgba(59, 130, 246, 0.16);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.95), rgba(255, 255, 255, 0.96));
 }
 
 .section-head {
@@ -338,23 +427,50 @@ watch([activeIndustry, activeType], ([industry, type]) => {
   color: var(--brand-primary);
 }
 
+.templates-section {
+  padding: var(--space-5);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-card);
+}
+
 .industry-grid,
+.tool-grid,
 .special-grid,
 .templates-grid {
   display: grid;
   gap: var(--space-4);
 }
 
+.index-filters {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  border-color: var(--line-soft);
+  background: var(--bg-panel);
+}
+
+.index-filters > div {
+  min-width: 0;
+}
+
+.index-filters h3 {
+  margin-bottom: var(--space-3);
+}
+
 .industry-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 .industry-chip,
+.tool-card,
 .special-card,
 .template-card {
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 16px;
-  background: #fff;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
@@ -363,7 +479,9 @@ watch([activeIndustry, activeType], ([industry, type]) => {
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  padding: 14px;
+  min-width: 0;
+  min-height: 88px;
+  padding: var(--space-3);
   text-align: left;
 }
 
@@ -374,11 +492,16 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 
 .industry-chip.active,
 .industry-chip:hover,
+.tool-card:hover,
 .special-card:hover,
 .template-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(30, 58, 138, 0.12);
+  box-shadow: var(--shadow-card);
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+.industry-chip.active {
+  background: var(--state-info-bg);
 }
 
 .entry-dot {
@@ -398,7 +521,8 @@ watch([activeIndustry, activeType], ([industry, type]) => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  min-height: var(--button-height-sm);
+  padding: 0 var(--space-4);
   border-radius: var(--radius-btn);
   background: var(--bg-subtle);
   color: var(--text-secondary);
@@ -426,10 +550,23 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 }
 
 .template-card,
+.tool-card,
 .special-card {
   display: block;
+  min-width: 0;
   text-decoration: none;
   color: inherit;
+}
+
+.template-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+}
+
+.tool-card,
+.special-card {
+  min-height: 178px;
 }
 
 .template-badges,
@@ -485,15 +622,17 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 
 .template-foot {
   align-items: center;
-  margin-top: var(--space-4);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
 }
 
 .template-access.ready {
-  color: #0f766e;
+  color: var(--state-success);
 }
 
 .template-access.locked {
-  color: #b45309;
+  color: var(--state-warning);
 }
 
 .template-enter {
@@ -505,6 +644,28 @@ watch([activeIndustry, activeType], ([industry, type]) => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.tool-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tool-card p {
+  margin-top: var(--space-2);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.tool-card,
+.special-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.inline-button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .special-card strong {
   display: block;
   margin-bottom: var(--space-2);
@@ -512,12 +673,14 @@ watch([activeIndustry, activeType], ([industry, type]) => {
 
 .special-audience {
   display: block;
-  margin-top: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-3);
   font-size: var(--text-caption);
 }
 
 @media (max-width: 1023px) {
   .industry-grid,
+  .tool-grid,
   .templates-grid,
   .special-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -535,6 +698,7 @@ watch([activeIndustry, activeType], ([industry, type]) => {
   }
 
   .industry-grid,
+  .tool-grid,
   .templates-grid,
   .special-grid {
     grid-template-columns: 1fr;
@@ -543,6 +707,15 @@ watch([activeIndustry, activeType], ([industry, type]) => {
   .quota-card {
     width: 100%;
     align-items: flex-start;
+  }
+
+  .filter-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .tab-btn {
+    min-width: 0;
   }
 }
 </style>

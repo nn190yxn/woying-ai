@@ -1,15 +1,32 @@
+const seedAnnualUser = process.env.NODE_ENV === 'test' && process.env.TEST_SEED_ANNUAL_USER === '1'
+
 const mockDb = {
-  users: [],
+  users: seedAnnualUser ? [{
+    id: 1,
+    phone: '19900000001',
+    password_hash: '',
+    nickname: '年度测试用户',
+    member_level: 'annual',
+    member_expire_at: null,
+    referral_code: 'TEST001',
+    referred_by: null,
+    referral_bonus_days: 0,
+    created_at: new Date()
+  }] : [],
   orders: [],
   tool_usage: [],
   tool_results: [],
   diagnosis_reports: [],
+  douyin_quick_plans: [],
+  douyin_review_records: [],
   _idCounters: {
-    users: 0,
+    users: seedAnnualUser ? 1 : 0,
     orders: 0,
     tool_usage: 0,
     tool_results: 0,
-    diagnosis_reports: 0
+    diagnosis_reports: 0,
+    douyin_quick_plans: 0,
+    douyin_review_records: 0
   }
 }
 
@@ -158,6 +175,10 @@ export function createMockQuery() {
       return []
     }
 
+    if (sql.startsWith('SELECT') && sql.includes('INFORMATION_SCHEMA.COLUMNS')) {
+      return [{ count: 1 }]
+    }
+
     if (sql.startsWith('INSERT INTO diagnosis_reports')) {
       const [userId, answersJson, analysisJson] = params
       const id = getNextId('diagnosis_reports')
@@ -170,6 +191,107 @@ export function createMockQuery() {
       }
       mockDb.diagnosis_reports.push(report)
       return { insertId: id }
+    }
+
+    if (sql.startsWith('SELECT') && sql.includes('FROM douyin_quick_plans')) {
+      const userId = String(params[0])
+      const plan = mockDb.douyin_quick_plans.find(item => item.user_id === userId)
+      return plan ? [plan] : []
+    }
+
+    if (sql.startsWith('INSERT INTO douyin_quick_plans')) {
+      const hasVersionFields = sql.includes('plan_version') && sql.includes('input_hash')
+      const [userId, industry, goal, frequency, adSupport] = params
+      const planVersion = hasVersionFields ? params[5] : 1
+      const inputHash = hasVersionFields ? params[6] : null
+      const diagnosisContext = hasVersionFields ? params[7] : params[5]
+      const plan = hasVersionFields ? params[8] : params[6]
+      const existing = mockDb.douyin_quick_plans.find(item => item.user_id === String(userId))
+      const now = new Date()
+      if (existing) {
+        Object.assign(existing, {
+          industry,
+          goal,
+          frequency,
+          ad_support: adSupport,
+          plan_version: Number(planVersion || 1),
+          input_hash: inputHash || null,
+          diagnosis_context: diagnosisContext,
+          plan,
+          updated_at: now
+        })
+        return { insertId: existing.id, affectedRows: 2 }
+      }
+
+      const id = getNextId('douyin_quick_plans')
+      mockDb.douyin_quick_plans.push({
+        id,
+        user_id: String(userId),
+        industry,
+        goal,
+        frequency,
+        ad_support: adSupport,
+        plan_version: Number(planVersion || 1),
+        input_hash: inputHash || null,
+        diagnosis_context: diagnosisContext,
+        plan,
+        created_at: now,
+        updated_at: now
+      })
+      return { insertId: id, affectedRows: 1 }
+    }
+
+    if (sql.startsWith('UPDATE douyin_quick_plans') && sql.includes('SET plan')) {
+      const hasVersionFields = sql.includes('plan_version') && sql.includes('input_hash')
+      const [plan] = params
+      const planVersion = hasVersionFields ? params[1] : null
+      const inputHash = hasVersionFields ? params[2] : null
+      const userId = hasVersionFields ? params[3] : params[1]
+      const existing = mockDb.douyin_quick_plans.find(item => item.user_id === String(userId))
+      if (existing) {
+        existing.plan = plan
+        if (hasVersionFields) {
+          existing.plan_version = Number(planVersion || existing.plan_version || 1)
+          existing.input_hash = inputHash || null
+        }
+        existing.updated_at = new Date()
+      }
+      return { affectedRows: existing ? 1 : 0 }
+    }
+
+    if (sql.startsWith('SELECT') && sql.includes('FROM douyin_review_records')) {
+      if (sql.includes('WHERE id')) {
+        const id = Number(params[0])
+        const userId = String(params[1])
+        const record = mockDb.douyin_review_records.find(item => item.id === id && item.user_id === userId)
+        return record ? [record] : []
+      }
+      const userId = String(params[0])
+      const records = mockDb.douyin_review_records
+        .filter(item => item.user_id === userId)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      if (sql.includes('LIMIT 1')) return records.slice(0, 1)
+      return records
+    }
+
+    if (sql.startsWith('INSERT INTO douyin_review_records')) {
+      const [userId, industry, goal, sourceContext, inputData, resultData, effectiveContentTypes, nextActions] = params
+      const now = new Date()
+      const id = getNextId('douyin_review_records')
+      mockDb.douyin_review_records.push({
+        id,
+        user_id: String(userId),
+        industry,
+        goal,
+        source_context: sourceContext,
+        input_data: inputData,
+        result_data: resultData,
+        effective_content_types: effectiveContentTypes,
+        next_actions: nextActions,
+        created_at: now,
+        updated_at: now
+      })
+      return { insertId: id, affectedRows: 1 }
     }
 
     console.warn('[MockDB] Unhandled query:', sql.substring(0, 80))

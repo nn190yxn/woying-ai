@@ -43,12 +43,18 @@ const toolComponent = computed(() => {
 
 <style scoped>
 .tool-not-found {
-  min-height: 60vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--space-4);
+  min-height: 60vh;
+  margin: var(--space-6) auto;
+  padding: var(--card-padding-lg);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
   color: var(--text-secondary);
 }
 </style>

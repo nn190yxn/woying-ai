@@ -51,6 +51,17 @@
         <div class="result-header">
           <span class="industry-badge">{{ result.industry }}</span>
           <span class="member-day">会员日: {{ result.memberDay }}</span>
+          <span v-if="result.goal" class="goal-badge">目标: {{ result.goal }}</span>
+        </div>
+
+        <div v-if="result.benchmarks?.length" class="benchmark-section">
+          <h3>行业基准</h3>
+          <div class="benchmark-grid">
+            <div v-for="item in result.benchmarks" :key="item.label" class="benchmark-item">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
         </div>
 
         <div class="tier-section">
@@ -81,6 +92,35 @@
           </div>
         </div>
 
+        <div v-if="result.successMetrics?.length" class="metrics-section">
+          <h3>成功指标</h3>
+          <ul>
+            <li v-for="(metric, i) in result.successMetrics" :key="i">{{ metric }}</li>
+          </ul>
+        </div>
+
+        <div v-if="result.expectedImpact" class="impact-section">
+          <h3>首月验证口径</h3>
+          <div class="impact-grid">
+            <div class="impact-item">
+              <span>种子用户</span>
+              <strong>{{ result.expectedImpact.seedUsers }}人</strong>
+            </div>
+            <div class="impact-item">
+              <span>客单参考</span>
+              <strong>¥{{ result.expectedImpact.baselineOrderValue }}</strong>
+            </div>
+            <div class="impact-item">
+              <span>锁定金额测算</span>
+              <strong>¥{{ result.expectedImpact.firstMonthLockEstimate?.toLocaleString?.() || result.expectedImpact.firstMonthLockEstimate }}</strong>
+            </div>
+            <div class="impact-item">
+              <span>复盘周期</span>
+              <strong>{{ result.expectedImpact.reviewCycle }}</strong>
+            </div>
+          </div>
+        </div>
+
         <div v-if="result.scriptSnippets" class="script-section">
           <h3>储值话术模板</h3>
           <div v-if="result.scriptSnippets.rechargePitch" class="script-card">
@@ -96,6 +136,13 @@
           <h3>设计建议</h3>
           <ul>
             <li v-for="(s, i) in result.suggestions" :key="i">{{ s }}</li>
+          </ul>
+        </div>
+
+        <div v-if="result.riskBoundary?.length" class="risk-section">
+          <h3>风险边界</h3>
+          <ul>
+            <li v-for="(risk, i) in result.riskBoundary" :key="i">{{ risk }}</li>
           </ul>
         </div>
 
@@ -240,13 +287,47 @@ const bookConsult = () => router.push('/consultation')
   color: #0369a1;
 }
 
-.tier-section, .timeline-section, .script-section, .suggestions {
+.goal-badge {
+  padding: 4px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 20px;
+  font-size: var(--text-body-sm);
+  color: #047857;
+}
+
+.tier-section, .timeline-section, .script-section, .suggestions, .benchmark-section, .metrics-section, .impact-section, .risk-section {
   margin-bottom: 24px;
 }
 
-.tier-section h3, .timeline-section h3, .script-section h3, .suggestions h3 {
+.tier-section h3, .timeline-section h3, .script-section h3, .suggestions h3, .benchmark-section h3, .metrics-section h3, .impact-section h3, .risk-section h3 {
   font-size: var(--text-h4);
   margin-bottom: 16px;
+}
+
+.benchmark-grid, .impact-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.benchmark-item, .impact-item {
+  padding: 14px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+}
+
+.benchmark-item span, .impact-item span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--text-body-xs);
+  margin-bottom: 6px;
+}
+
+.benchmark-item strong, .impact-item strong {
+  color: var(--text-main);
+  font-size: var(--text-body);
 }
 
 .tier-table {
@@ -320,12 +401,12 @@ const bookConsult = () => router.push('/consultation')
   margin: 0;
 }
 
-.suggestions ul {
+.suggestions ul, .metrics-section ul, .risk-section ul {
   margin: 0;
   padding-left: 20px;
 }
 
-.suggestions li {
+.suggestions li, .metrics-section li, .risk-section li {
   margin-bottom: 8px;
   color: var(--text-secondary);
 }
@@ -359,8 +440,14 @@ const bookConsult = () => router.push('/consultation')
 
 @media (max-width: 768px) {
   .form-grid { grid-template-columns: 1fr; }
+  .benchmark-grid, .impact-grid { grid-template-columns: 1fr 1fr; }
   .tier-header, .tier-row { grid-template-columns: 1.5fr 1fr 1fr; }
   .tier-header > :nth-child(4), .tier-header > :nth-child(5),
   .tier-row > :nth-child(4), .tier-row > :nth-child(5) { display: none; }
+}
+
+@media (max-width: 520px) {
+  .result-header { align-items: flex-start; flex-direction: column; }
+  .benchmark-grid, .impact-grid { grid-template-columns: 1fr; }
 }
 </style>

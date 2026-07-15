@@ -1,69 +1,71 @@
 <template>
   <div class="home-page">
     <section class="hero">
-      <div class="container hero-grid">
+      <div class="container-wide hero-grid">
         <div class="hero-copy">
-          <p class="hero-eyebrow">我赢AI</p>
+          <p class="hero-eyebrow">本地生活 AI 经营系统</p>
           <h1>
-            <span>100+知识库</span>
-            <span>让老板多赚三倍钱的 AI 助理</span>
+            <span>每天给老板一张</span>
+            <span>能照着做的经营作战表</span>
           </h1>
-          <p class="hero-desc">本站会员持续增长中</p>
+          <p class="hero-desc">先诊断客流、内容、转化和复购卡点，再把问题拆成 15 天任务、执行工具和复盘指标。</p>
+          <div class="hero-metrics workbench-metrics" aria-label="经营工作台能力">
+            <article v-for="metric in operatingMetrics" :key="metric.label" class="workbench-metric-card">
+              <span class="workbench-metric-label">{{ metric.label }}</span>
+              <strong class="workbench-metric-value">{{ metric.value }}</strong>
+              <span class="workbench-metric-note">{{ metric.note }}</span>
+            </article>
+          </div>
           <div class="hero-actions">
-            <router-link to="/tools" class="btn btn-primary btn-lg">功能分类</router-link>
-            <router-link to="/membership" class="btn btn-secondary btn-lg">会员介绍</router-link>
+            <router-link to="/douyin/diagnosis" class="btn btn-primary btn-lg">开始经营体检</router-link>
+            <router-link to="/douyin/quick-plan" class="btn btn-secondary btn-lg">查看作战计划</router-link>
+            <router-link to="/douyin/video-diagnoser" class="btn btn-secondary btn-lg">记录今天的数据</router-link>
           </div>
         </div>
 
         <div class="hero-panel card">
           <div class="member-total">
-            <strong class="member-total-number">持续增长</strong>
-            <span class="member-total-label">本站会员统计</span>
+            <strong class="member-total-number">3 步</strong>
+            <span class="member-total-label">从诊断到执行复盘</span>
           </div>
-          <div class="hero-metrics">
-            <div class="metric-card">
-              <strong class="numeral">{{ capabilityCount }}</strong>
-              <span>已上线能力</span>
-            </div>
-            <div class="metric-card">
-              <strong class="numeral">8</strong>
-              <span>模块入口</span>
-            </div>
-            <div class="metric-card">
-              <strong class="numeral">{{ industryTemplateEntries.length }}</strong>
-              <span>表格模板</span>
-            </div>
+          <div class="hero-flow">
+            <router-link v-for="step in heroSteps" :key="step.title" :to="step.path" class="flow-step">
+              <span class="flow-index">{{ step.index }}</span>
+              <div>
+                <strong>{{ step.title }}</strong>
+                <span>{{ step.desc }}</span>
+              </div>
+            </router-link>
           </div>
           <router-link to="/diagnosis" class="growth-spotlight">
-            <span class="growth-spotlight-label">特色能力</span>
-            <strong>企业增长全景顾问</strong>
+            <span class="growth-spotlight-label">系统诊断</span>
+            <strong>不知道先改哪里，就从全景增长诊断开始</strong>
           </router-link>
         </div>
       </div>
     </section>
 
     <section class="section">
-      <div class="container">
-        <div class="section-head">
-          <h2>功能分类</h2>
+      <div class="container-wide">
+        <div class="section-head workbench-section-header">
+          <div>
+            <p class="section-kicker">今日经营任务</p>
+            <h2>今天先推进哪件事</h2>
+          </div>
         </div>
 
-        <div class="module-grid">
+        <div class="mission-grid">
           <router-link
-            v-for="pillar in pillars"
-            :key="pillar.key"
-            :to="pillar.path || `/modules/${pillar.key}`"
-            class="module-card card"
+            v-for="mission in missionCards"
+            :key="mission.title"
+            :to="mission.path"
+            class="mission-card card"
           >
-            <div class="module-top">
-              <span class="module-icon" :style="{ color: pillar.color, backgroundColor: pillar.bg }">
-                <component :is="pillar.icon" />
-              </span>
-              <span class="module-count">{{ pillar.count }} 个能力</span>
-            </div>
-            <h3>{{ pillar.name }}</h3>
+            <span class="mission-label">{{ mission.label }}</span>
+            <h3>{{ mission.title }}</h3>
+            <p>{{ mission.desc }}</p>
             <div class="module-cues">
-              <span v-for="cue in pillar.cues" :key="cue" class="module-cue">{{ cue }}</span>
+              <span v-for="cue in mission.cues" :key="cue" class="module-cue">{{ cue }}</span>
             </div>
           </router-link>
         </div>
@@ -71,105 +73,132 @@
     </section>
 
     <section class="section section-subtle">
-      <div class="container">
-        <div class="section-head">
-          <h2>行业入口</h2>
+      <div class="container-wide">
+        <div class="section-head workbench-section-header">
+          <div>
+            <p class="section-kicker">15 天作战表示例</p>
+            <h2>餐饮门店抖音获客 5 天样例</h2>
+          </div>
+          <router-link to="/douyin/quick-plan" class="section-link">生成完整 15 天计划</router-link>
         </div>
-        <div class="mini-grid industry-entry-grid">
+
+        <BattlePlanPreview />
+      </div>
+    </section>
+
+    <section class="section section-subtle">
+      <div class="container-wide">
+        <div class="section-head workbench-section-header">
+          <div>
+            <p class="section-kicker">专项作战入口</p>
+            <h2>先测、再做、再复盘</h2>
+          </div>
+        </div>
+        <div class="special-entry-grid">
           <router-link
-            v-for="industry in industryEntries"
-            :key="industry.slug"
-            :to="`/industries/${industry.slug}`"
-            class="industry-entry"
+            v-for="entry in specialEntries"
+            :key="entry.title"
+            :to="entry.path"
+            class="special-entry card"
           >
-            <div class="industry-entry-top">
-              <span class="mini-dot" :style="{ backgroundColor: industry.accent }"></span>
-              <strong>{{ industry.shortName }}</strong>
+            <div class="special-entry-top">
+              <span class="mini-dot" :style="{ backgroundColor: entry.accent }"></span>
+              <div>
+                <strong>{{ entry.title }}</strong>
+                <p>{{ entry.desc }}</p>
+              </div>
             </div>
-            <span class="industry-entry-count">{{ getIndustryTemplateCount(industry.slug) }} 张表格</span>
+            <div class="special-entry-flow">
+              <span v-for="step in entry.steps" :key="step">{{ step }}</span>
+            </div>
           </router-link>
         </div>
       </div>
     </section>
 
     <section class="section membership-section">
-      <div class="container">
-        <div class="section-head">
-          <h2>会员介绍</h2>
-        </div>
-
-        <div class="membership-grid">
-          <div v-for="plan in membershipPlans" :key="plan.code" class="membership-card card" :class="{ recommended: plan.recommended, featured: plan.featured }">
-            <div class="membership-top">
-              <div>
-                <h3>{{ plan.name }}</h3>
-                <p class="sub-price">{{ plan.subPrice }}</p>
-              </div>
-              <span class="badge" :class="plan.badgeClass">{{ plan.badge }}</span>
-            </div>
-            <p class="price">{{ plan.price }}</p>
-            <p class="coverage">覆盖 {{ plan.pillarCoverage }} 大模块</p>
-            <router-link to="/membership" class="btn btn-block" :class="plan.recommended || plan.featured ? 'btn-primary' : 'btn-secondary'">{{ plan.cta }}</router-link>
+      <div class="container-wide">
+        <div class="section-head workbench-section-header">
+          <div>
+            <p class="section-kicker">经营权益</p>
+            <h2>会员介绍</h2>
           </div>
         </div>
+
+        <MembershipOutcomeMatrix />
       </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import {
-  allTools,
-  capabilityCount,
-  industryTemplateEntries,
-  visibleIndustryEntries as industryEntries,
-  mapToolToPillar,
-  pricingPlans,
-  pillarMeta
-} from '@/constants/toolCatalog'
+import BattlePlanPreview from '@/components/BattlePlanPreview.vue'
+import MembershipOutcomeMatrix from '@/components/MembershipOutcomeMatrix.vue'
 
-function getToolCountByPillar(pillarKey) {
-  if (pillarMeta[pillarKey]?.count) return pillarMeta[pillarKey].count
-  return allTools.filter(tool => mapToolToPillar(tool) === pillarKey).length
-}
+const heroSteps = [
+  { index: '01', title: '先体检', desc: '抖音、小红书、私域和门店经营先找主短板', path: '/douyin/diagnosis' },
+  { index: '02', title: '出计划', desc: '把诊断结论变成 15 天可执行动作', path: '/douyin/quick-plan' },
+  { index: '03', title: '做复盘', desc: '记录视频和成交数据，持续校准动作', path: '/douyin/video-diagnoser' }
+]
 
-const pillars = Object.entries(pillarMeta).map(([key, meta]) => ({
-  key,
-  ...meta,
-  count: getToolCountByPillar(key)
-}))
+const operatingMetrics = [
+  { label: '入口', value: '3 类', note: '体检、计划、复盘' },
+  { label: '周期', value: '15 天', note: '每日任务和工具' },
+  { label: '闭环', value: '4 段', note: '诊断到复盘校准' }
+]
 
-const membershipPlans = pricingPlans.map(plan => {
-  const coverageMap = { free: '3/8', starter: '5/8', pro: '7/8', annual: '8/8' }
-  return {
-    ...plan,
-    pillarCoverage: coverageMap[plan.code] || '4/8'
+const missionCards = [
+  { label: '体检', title: '开始经营体检', desc: '适合不知道先优化抖音、小红书、私域还是门店经营的老板。', path: '/douyin/diagnosis', cues: ['诊断依据', '主短板', '下一步动作'] },
+  { label: '计划', title: '生成作战计划', desc: '把问题拆成 15 天执行节奏，直接衔接脚本、话术、投流和私域动作。', path: '/douyin/quick-plan', cues: ['15 天节奏', '每日任务', '工具推荐'] },
+  { label: '复盘', title: '记录今天的数据', desc: '记录播放、互动、咨询和成交数据，让下一次诊断更准。', path: '/douyin/video-diagnoser', cues: ['视频数据', '成交复盘', '下一步建议'] }
+]
+
+const specialEntries = [
+  {
+    title: '抖音本地获客',
+    desc: '适合想用短视频、团购和本地推拉新到店的门店。',
+    path: '/douyin',
+    accent: '#2563eb',
+    steps: ['经营体检', '15 天计划', '视频复盘']
+  },
+  {
+    title: '小红书种草转化',
+    desc: '适合美业、教培、生活服务做内容种草和咨询转化。',
+    path: '/xhs',
+    accent: '#db2777',
+    steps: ['账号体检', '起号计划', '笔记复盘']
+  },
+  {
+    title: '私域复购承接',
+    desc: '适合把到店客户、企微、社群和会员体系做成复购资产。',
+    path: '/private',
+    accent: '#0f766e',
+    steps: ['私域体检', '承接动作', '复购复盘']
   }
-})
+]
 
-function getIndustryTemplateCount(slug) {
-  return industryTemplateEntries.filter(template => template.industry === slug).length
-}
 </script>
 
 <style scoped>
 .home-page {
+  background: var(--bg-workbench);
   padding-bottom: var(--space-8);
 }
 
 .hero,
 .section {
-  padding: var(--space-6) 0;
+  padding: var(--section-gap-md) 0;
 }
 
 .section-subtle {
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  background: transparent;
 }
 
 .hero-grid {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  gap: var(--space-5);
+  align-items: start;
+  gap: var(--grid-gap-lg);
 }
 
 .hero-copy {
@@ -184,7 +213,7 @@ function getIndustryTemplateCount(slug) {
 }
 
 .hero-copy h1 {
-  font-size: 46px;
+  font-size: var(--text-display);
   line-height: 1.08;
   margin-bottom: var(--space-3);
 }
@@ -194,9 +223,7 @@ function getIndustryTemplateCount(slug) {
 }
 
 .hero-desc,
-.sub-price,
-.coverage,
-.industry-entry-count {
+.special-entry p {
   color: var(--text-secondary);
 }
 
@@ -207,14 +234,15 @@ function getIndustryTemplateCount(slug) {
 
 .hero-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-5);
 }
 
 .hero-panel {
-  padding: var(--space-5);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  padding: var(--card-padding-lg);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .member-total {
@@ -229,7 +257,6 @@ function getIndustryTemplateCount(slug) {
   line-height: 1;
   font-weight: var(--font-weight-bold);
   color: var(--brand-primary);
-  letter-spacing: -0.04em;
 }
 
 .member-total-label {
@@ -239,9 +266,57 @@ function getIndustryTemplateCount(slug) {
 
 .hero-metrics {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--grid-gap-sm);
+  margin-top: var(--space-5);
+}
+
+.hero-flow {
+  display: grid;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
+}
+
+.flow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-panel);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.flow-step:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.flow-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(30, 58, 138, 0.08);
+  color: var(--brand-primary);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-caption);
+}
+
+.flow-step strong,
+.flow-step span:last-child {
+  display: block;
+}
+
+.flow-step span:last-child {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
 }
 
 .metric-card {
@@ -268,9 +343,9 @@ function getIndustryTemplateCount(slug) {
   gap: 6px;
   margin-top: var(--space-4);
   padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(30, 58, 138, 0.1);
-  background: linear-gradient(135deg, rgba(30, 58, 138, 0.04), rgba(13, 148, 136, 0.06));
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--line-soft);
+  background: var(--state-info-bg);
   color: inherit;
   text-decoration: none;
 }
@@ -285,7 +360,7 @@ function getIndustryTemplateCount(slug) {
   justify-content: space-between;
   align-items: flex-end;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .section-head.compact {
@@ -298,6 +373,12 @@ function getIndustryTemplateCount(slug) {
   gap: var(--space-4);
 }
 
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--grid-gap-md);
+}
+
 .module-card {
   padding: 18px;
   text-decoration: none;
@@ -306,16 +387,40 @@ function getIndustryTemplateCount(slug) {
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
+.mission-card {
+  display: grid;
+  align-content: start;
+  min-height: 220px;
+  padding: var(--card-padding-lg);
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--line-soft);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
 .module-card:hover,
-.industry-entry:hover,
+.mission-card:hover,
+.special-entry:hover,
 .growth-spotlight:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
   border-color: rgba(30, 58, 138, 0.12);
 }
 
-.module-top,
-.membership-top {
+.mission-label {
+  display: inline-flex;
+  width: fit-content;
+  min-height: var(--tag-height);
+  align-items: center;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.module-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -342,9 +447,27 @@ function getIndustryTemplateCount(slug) {
 }
 
 .module-card h3,
-.membership-card h3 {
+.mission-card h3 {
   margin: var(--space-3) 0 6px;
   font-size: var(--text-h4);
+}
+
+.mission-card p {
+  min-height: 48px;
+  color: var(--text-secondary);
+}
+
+.section-kicker {
+  margin-bottom: 6px;
+  color: var(--brand-primary);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.section-link {
+  color: var(--brand-primary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
 }
 
 .module-cues {
@@ -361,35 +484,60 @@ function getIndustryTemplateCount(slug) {
 }
 
 .module-cue {
-  padding: 4px 8px;
-  border-radius: 9999px;
-  background: var(--bg-subtle);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-panel);
   color: var(--text-secondary);
 }
 
-.mini-grid {
+.mini-grid,
+.special-entry-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
-.industry-entry {
+.special-entry {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  background: white;
+  gap: var(--space-4);
+  min-height: 180px;
+  padding: var(--card-padding-lg);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-card);
   text-decoration: none;
   color: inherit;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-.industry-entry-top {
+.special-entry-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
+}
+
+.special-entry-top strong,
+.special-entry-top p {
+  display: block;
+}
+
+.special-entry-top p {
+  margin-top: 6px;
+}
+
+.special-entry-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.special-entry-flow span {
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
 }
 
 .mini-dot {
@@ -399,46 +547,15 @@ function getIndustryTemplateCount(slug) {
   flex-shrink: 0;
 }
 
-.industry-entry strong {
+.special-entry strong {
   display: block;
-}
-
-.membership-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-
-.membership-card {
-  padding: 18px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-}
-
-.membership-card.recommended,
-.membership-card.featured {
-  border-color: rgba(30, 58, 138, 0.16);
-  box-shadow: 0 16px 40px rgba(30, 58, 138, 0.08);
-}
-
-.price {
-  font-size: 30px;
-  font-weight: var(--font-weight-bold);
-  margin: var(--space-3) 0 2px;
-}
-
-.coverage {
-  margin-bottom: var(--space-3);
-}
-
-.btn-block {
-  width: 100%;
-  margin-top: var(--space-3);
 }
 
 @media (max-width: 1023px) {
   .hero-grid,
-  .membership-grid,
   .module-grid,
+  .mission-grid,
+  .special-entry-grid,
   .mini-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -449,8 +566,13 @@ function getIndustryTemplateCount(slug) {
 }
 
 @media (max-width: 639px) {
+  .hero,
+  .section {
+    padding: var(--section-gap-sm) 0;
+  }
+
   .hero-copy h1 {
-    font-size: 34px;
+    font-size: var(--text-h1);
   }
 
   .member-total-number {
@@ -460,15 +582,27 @@ function getIndustryTemplateCount(slug) {
   .hero-actions,
   .hero-metrics,
   .module-grid,
-  .mini-grid,
-  .membership-grid {
+  .mission-grid,
+  .special-entry-grid,
+  .mini-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mission-card,
+  .special-entry {
+    min-height: auto;
+    padding: var(--card-padding-md);
   }
 
   .hero-actions,
   .section-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

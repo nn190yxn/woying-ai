@@ -6,6 +6,7 @@ dist/
 *.env.server-fill.template
 backend/env.server-fill.template
 backend/logs/
+backend/reports/
 audit-freeze/
 .DS_Store
 .env

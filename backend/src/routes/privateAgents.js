@@ -153,6 +153,54 @@ const INDUSTRY_BENCHMARKS = {
   }
 }
 
+const MEMBER_GOAL_LABELS = {
+  recharge: '储值锁客',
+  retention: '提升复购',
+  value: '提升客单价'
+}
+
+const MEMBER_SCRIPT_TEMPLATES = {
+  restaurant: {
+    rechargePitch: '您平时一个月来店大概 3-4 次，按现在客单价算，充 1000 送 200 基本能覆盖一个月用餐，还能锁定会员日专属菜品和包间优先权。',
+    urgency: '本周会员日只开放老客内测名额，先帮您保留权益，实际使用时按到店消费逐次抵扣。'
+  },
+  beauty: {
+    rechargePitch: '您的项目有周期护理属性，储值 3000 档适合覆盖 2-3 次护理和一次升级项目，既能降低单次决策压力，也方便顾问按疗程持续跟进效果。',
+    urgency: '本月体验权益只给已咨询客户，今天确认后可同步锁定项目赠送、皮肤档案和下次护理预约。'
+  },
+  education: {
+    rechargePitch: '孩子学习效果需要连续周期验证，充 5000 档能覆盖一阶段课时，并附带阶段测评和学习反馈，家长更容易看到稳定进步。',
+    urgency: '本期班级名额和老师排期有限，今天确认后可优先锁定班型、测评名额和续课权益。'
+  },
+  service: {
+    rechargePitch: '您的消费更偏周期性维护，储值 1000 档能覆盖下一阶段服务，并享受优先排期和会员价，避免每次单独议价。',
+    urgency: '本月会员服务名额有限，确认后可优先安排档期，并保留本次赠送权益。'
+  }
+}
+
+const buildMemberRiskBoundary = (industry, goal, bm) => {
+  const goalLabel = MEMBER_GOAL_LABELS[goal] || MEMBER_GOAL_LABELS.recharge
+  const industryRisk = {
+    restaurant: '餐饮储值需关注闭店、换店、菜品履约和节假日排队体验，权益设计要保证高峰期也能兑现。',
+    beauty: '美业储值需关注项目合规、疗程承诺、顾问过度销售和效果预期管理，话术要避免绝对化承诺。',
+    education: '教培储值需关注课时交付、退费规则、师资稳定和升班续费节奏，家长沟通应以学习目标和阶段反馈为主。',
+    service: '生活服务储值需关注服务周期、排期能力、退款规则和员工交付稳定性，先用小范围客户验证履约压力。'
+  }[industry] || '会员储值需关注履约能力、退款规则、员工执行和客户体验，先小范围验证再全量推广。'
+
+  return [
+    `当前方案目标是${goalLabel}，行业客单基准为${bm.avgOrder}、消费频次为${bm.frequency}，储值档位需要结合真实毛利和履约能力二次校准。`,
+    industryRisk,
+    `会员日建议从${bm.memberDay}开始试运行，连续观察 4 周的开卡率、核销率、复购率和投诉反馈后再扩大。`
+  ]
+}
+
+const buildMemberSuccessMetrics = (bm) => [
+  `开卡转化率：首月目标 8%-15%，高意向老客可单独拆分统计。`,
+  `储值核销率：30 天内观察是否达到 35%-60%，低于目标需调整权益和触达频次。`,
+  `复购目标：对齐行业目标 ${bm.retentionTarget}，以会员客群和非会员客群做对比。`,
+  `沉睡预警：达到 ${bm.sleepThreshold} 前触发回访、权益提醒或专属活动。`
+]
+
 // ===== 1. 私域体检表（免费） =====
 
 router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) => {
@@ -196,6 +244,30 @@ router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) =>
     suggestions.push(`识别到 ${painCount} 个痛点，建议优先处理高优痛点（引流>转化>留存>裂变）`)
   }
 
+  const confidence = currentData && Object.values(currentData).filter(value => value !== null && value !== undefined && value !== '').length >= 3 ? '中' : '低'
+  const isLowConfidence = confidence === '低'
+  const profileMap = {
+    traffic: '私域引流不足型',
+    operation: '私域运营薄弱型',
+    conversion: '私域转化漏损型',
+    retention: '复购留存薄弱型',
+    fission: '裂变增长不足型'
+  }
+  const recommendedMap = {
+    traffic: ['private-cac-ltv', 'private-community-sop', 'private-retention-plan'],
+    operation: ['private-community-sop', 'private-member-design', 'private-retention-plan'],
+    conversion: ['private-member-design', 'private-cac-ltv', 'private-retention-plan'],
+    retention: ['private-retention-plan', 'private-member-design', 'private-community-sop'],
+    fission: ['private-cac-ltv', 'private-full-strategy', 'private-community-sop']
+  }
+  const dimensionDetails = scores.map(item => ({
+    key: item.key,
+    name: item.name,
+    score: item.score,
+    benchmark: item.benchmark,
+    basis: `${item.name}当前 ${item.score} 分，行业基准 ${item.benchmark} 分，差距 ${Math.max(0, item.benchmark - item.score)} 分`
+  }))
+
   res.json({
     agent: 'private-diagnosis',
     status: 'success',
@@ -205,7 +277,26 @@ router.post('/diagnosis', checkAccess, requireLevel('free'), async (req, res) =>
       avgScore,
       industryBenchmark: { traffic: bm.traffic, operation: bm.operation, conversion: bm.conversion, retention: bm.retention, fission: bm.fission },
       kpis,
-      diagnosis: `您的私域运营整体健康度为${avgScore}分（行业基准：${bm.traffic}-${bm.retention}分）。最明显的短板是「${lowest.name}」（${lowest.score}分 vs 基准${lowest.benchmark}分），共识别到 ${painCount} 个痛点。${modeHint[mode] || '私域运营'}链路存在明显优化空间。`,
+      diagnosis: `${isLowConfidence ? '当前为初筛判断。' : ''}您的私域运营整体健康度为${avgScore}分（行业基准：${bm.traffic}-${bm.retention}分）。最明显的短板是「${lowest.name}」（${lowest.score}分 vs 基准${lowest.benchmark}分），共识别到 ${painCount} 个痛点。${modeHint[mode] || '私域运营'}链路存在明显优化空间。`,
+      dataBasis: [
+        `行业：${bm.name}，模式：${modeHint[mode] || '私域运营'}，共识别 ${painCount} 个痛点`,
+        `当前数据：企微好友 ${currentData?.wechatFriends || '未填'}，社群 ${currentData?.communityCount || '未填'}，月私域成交额 ${currentData?.monthlyRevenue || '未填'}，月新增好友 ${currentData?.monthlyNewFriends || '未填'}`,
+        `最低维度为${lowest.name}（${lowest.score}分），行业基准为 ${lowest.benchmark} 分`
+      ],
+      confidence,
+      diagnosticProfile: profileMap[lowest.key] || '私域综合诊断',
+      weakestDimension: lowest.key,
+      dimensionDetails,
+      recommendedNext: recommendedMap[lowest.key] || ['private-retention-plan', 'private-community-sop'],
+      nextQuestions: [
+        '近 30 天新增私域用户、成交用户、复购用户分别是多少？',
+        '当前用户从进私域到成交通常经过哪些触点？每一步转化率是多少？',
+        '目前是否有会员权益、社群 SOP 和沉睡客户召回机制？'
+      ],
+      riskBoundary: [
+        isLowConfidence ? '当前基础经营数据不足，本报告属于初筛判断，建议补齐好友数、社群数、私域成交额和月新增好友后再制定执行计划。' : '本报告基于当前填写数据、痛点勾选和行业基准生成，适合作为私域动作排序。',
+        '私域效果受门店履约、客户质量、员工执行和触达频率影响，建议先用 7 天小范围 SOP 验证后再扩大。'
+      ],
       suggestions,
       upgradeHint: '获取《15 天针对性私域提升方案》+《行业对标报告》需成为进阶会员，或预约专家 1v1 深度诊断'
     }
@@ -220,7 +311,9 @@ router.post('/member-design', checkAccess, requireLevel('pro'), async (req, res)
   const bm = INDUSTRY_BENCHMARKS[industry] || INDUSTRY_BENCHMARKS.restaurant
 
   const memberScript = kb.scripts['话术_会员储值'] || ''
-  const welcomeScript = kb.scripts['话术_首单转化'] || ''
+  const scriptTemplate = MEMBER_SCRIPT_TEMPLATES[industry] || MEMBER_SCRIPT_TEMPLATES.restaurant
+  const memberCount = Number(currentMembers) || 0
+  const orderValue = Number(avgOrderValue) || 100
 
   const tierAnalysis = bm.rechargeTiers.map(tier => {
     const discount = typeof tier.gift === 'number'
@@ -240,6 +333,13 @@ router.post('/member-design', checkAccess, requireLevel('pro'), async (req, res)
     result: {
       industry: bm.name,
       memberDay: bm.memberDay,
+      goal: MEMBER_GOAL_LABELS[goal] || MEMBER_GOAL_LABELS.recharge,
+      benchmarks: [
+        { label: '行业客单基准', value: bm.avgOrder },
+        { label: '消费频次基准', value: bm.frequency },
+        { label: '复购目标', value: bm.retentionTarget },
+        { label: '沉睡预警阈值', value: bm.sleepThreshold }
+      ],
       recommendedTiers: tierAnalysis,
       projectedRevenue: tierAnalysis.map(tier => ({
         tier: tier.desc,
@@ -247,6 +347,13 @@ router.post('/member-design', checkAccess, requireLevel('pro'), async (req, res)
         expectedLock: tier.expectedLock,
         retentionLift: tier.desc.includes('8.5') ? '+35%' : tier.desc.includes('9折') ? '+25%' : '+15%'
       })),
+      successMetrics: buildMemberSuccessMetrics(bm),
+      expectedImpact: {
+        seedUsers: memberCount ? Math.max(10, Math.round(memberCount * 0.2)) : 20,
+        baselineOrderValue: orderValue,
+        firstMonthLockEstimate: tierAnalysis.reduce((sum, tier) => sum + tier.expectedLock, 0),
+        reviewCycle: '4周为一个验证周期'
+      },
       implementationTimeline: [
         { week: '第1周', task: '设计储值方案 + 系统配置' },
         { week: '第2周', task: '员工培训 + 话术演练' },
@@ -254,9 +361,10 @@ router.post('/member-design', checkAccess, requireLevel('pro'), async (req, res)
         { week: '第4周', task: '全量上线 + 社群推广' }
       ],
       scriptSnippets: {
-        rechargePitch: memberScript.includes('我给您算一下') ? memberScript.match(/我给您算一下[^。]*。/s)?.[0] || '' : '',
-        urgency: memberScript.includes('这个储值活动就这周有') ? '限时促单话术已就绪' : ''
+        rechargePitch: memberScript.match(/我给您算一下[^。]*。/s)?.[0] || scriptTemplate.rechargePitch,
+        urgency: memberScript.includes('这个储值活动就这周有') ? '这个储值活动就这周有，确认后可先锁定权益，到店消费时逐次抵扣。' : scriptTemplate.urgency
       },
+      riskBoundary: buildMemberRiskBoundary(industry, goal, bm),
       suggestions: [
         '储值金额设置为月均消费额的 3-5 倍，降低决策门槛',
         '赠品选择高感知价值、低实际成本的项目（如招牌菜/体验课）',

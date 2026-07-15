@@ -287,6 +287,7 @@ function trimByChars(text, maxChars) {
  */
 export function getKBContextWithMeta(toolCode, memberLevel = 'free', formData = {}, options = {}) {
   const retrievalMode = options.retrievalMode || 'mapping_only'
+  const rawFallback = Boolean(options.rawFallback)
   const mapping = loadMapping()
   const toolConfig = mapping[toolCode]
   const emptyResult = {
@@ -327,7 +328,7 @@ export function getKBContextWithMeta(toolCode, memberLevel = 'free', formData = 
 
     // Extract relevant sections (supports both string[] and object[] formats)
     const filteredSections = filterSectionsByType(kbFile.sections, formData)
-    const sectionContent = extractSections(content, filteredSections)
+    const sectionContent = extractSections(content, filteredSections) || (rawFallback ? content : '')
 
     if (sectionContent) {
       const limitedSection = trimByChars(sectionContent, MAX_FILE_CHARS)

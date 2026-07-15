@@ -89,8 +89,22 @@
             <div class="loading-spinner"></div>
             <p>正在分析账号健康度...</p>
           </div>
-          <div v-else class="result-container">
+          <div v-else-if="result" class="result-container">
             <div v-if="errorMessage" class="error-state">{{ errorMessage }}</div>
+            <div class="diagnosis-overview">
+              <div class="overview-item">
+                <span>诊断类型</span>
+                <strong>{{ result.diagnosticProfile }}</strong>
+              </div>
+              <div class="overview-item">
+                <span>主短板</span>
+                <strong>{{ weakestDimensionLabel }}</strong>
+              </div>
+              <div class="overview-item">
+                <span>置信度</span>
+                <strong>{{ result.confidence }}</strong>
+              </div>
+            </div>
             <div class="score-overview">
               <div class="score-circle" :style="{ borderColor: levelColor }">
                 <span class="score-num">{{ result.totalScore }}</span>
@@ -99,14 +113,59 @@
               <div class="level-badge" :style="{ backgroundColor: levelColor }">{{ result.level }}级 · {{ levelText }}</div>
             </div>
             <p class="diagnosis-text">{{ result.diagnosis }}</p>
+            <div class="diagnosis-basis">
+              <h3>诊断依据</h3>
+              <ul>
+                <li v-for="(basis, i) in result.dataBasis" :key="i">{{ basis }}</li>
+              </ul>
+            </div>
             <div v-if="result" class="radar-chart" ref="radarChart"></div>
+            <div v-if="result.dimensionDetails.length" class="dimension-details">
+              <h3>评分说明</h3>
+              <div v-for="item in result.dimensionDetails" :key="item.key" class="dimension-card" :class="{ weakest: item.key === result.weakestDimension }">
+                <div class="dimension-card-head">
+                  <strong>{{ item.name }}</strong>
+                  <span>{{ item.score }}分</span>
+                </div>
+                <p>{{ item.basis }}</p>
+              </div>
+            </div>
             <div class="suggestion-list">
-              <h3>🔧 优化建议</h3>
+              <h3>优化建议</h3>
               <ul>
                 <li v-for="(s, i) in result.suggestions" :key="i">{{ s }}</li>
               </ul>
             </div>
+            <div v-if="result.nextQuestions.length" class="follow-up-questions">
+              <h3>进入计划前建议补充</h3>
+              <ul>
+                <li v-for="(question, i) in result.nextQuestions" :key="i">{{ question }}</li>
+              </ul>
+            </div>
+            <div v-if="result.riskBoundary.length" class="risk-boundary">
+              <h3>风险边界</h3>
+              <ul>
+                <li v-for="(risk, i) in result.riskBoundary" :key="i">{{ risk }}</li>
+              </ul>
+            </div>
+            <div class="next-actions">
+              <h3>下一步动作</h3>
+              <div class="next-action-grid">
+                <button
+                  v-for="action in recommendedActions"
+                  :key="action.code"
+                  type="button"
+                  class="next-action-card"
+                  @click="goRecommendedAction(action)"
+                >
+                  <span>{{ action.type }}</span>
+                  <strong>{{ action.title }}</strong>
+                  <em>{{ action.desc }}</em>
+                </button>
+              </div>
+            </div>
           </div>
+          <div v-else-if="errorMessage" class="error-state">{{ errorMessage }}</div>
         </div>
       </div>
 
@@ -123,7 +182,11 @@
 
 <script setup>
 import { ref, reactive, computed, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import request from '@/api/request'
+import { getRecommendedDiagnosisActions } from '@/constants/diagnosisRecommendations'
+
+const router = useRouter()
 
 const steps = [
   { label: '基础信息' },
@@ -167,6 +230,26 @@ const levelText = computed(() => {
   return l === 'A' ? '健康' : l === 'B' ? '良好' : l === 'C' ? '预警' : '危险'
 })
 
+const dimensionLabelMap = {
+  verticality: '内容垂直度',
+  interaction: '互动质量',
+  activity: '发布活跃度',
+  violation: '违规记录',
+  completeness: '账号完善度'
+}
+
+const weakestDimensionLabel = computed(() => {
+  if (!result.value?.weakestDimension) return '待识别'
+  return dimensionLabelMap[result.value.weakestDimension] || result.value.weakestDimension
+})
+
+const recommendedActions = computed(() => {
+  return getRecommendedDiagnosisActions('xhs', {
+    recommendedNext: result.value?.recommendedNext,
+    weakestDimension: result.value?.weakestDimension
+  })
+})
+
 const nextStep = async () => {
   if (currentStep.value === 1) {
     loading.value = true
@@ -175,7 +258,22 @@ const nextStep = async () => {
     currentStep.value++
     try {
       const response = await request.post('/xhs/account-diagnosis', form)
-      result.value = response.result
+      const diagnosisResult = response.result || {}
+      result.value = {
+        radar: diagnosisResult.radar || [],
+        totalScore: diagnosisResult.totalScore || 0,
+        level: diagnosisResult.level || 'C',
+        diagnosis: diagnosisResult.diagnosis || '小红书账号体检已生成，请优先处理最低分维度。',
+        dataBasis: diagnosisResult.dataBasis || ['当前输入信息较少，本报告按已填痛点做初筛判断。'],
+        confidence: diagnosisResult.confidence || '低',
+        diagnosticProfile: diagnosisResult.diagnosticProfile || '账号综合诊断',
+        weakestDimension: diagnosisResult.weakestDimension || '',
+        dimensionDetails: diagnosisResult.dimensionDetails || [],
+        suggestions: diagnosisResult.suggestions || [],
+        recommendedNext: diagnosisResult.recommendedNext || [],
+        nextQuestions: diagnosisResult.nextQuestions || [],
+        riskBoundary: diagnosisResult.riskBoundary || []
+      }
       await nextTick()
       await renderRadar(result.value.radar)
     } catch (error) {
@@ -187,6 +285,20 @@ const nextStep = async () => {
     return
   }
   currentStep.value++
+}
+
+const goRecommendedAction = (action) => {
+  router.push({
+    path: action.path,
+    query: {
+      industry: form.industry,
+      noteType: form.noteType,
+      source: 'account-diagnosis',
+      weakness: result.value?.weakestDimension || '',
+      profile: result.value?.diagnosticProfile || '',
+      confidence: result.value?.confidence || ''
+    }
+  })
 }
 
 const renderRadar = async (radarData) => {
@@ -228,4 +340,157 @@ const renderRadar = async (radarData) => {
 
 <style scoped>
 @import '../agent-common.css';
+
+.diagnosis-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.overview-item,
+.diagnosis-basis,
+.dimension-card,
+.next-actions {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.overview-item {
+  padding: var(--card-padding-md);
+}
+
+.overview-item span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: var(--text-body-sm);
+}
+
+.overview-item strong {
+  color: var(--text-main);
+  font-size: var(--text-body-lg);
+}
+
+.diagnosis-basis,
+.follow-up-questions,
+.risk-boundary,
+.next-actions {
+  padding: var(--card-padding-md);
+  margin: var(--space-4) 0;
+}
+
+.diagnosis-basis h3,
+.dimension-details h3,
+.follow-up-questions h3,
+.risk-boundary h3,
+.next-actions h3 {
+  margin-bottom: 10px;
+  font-size: var(--text-body-lg);
+}
+
+.diagnosis-basis ul,
+.follow-up-questions ul,
+.risk-boundary ul,
+.suggestion-list ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.diagnosis-basis li,
+.follow-up-questions li,
+.risk-boundary li,
+.suggestion-list li {
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.risk-boundary {
+  border: 1px solid rgba(217, 119, 6, 0.18);
+  border-radius: var(--radius-panel);
+  background: var(--state-warning-bg);
+}
+
+.risk-boundary li {
+  color: #9a3412;
+}
+
+.dimension-details {
+  margin: 18px 0;
+}
+
+.dimension-card {
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.dimension-card.weakest {
+  border-color: rgba(220, 38, 38, 0.24);
+  background: var(--state-danger-bg);
+}
+
+.dimension-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.dimension-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+}
+
+.next-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.next-action-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.next-action-card:hover {
+  border-color: rgba(255, 36, 66, 0.28);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.next-action-card span {
+  width: fit-content;
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--pillar-xiaohongshu-bg);
+  color: #be123c;
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.next-action-card em {
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+  font-style: normal;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .diagnosis-overview,
+  .next-action-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

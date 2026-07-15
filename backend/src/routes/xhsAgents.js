@@ -288,21 +288,69 @@ router.post('/account-diagnosis', checkAccess, requireLevel('free'), async (req,
   const completenessScore = 80 // 默认
   
   const total = Math.round(vScore * 0.3 + iScore * 0.25 + aScore * 0.2 + violationScore * 0.15 + completenessScore * 0.1)
+  const radar = [
+    { key: 'verticality', name: '内容垂直度', score: vScore, color: vScore < 50 ? '#ef4444' : vScore < 80 ? '#f59e0b' : '#10b981', basis: `内容垂直痛点 ${verticalityPains?.length || 0} 项` },
+    { key: 'interaction', name: '互动质量', score: iScore, color: iScore < 50 ? '#ef4444' : iScore < 80 ? '#f59e0b' : '#10b981', basis: `互动质量痛点 ${interactionPains?.length || 0} 项` },
+    { key: 'activity', name: '发布活跃度', score: aScore, color: aScore < 50 ? '#ef4444' : aScore < 80 ? '#f59e0b' : '#10b981', basis: `发布活跃痛点 ${activityPains?.length || 0} 项` },
+    { key: 'violation', name: '违规记录', score: violationScore, color: violationScore < 60 ? '#ef4444' : '#10b981', basis: `违规状态：${violationStatus || 'none'}` },
+    { key: 'completeness', name: '账号完善度', score: completenessScore, color: '#10b981', basis: '按当前基础资料完整度做默认估算' }
+  ]
+  const weakest = [...radar].sort((a, b) => a.score - b.score)[0]
+  const confidence = [industry, req.body.noteType].filter(Boolean).length >= 2 ? '中' : '低'
+  const profileMap = {
+    verticality: '赛道定位分散型',
+    interaction: '互动转化偏弱型',
+    activity: '更新节奏不足型',
+    violation: '合规风险待修复型',
+    completeness: '账号基建待完善型'
+  }
+  const recommendedMap = {
+    verticality: ['xhs-topic-generator', 'xhs-title-generator', 'xhs-cover-helper'],
+    interaction: ['xhs-conversion-optimizer', 'xhs-script-generator', 'xhs-note-diagnoser'],
+    activity: ['xhs-quick-start-plan', 'xhs-topic-generator', 'xhs-account-reviewer'],
+    violation: ['xhs-conversion-optimizer', 'xhs-account-reviewer', 'xhs-growth-strategy'],
+    completeness: ['xhs-quick-start-plan', 'xhs-account-reviewer', 'xhs-growth-strategy']
+  }
+  const suggestionMap = {
+    verticality: ['先收窄到一个核心赛道，连续 7 天只测试同一类关键词和用户痛点', '把主页简介、置顶笔记和话题标签统一到同一人群需求'],
+    interaction: ['每篇笔记增加收藏理由和评论问题，把互动动作前置到正文中段', '优先复盘近 10 篇笔记的小眼睛、点赞、收藏和私信差异'],
+    activity: ['先恢复每周 3-4 篇稳定更新，用 15 天计划建立固定栏目', '把选题拆成系列内容，减少临时想题导致的断更'],
+    violation: ['先排查敏感词、导流表达和营销承诺，恢复账号安全分后再放量', '把成交引导改成合规的主页、评论和私信承接路径'],
+    completeness: ['补齐头像、简介、置顶笔记和主推服务说明，让访客 5 秒内理解账号价值', '用账号复盘检查主页点击、笔记收藏和私信承接是否一致']
+  }
+  const isLowConfidence = confidence === '低'
+  const suggestions = [
+    ...(suggestionMap[weakest.key] || []),
+    '把本次体检转成 15 天起号计划，每周复盘点击、收藏、评论、私信和成交线索'
+  ]
   
   res.json({
     agent: 'account_diagnosis',
     result: {
-      radar: [
-        { name: '内容垂直度', score: vScore, color: vScore < 50 ? '#ef4444' : vScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '互动质量', score: iScore, color: iScore < 50 ? '#ef4444' : iScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '发布活跃度', score: aScore, color: aScore < 50 ? '#ef4444' : aScore < 80 ? '#f59e0b' : '#10b981' },
-        { name: '违规记录', score: violationScore, color: violationScore < 60 ? '#ef4444' : '#10b981' },
-        { name: '账号完善度', score: completenessScore, color: '#10b981' }
-      ],
+      radar,
       totalScore: total,
       level: total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 50 ? 'C' : 'D',
-      diagnosis: `您的账号整体健康度为${total}分，属于${total >= 85 ? '健康' : total >= 70 ? '良好' : total >= 50 ? '预警' : '危险'}状态。`,
-      suggestions: ['优化内容垂直度，聚焦单一赛道', '提高互动率，多引导收藏和评论', '保持每周 3-4 篇的稳定更新频率']
+      diagnosis: `${isLowConfidence ? '当前为初筛判断。' : ''}您的账号整体健康度为${total}分，属于${total >= 85 ? '健康' : total >= 70 ? '良好' : total >= 50 ? '预警' : '危险'}状态，当前优先处理${weakest.name}。`,
+      dataBasis: [
+        `赛道：${industryNameMap[industry] || industry || '未提供'}，笔记类型：${req.body.noteType || '未提供'}`,
+        `内容垂直痛点 ${verticalityPains?.length || 0} 项，互动痛点 ${interactionPains?.length || 0} 项，发布活跃痛点 ${activityPains?.length || 0} 项`,
+        `违规状态 ${violationStatus || 'none'}，最低维度为${weakest.name}（${weakest.score}分）`
+      ],
+      confidence,
+      diagnosticProfile: profileMap[weakest.key],
+      weakestDimension: weakest.key,
+      dimensionDetails: radar.map(item => ({ key: item.key, name: item.name, score: item.score, basis: item.basis })),
+      recommendedNext: recommendedMap[weakest.key] || ['xhs-quick-start-plan', 'xhs-note-diagnoser'],
+      nextQuestions: [
+        '近 7 天表现最好的 3 篇笔记分别是什么？阅读、点赞、收藏、评论和私信数据是多少？',
+        '当前主页承接路径是什么？用户看完笔记后被引导到哪里咨询或成交？',
+        '账号最想吸引的人群是谁？他们最常搜索的关键词和决策顾虑是什么？'
+      ],
+      riskBoundary: [
+        isLowConfidence ? '当前输入只有基础信息和痛点勾选，本报告属于初筛判断，建议补充近 7 天笔记数据后再制定起号计划。' : '本报告基于当前账号状态和痛点勾选生成，适合作为内容与转化排查顺序。',
+        '小红书内容效果受赛道、关键词、首图、发布时间和账号历史影响，建议先用 3-5 篇笔记小范围验证。'
+      ],
+      suggestions
     }
   })
 })

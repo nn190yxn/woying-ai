@@ -117,6 +117,21 @@
               <span class="score-label">综合健康分</span>
             </div>
 
+            <div class="diagnosis-overview">
+              <div class="overview-item">
+                <span>诊断类型</span>
+                <strong>{{ result.diagnosticProfile }}</strong>
+              </div>
+              <div class="overview-item">
+                <span>主短板</span>
+                <strong>{{ weakestDimensionLabel }}</strong>
+              </div>
+              <div class="overview-item">
+                <span>置信度</span>
+                <strong>{{ result.confidence }}</strong>
+              </div>
+            </div>
+
             <div class="radar-container">
               <h3 class="radar-title">五维健康度雷达</h3>
               <div class="radar-chart">
@@ -151,6 +166,24 @@
               <p>{{ result.diagnosis }}</p>
             </div>
 
+            <div class="diagnosis-basis">
+              <h3>诊断依据</h3>
+              <ul>
+                <li v-for="(basis, i) in result.dataBasis" :key="i">{{ basis }}</li>
+              </ul>
+            </div>
+
+            <div v-if="result.dimensionDetails.length" class="dimension-details">
+              <h3>评分说明</h3>
+              <div v-for="item in result.dimensionDetails" :key="item.key" class="dimension-card" :class="{ weakest: item.key === result.weakestDimension }">
+                <div class="dimension-card-head">
+                  <strong>{{ item.name }}</strong>
+                  <span>{{ item.score }}分 / 基准 {{ item.benchmark }}</span>
+                </div>
+                <p>{{ item.basis }}</p>
+              </div>
+            </div>
+
             <div class="suggestions">
               <h3>优先优化建议</h3>
               <ul>
@@ -158,8 +191,35 @@
               </ul>
             </div>
 
+            <div v-if="result.nextQuestions.length" class="follow-up-questions">
+              <h3>进入计划前建议补充</h3>
+              <ul>
+                <li v-for="(question, i) in result.nextQuestions" :key="i">{{ question }}</li>
+              </ul>
+            </div>
+
+            <div v-if="result.riskBoundary.length" class="risk-boundary">
+              <h3>风险边界</h3>
+              <ul>
+                <li v-for="(risk, i) in result.riskBoundary" :key="i">{{ risk }}</li>
+              </ul>
+            </div>
+
             <div class="upgrade-hint">
               <p>获取《15 天针对性私域提升方案》需成为进阶会员，或预约专家 1v1 深度诊断</p>
+              <div class="next-action-grid">
+                <button
+                  v-for="action in recommendedActions"
+                  :key="action.code"
+                  type="button"
+                  class="next-action-card"
+                  @click="goRecommendedAction(action)"
+                >
+                  <span>{{ action.type }}</span>
+                  <strong>{{ action.title }}</strong>
+                  <em>{{ action.desc }}</em>
+                </button>
+              </div>
               <div class="upgrade-actions">
                 <button class="btn-primary" @click="$router.push('/private/retention-plan')">生成复购留存方案</button>
                 <button class="btn-secondary" @click="bookConsult">预约专家诊断</button>
@@ -182,6 +242,7 @@
 import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '@/api/request'
+import { getRecommendedDiagnosisActions } from '@/constants/diagnosisRecommendations'
 
 const router = useRouter()
 const currentStep = ref(0)
@@ -223,6 +284,26 @@ const canProceed = computed(() => {
   return false
 })
 
+const dimensionLabelMap = {
+  traffic: '引流力',
+  operation: '运营力',
+  conversion: '转化力',
+  retention: '留存力',
+  fission: '裂变力'
+}
+
+const weakestDimensionLabel = computed(() => {
+  if (!result.value?.weakestDimension) return '待识别'
+  return dimensionLabelMap[result.value.weakestDimension] || result.value.weakestDimension
+})
+
+const recommendedActions = computed(() => {
+  return getRecommendedDiagnosisActions('private', {
+    recommendedNext: result.value?.recommendedNext,
+    weakestDimension: result.value?.weakestDimension
+  })
+})
+
 const generate = async () => {
   loading.value = true
   result.value = null
@@ -252,6 +333,14 @@ const generate = async () => {
         color: getDimColor(d.key),
         scoreClass: d.score < 40 ? 'low' : d.score < 70 ? 'mid' : 'high'
       }))
+      r.dataBasis = r.dataBasis || ['当前数据较少，本报告按已填痛点和基础数据做初筛判断。']
+      r.confidence = r.confidence || '低'
+      r.diagnosticProfile = r.diagnosticProfile || '私域综合诊断'
+      r.weakestDimension = r.weakestDimension || r.radar[0]?.key || ''
+      r.dimensionDetails = r.dimensionDetails || []
+      r.recommendedNext = r.recommendedNext || []
+      r.nextQuestions = r.nextQuestions || []
+      r.riskBoundary = r.riskBoundary || []
       result.value = r
     }
     currentStep.value = 3
@@ -272,6 +361,20 @@ const getDimColor = (key) => {
 const bookConsult = () => {
   router.push('/consultation')
 }
+
+const goRecommendedAction = (action) => {
+  router.push({
+    path: action.path,
+    query: {
+      industry: form.industry,
+      mode: form.mode,
+      source: 'private-diagnosis',
+      weakness: result.value?.weakestDimension || '',
+      profile: result.value?.diagnosticProfile || '',
+      confidence: result.value?.confidence || ''
+    }
+  })
+}
 </script>
 
 <style scoped>
@@ -285,7 +388,7 @@ const bookConsult = () => {
 }
 
 .pain-category h3 {
-  font-size: var(--text-body);
+  font-size: var(--text-body-md);
   margin-bottom: 8px;
 }
 
@@ -313,9 +416,10 @@ const bookConsult = () => {
 
 .error-state {
   padding: 12px 16px;
-  background: #fef2f2;
-  color: #b91c1c;
-  border-radius: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  background: var(--state-danger-bg);
+  color: var(--state-danger);
+  border-radius: var(--radius-panel);
   font-size: var(--text-body-sm);
 }
 
@@ -332,12 +436,44 @@ const bookConsult = () => {
 .avg-score {
   font-size: 48px;
   font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .score-label {
   font-size: var(--text-body-sm);
   color: var(--text-secondary);
+}
+
+.diagnosis-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.overview-item,
+.diagnosis-basis,
+.dimension-card {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.overview-item {
+  padding: 14px;
+}
+
+.overview-item span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: var(--text-body-sm);
+}
+
+.overview-item strong {
+  color: var(--text-main);
+  font-size: var(--text-body-lg);
 }
 
 .radar-container {
@@ -405,7 +541,7 @@ const bookConsult = () => {
 }
 
 .benchmark-text {
-  font-size: var(--text-body-xs);
+  font-size: var(--text-caption);
   font-weight: var(--font-weight-normal);
   color: var(--text-muted);
 }
@@ -432,7 +568,8 @@ const bookConsult = () => {
 .kpi-card {
   padding: 12px;
   background: var(--bg-subtle);
-  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -446,13 +583,14 @@ const bookConsult = () => {
 .kpi-value {
   font-size: var(--text-body-lg);
   font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .diagnosis-summary {
-  padding: 16px;
-  background: #f0f9ff;
-  border-radius: 8px;
+  padding: var(--card-padding-md);
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  background: var(--state-info-bg);
+  border-radius: var(--radius-panel);
   margin-bottom: 16px;
 }
 
@@ -463,6 +601,74 @@ const bookConsult = () => {
 
 .diagnosis-summary p {
   color: var(--text-secondary);
+}
+
+.diagnosis-basis {
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.follow-up-questions,
+.risk-boundary {
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(217, 119, 6, 0.18);
+  border-radius: var(--radius-panel);
+  background: var(--state-warning-bg);
+}
+
+.diagnosis-basis h3,
+.follow-up-questions h3,
+.risk-boundary h3,
+.dimension-details h3 {
+  margin-bottom: 10px;
+  font-size: var(--text-body-lg);
+}
+
+.diagnosis-basis ul,
+.follow-up-questions ul,
+.risk-boundary ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.diagnosis-basis li,
+.follow-up-questions li,
+.risk-boundary li {
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.risk-boundary li {
+  color: #9a3412;
+}
+
+.dimension-details {
+  margin-bottom: 24px;
+}
+
+.dimension-card {
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.dimension-card.weakest {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.dimension-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.dimension-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+  line-height: 1.5;
 }
 
 .suggestions {
@@ -491,29 +697,99 @@ const bookConsult = () => {
   margin-top: 12px;
 }
 
+.next-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.next-action-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: var(--bg-card);
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.next-action-card:hover {
+  border-color: rgba(30, 58, 138, 0.24);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.next-action-card span {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: #eef2ff;
+  color: var(--brand-primary);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.next-action-card em {
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+  font-style: normal;
+  line-height: 1.5;
+}
+
 .btn-primary {
-  padding: 10px 24px;
+  min-height: var(--button-height-md);
+  padding: 0 var(--space-5);
   background: var(--brand-primary);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   font-weight: var(--font-weight-semibold);
 }
 
 .btn-secondary {
-  padding: 10px 24px;
+  min-height: var(--button-height-md);
+  padding: 0 var(--space-5);
   background: white;
   color: var(--brand-primary);
   border: 1px solid var(--brand-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   font-weight: var(--font-weight-semibold);
+}
+
+.nav-btn.prev {
+  border: 1px solid var(--line-default);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+
+.nav-btn.next,
+.nav-btn.generate {
+  background: var(--brand-primary);
+  color: #fff;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .diagnosis-overview,
+  .form-grid,
+  .next-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .radar-item {
+    align-items: flex-start;
+  }
 }
 </style>

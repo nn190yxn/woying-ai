@@ -8,7 +8,17 @@
     "start": "node src/index.js",
     "build": "echo 'No build step needed for Node.js'",
     "check:env": "node scripts/check-env-presence.js",
-    "smoke:core": "node scripts/smoke-core-endpoints.js"
+    "smoke:core": "node scripts/smoke-core-endpoints.js",
+    "deep:test": "node scripts/deep-test-runner.js",
+    "test:deep-runner": "node --test scripts/deep-test-runner.test.js",
+    "test:douyin-diagnosis": "node --test scripts/douyin-diagnosis.test.js",
+    "test:quick-plan-semantic": "node --test scripts/quick-plan-semantic.test.js",
+    "test:quick-plan-input": "node --test scripts/quick-plan-input.test.js",
+    "test:quick-plan-generator": "node --test scripts/quick-plan-generator.test.js",
+    "test:quick-plan-migration": "node --test scripts/quick-plan-migration.test.js",
+    "test:quick-plan-saved-api": "node --test scripts/quick-plan-saved-api.test.js",
+    "test:quick-plan-properties": "node --test scripts/quick-plan-properties.test.js",
+    "test:quick-plan": "npm run test:quick-plan-input && npm run test:quick-plan-generator && npm run test:quick-plan-migration && npm run test:quick-plan-saved-api && npm run test:quick-plan-semantic && npm run test:quick-plan-properties"
   },
   "dependencies": {
     "express": "^4.18.2",
