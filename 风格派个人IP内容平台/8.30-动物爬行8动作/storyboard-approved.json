@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "id": "fengpai-animal-crawl-2026-08-30",
+  "title": "孩子驼背别吼了：8个动物爬行玩着练回来",
+  "audience": "贵阳及全国 4–10 岁孩子家长",
+  "goal": "抖音家长科普与轻度互动转化",
+  "format": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "aspectRatio": "9:16"
+  },
+  "source": {
+    "type": "markdown",
+    "path": "source/抖音文案.md",
+    "author": "Monkeycode"
+  },
+  "reviewStatus": "approved",
+  "scenes": [
+    {
+      "order": 1,
+      "type": "hook",
+      "durationSeconds": 4.083,
+      "title": "孩子驼背，说一百遍“坐直了”，真的有用吗？",
+      "pageText": "孩子驼背，说一百遍“坐直了”，真的有用吗？",
+      "narration": "孩子驼背，说一百遍坐直了，真的有用吗？",
+      "visualPrompt": "P2 认知反转：手机姿势与家长疑问",
+      "animation": {
+        "enter": "fade-in",
+        "exit": "fade-out"
+      },
+      "audio": {
+        "narrationAsset": null,
+        "musicVolume": 0.12,
+        "ducking": true,
+        "soundEffects": []
+      },
+      "cta": null
+    },
+    {
+      "order": 2,
+      "type": "boundary",
+      "durationSeconds": 4.528,
+      "title": "让他像小动物一样爬 / 他以为在玩，其实在练",
+      "pageText": "让他像小动物一样爬\n他以为在玩，其实在练",
+      "narration": "让他像小动物一样爬。他以为在玩，其实在练。",
+      "visualPrompt": "P1 封面：明确游戏化方案",
+      "animation": {
+        "enter": "fade-in",
+        "exit": "fade-out"
+      },
+      "audio": {
+        "narrationAsset": null,
+        "musicVolume": 0.12,
+        "ducking": true,
+        "soundEffects": []
+      },
+      "cta": null
+    },
+    {
+      "order": 3,
+      "type": "execution",
+      "durationSeconds": 8.454,
+      "title": "①小熊爬：核心和手臂 / ②螃蟹走：肩背和侧向协调",
+      "pageText": "①小熊爬：核心和手臂\n②螃蟹走：肩背和侧向协调",
+      "narration": "8个动物爬行，先看前两个：小熊爬练核心和手臂，螃蟹走练肩背和侧向协调。",
+      "visualPrompt": "P3 动作 1–2：重点词突出",
+      "animation": {
+        "enter": "fade-in",
+        "exit": "fade-out"
+      },
+      "audio": {
+        "narrationAsset": null,
+        "musicVolume": 0.12,
+        "ducking": true,
+        "soundEffects": []
+      },
+      "cta": null
+    },
+    {
+      "order": 4,
+      "type": "execution",
+      "durationSeconds": 6.306,
+      "title": "③青蛙跳：下肢爆发 / 落地记得屈膝缓冲 / ④毛毛虫爬：柔韧和核心",
+      "pageText": "③青蛙跳：下肢爆发\n落地记得屈膝缓冲\n④毛毛虫爬：柔韧和核心",
+      "narration": "青蛙跳练下肢爆发，落地记得屈膝缓冲；毛毛虫爬练柔韧和核心。",
+      "visualPrompt": "P4 动作 3–4：加入安全提示",
+      "animation": {
+        "enter": "fade-in",
+        "exit": "fade-out"
+      },
+      "audio": {
+        "narrationAsset": null,
+        "musicVolume": 0.12,
+        "ducking": true,
+        "soundEffects": []
+      },
+      "cta": null
+    },
+    {
+      "order": 5,
+      "type": "execution",
+      "durationSeconds": 7.259,
+      "title": "⑤鳄鱼爬：全身协调 / ⑥猴子跳：反应和协调",
+      "pageText": "⑤鳄鱼爬：全身协调\n⑥猴子跳：反应和协调",
+      "narration": "鳄鱼爬练全身协调，猴子跳练反应。动作不用做得快，先把手脚配合起来。",
+      "visualPrompt": "P5 动作 5–6：强调动作质量",
+      "animation": {
+        "enter": "fade-in",
+        "exit": "fade-out"
+      },
+      "audio": {
+        "narrationAsset": null,
+        "musicVolume": 0.12,
+        "ducking": true,
+        "soundEffects": []
+      },
+      "cta": null
+    },
+    {
+      "order": 6,
+      "type": "execution",
+      "durationSeconds": 6.083,
+      "title": "⑦鸭子走：腿力和平衡 / ⑧小狗爬：幼幼版入门",
+      "pageText": "⑦鸭子走：腿力和平衡\n⑧小狗爬：幼幼版入门",
+      "narration": "鸭子走练腿力和平衡，小狗爬是四到五岁宝宝也能上手的入门款。",
+      "visualPrompt": "P6 动作 7–8：补充年龄提示",
+      "animation": {
+        "enter": "fade-in",
+        "exit": "fade-out"
+      },
+      "audio": {
+        "narrationAsset": null,
+        "musicVolume": 0.12,
+        "ducking": true,
+        "soundEffects": []
+      },
+      "cta": null
+    },
+    {
+      "order": 7,
+      "type": "advice",
+      "durationSeconds": 9.926,
+      "title": "爬行是感统训练的基础动作 / 每天10分钟，选4–5个轮着玩",
+      "pageText": "爬行是感统训练的基础动作\n每天10分钟，选4–5个轮着玩",
+      "narration": "爬行是感统训练的基础动作，锻炼核心稳定和四肢协调。每天十分钟，八个动作选四到五个轮着玩。",
+      "visualPrompt": "P7 收口：方法与互动前置",
+      "animation": {
+        "enter": "fade-in",
+        "exit": "fade-out"
+      },
+      "audio": {
+        "narrationAsset": null,
+        "musicVolume": 0.12,
+        "ducking": true,
+        "soundEffects": []
+      },
+      "cta": null
+    },
+    {
+      "order": 8,
+      "type": "cta",
+      "durationSeconds": 10.148,
+      "title": "你家娃最爱哪个动物？ / 评论区告诉我 / 关注追光小牛｜效果因人而异",
+      "pageText": "你家娃最爱哪个动物？\n评论区告诉我\n关注追光小牛｜效果因人而异",
+      "narration": "你家娃最爱模仿哪个动物？评论区告诉我。关注追光小牛，开学系列每天一个运动小方法，效果因人而异。",
+      "visualPrompt": "P8 品牌卡：互动、关注与免责声明",
+      "animation": {
+        "enter": "fade-in",
+        "exit": "fade-out"
+      },
+      "audio": {
+        "narrationAsset": null,
+        "musicVolume": 0.12,
+        "ducking": true,
+        "soundEffects": []
+      },
+      "cta": "评论区互动并关注追光小牛"
+    }
+  ]
+}
