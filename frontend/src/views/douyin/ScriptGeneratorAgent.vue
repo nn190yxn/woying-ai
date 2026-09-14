@@ -1,8 +1,8 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
-      <h1 class="agent-title">📝 脚本生成器</h1>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回经营工作台</button>
+      <h1 class="agent-title">📝 脚本创作助手</h1>
       <p class="agent-desc">选模板，自动生成分镜脚本</p>
     </div>
 

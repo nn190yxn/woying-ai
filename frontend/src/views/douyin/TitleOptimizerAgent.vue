@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回经营工作台</button>
       <h1 class="agent-title">✍️ 标题优化器</h1>
       <p class="agent-desc">输入原标题，AI 给出 5 个高点击率版本</p>
     </div>

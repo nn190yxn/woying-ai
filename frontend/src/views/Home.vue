@@ -3,12 +3,12 @@
     <section class="hero">
       <div class="container-wide hero-grid">
         <div class="hero-copy">
-          <p class="hero-eyebrow">本地生活 AI 经营系统</p>
+          <p class="hero-eyebrow">儿童培训机构经营工作台</p>
           <h1>
-            <span>每天给老板一张</span>
-            <span>能照着做的经营作战表</span>
+            <span>每周给校长一张</span>
+            <span>能照着执行的招生行动表</span>
           </h1>
-          <p class="hero-desc">先诊断客流、内容、转化和复购卡点，再把问题拆成 15 天任务、执行工具和复盘指标。</p>
+          <p class="hero-desc">先看清咨询、预约体验、到店、报名和续费卡点，再把问题拆成7天行动、家长跟进和结果复盘。</p>
           <div class="hero-metrics workbench-metrics" aria-label="经营工作台能力">
             <article v-for="metric in operatingMetrics" :key="metric.label" class="workbench-metric-card">
               <span class="workbench-metric-label">{{ metric.label }}</span>
@@ -17,16 +17,16 @@
             </article>
           </div>
           <div class="hero-actions">
-            <router-link to="/douyin/diagnosis" class="btn btn-primary btn-lg">开始经营体检</router-link>
-            <router-link to="/douyin/quick-plan" class="btn btn-secondary btn-lg">查看作战计划</router-link>
-            <router-link to="/douyin/video-diagnoser" class="btn btn-secondary btn-lg">记录今天的数据</router-link>
+            <router-link to="/douyin/diagnosis" class="btn btn-primary btn-lg">开始校区体检</router-link>
+            <router-link to="/douyin/quick-plan" class="btn btn-secondary btn-lg">安排7天行动</router-link>
+            <router-link to="/douyin/video-diagnoser" class="btn btn-secondary btn-lg">记录本周结果</router-link>
           </div>
         </div>
 
         <div class="hero-panel card">
           <div class="member-total">
             <strong class="member-total-number">3 步</strong>
-            <span class="member-total-label">从诊断到执行复盘</span>
+            <span class="member-total-label">从发现问题到登记结果</span>
           </div>
           <div class="hero-flow">
             <router-link v-for="step in heroSteps" :key="step.title" :to="step.path" class="flow-step">
@@ -38,8 +38,8 @@
             </router-link>
           </div>
           <router-link to="/diagnosis" class="growth-spotlight">
-            <span class="growth-spotlight-label">系统诊断</span>
-            <strong>不知道先改哪里，就从全景增长诊断开始</strong>
+            <span class="growth-spotlight-label">经营体检</span>
+            <strong>不知道先改哪里，就先填写校区经营情况</strong>
           </router-link>
         </div>
       </div>
@@ -49,8 +49,8 @@
       <div class="container-wide">
         <div class="section-head workbench-section-header">
           <div>
-            <p class="section-kicker">今日经营任务</p>
-            <h2>今天先推进哪件事</h2>
+            <p class="section-kicker">本周经营重点</p>
+            <h2>这周先把哪件事做扎实</h2>
           </div>
         </div>
 
@@ -76,10 +76,10 @@
       <div class="container-wide">
         <div class="section-head workbench-section-header">
           <div>
-            <p class="section-kicker">15 天作战表示例</p>
-            <h2>餐饮门店抖音获客 5 天样例</h2>
+            <p class="section-kicker">7天招生行动示例</p>
+            <h2>少儿体育校区招生7天样例</h2>
           </div>
-          <router-link to="/douyin/quick-plan" class="section-link">生成完整 15 天计划</router-link>
+          <router-link to="/douyin/quick-plan" class="section-link">安排完整7天行动</router-link>
         </div>
 
         <BattlePlanPreview />
@@ -90,8 +90,8 @@
       <div class="container-wide">
         <div class="section-head workbench-section-header">
           <div>
-            <p class="section-kicker">专项作战入口</p>
-            <h2>先测、再做、再复盘</h2>
+            <p class="section-kicker">经营工作入口</p>
+            <h2>先看问题，再做动作，再登记结果</h2>
           </div>
         </div>
         <div class="special-entry-grid">
@@ -120,8 +120,8 @@
       <div class="container-wide">
         <div class="section-head workbench-section-header">
           <div>
-            <p class="section-kicker">经营权益</p>
-            <h2>会员介绍</h2>
+            <p class="section-kicker">陪跑支持</p>
+            <h2>选择适合校区的支持方式</h2>
           </div>
         </div>
 
@@ -136,44 +136,44 @@ import BattlePlanPreview from '@/components/BattlePlanPreview.vue'
 import MembershipOutcomeMatrix from '@/components/MembershipOutcomeMatrix.vue'
 
 const heroSteps = [
-  { index: '01', title: '先体检', desc: '抖音、小红书、私域和门店经营先找主短板', path: '/douyin/diagnosis' },
-  { index: '02', title: '出计划', desc: '把诊断结论变成 15 天可执行动作', path: '/douyin/quick-plan' },
-  { index: '03', title: '做复盘', desc: '记录视频和成交数据，持续校准动作', path: '/douyin/video-diagnoser' }
+  { index: '01', title: '先体检', desc: '从招生、体验课、家长跟进和续费先找主要问题', path: '/diagnosis' },
+  { index: '02', title: '定行动', desc: '把主要问题变成7天能执行的动作', path: '/douyin/quick-plan' },
+  { index: '03', title: '记结果', desc: '记录咨询、到店、报名和续费结果', path: '/douyin/video-diagnoser' }
 ]
 
 const operatingMetrics = [
-  { label: '入口', value: '3 类', note: '体检、计划、复盘' },
-  { label: '周期', value: '15 天', note: '每日任务和工具' },
-  { label: '闭环', value: '4 段', note: '诊断到复盘校准' }
+  { label: '入口', value: '5 个环节', note: '咨询、预约、到店、报名、续费' },
+  { label: '周期', value: '7 天', note: '每周只抓两个优先动作' },
+  { label: '闭环', value: '1 次复盘', note: '登记执行结果，再决定调整' }
 ]
 
 const missionCards = [
-  { label: '体检', title: '开始经营体检', desc: '适合不知道先优化抖音、小红书、私域还是门店经营的老板。', path: '/douyin/diagnosis', cues: ['诊断依据', '主短板', '下一步动作'] },
-  { label: '计划', title: '生成作战计划', desc: '把问题拆成 15 天执行节奏，直接衔接脚本、话术、投流和私域动作。', path: '/douyin/quick-plan', cues: ['15 天节奏', '每日任务', '工具推荐'] },
-  { label: '复盘', title: '记录今天的数据', desc: '记录播放、互动、咨询和成交数据，让下一次诊断更准。', path: '/douyin/video-diagnoser', cues: ['视频数据', '成交复盘', '下一步建议'] }
+  { label: '体检', title: '看看问题出在哪', desc: '填写校区招生、体验课和续费情况，先找本周最该处理的问题。', path: '/diagnosis', cues: ['填写经营情况', '找到主要问题', '顾问确认'] },
+  { label: '计划', title: '安排7天招生动作', desc: '把一个主要问题拆成负责人、完成标准和登记时间。', path: '/douyin/quick-plan', cues: ['本周重点', '谁来完成', '做到什么程度'] },
+  { label: '复盘', title: '记录本周结果', desc: '记录咨询、预约体验、到店、报名和续费，决定下周继续还是调整。', path: '/douyin/video-diagnoser', cues: ['招生结果', '跟进记录', '下周调整'] }
 ]
 
 const specialEntries = [
   {
-    title: '抖音本地获客',
-    desc: '适合想用短视频、团购和本地推拉新到店的门店。',
+    title: '短视频招生',
+    desc: '围绕主推课程和家长问题安排内容，记录咨询和预约体验。',
     path: '/douyin',
     accent: '#2563eb',
-    steps: ['经营体检', '15 天计划', '视频复盘']
+    steps: ['招生体检', '7天行动', '结果复盘']
   },
   {
-    title: '小红书种草转化',
-    desc: '适合美业、教培、生活服务做内容种草和咨询转化。',
+    title: '家长信任内容',
+    desc: '围绕课程体验、教练专业度和学员变化积累家长信任。',
     path: '/xhs',
     accent: '#db2777',
-    steps: ['账号体检', '起号计划', '笔记复盘']
+    steps: ['内容安排', '家长问题', '咨询复盘']
   },
   {
-    title: '私域复购承接',
-    desc: '适合把到店客户、企微、社群和会员体系做成复购资产。',
+    title: '家长跟进与续费',
+    desc: '按咨询、体验、报名和应续费状态安排联系与登记。',
     path: '/private',
     accent: '#0f766e',
-    steps: ['私域体检', '承接动作', '复购复盘']
+    steps: ['家长状态', '跟进动作', '续费复盘']
   }
 ]
 

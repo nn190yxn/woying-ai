@@ -64,9 +64,9 @@ function handleSubmit() {
 
   let status = 'warning', statusText = '及格', warning = '', suggestion = '', reference = '>85%优秀，70-85%及格，<70%需紧急催课排课'
 
-  if (rate >= 85) { status = 'success'; statusText = '优秀'; warning = '消课情况良好，继续保持。'; suggestion = '可考虑增加高阶课程推荐，提升学员客单价。' }
-  else if (rate >= 70) { status = 'warning'; statusText = '及格'; warning = '消课率偏一般，有部分课时积压。'; suggestion = '主动联系消课慢的学员，安排补课或加课。关注消课进度。' }
-  else { status = 'danger'; statusText = '危险'; warning = '消课率过低！大量预收款未消化，存在负债风险。'; suggestion = '紧急催课！联系所有未消课学员安排上课。考虑调整排课密度或增加消课活动。' }
+  if (rate >= 85) { status = 'success'; statusText = '优秀'; warning = '消课情况良好，继续保持。'; suggestion = '结合训练表现和教练反馈，为家长说明后续训练安排并提前做好续费提醒。' }
+  else if (rate >= 70) { status = 'warning'; statusText = '及格'; warning = '消课率偏一般，有部分课时积压。'; suggestion = '主动联系出勤较少的家长，确认排课并同步剩余课时和训练安排。' }
+  else { status = 'danger'; statusText = '危险'; warning = '消课率过低！大量预收款未消化，存在负债风险。'; suggestion = '优先联系缺勤家长确认原因，调整排课，并由教练同步训练表现和后续安排。' }
 
   result.value = { rate: rate.toFixed(1), unconsumedClass, backlogAmount, status, statusText, warning, suggestion, reference }
 }

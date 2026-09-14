@@ -1,11 +1,11 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container-wide diagnosis-hero">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回抖音经营工作台</button>
       <h1 class="agent-title">行业体检表</h1>
-      <p class="agent-desc">先回答几个顾问追问，再基于知识库生成五维健康度雷达图与诊断结论</p>
+      <p class="agent-desc">填写主推课程、家长问题和当前结果，整理本期经营判断</p>
       <div class="task-flow-nav" aria-label="抖音经营链路">
-        <router-link to="/douyin" class="task-flow-link">智能体矩阵</router-link>
+        <router-link to="/douyin" class="task-flow-link">经营工作台</router-link>
         <span class="task-flow-link current">经营体检</span>
         <router-link to="/douyin/quick-plan" class="task-flow-link">15 天计划</router-link>
         <router-link to="/douyin/video-diagnoser" class="task-flow-link">数据复盘</router-link>
@@ -153,7 +153,7 @@
           <div class="panel-heading">
             <span class="section-kicker">第三步</span>
             <h2 class="panel-title">填写关键经营数据</h2>
-            <p class="panel-hint">这些数据会直接影响雷达评分。填得越完整，报告置信度越高。</p>
+            <p class="panel-hint">数据用于核对判断依据；没有填写的内容会明确标记为待核对。</p>
           </div>
           <div class="form-grid metrics-input-grid">
             <div class="form-group metric-input-card">
@@ -191,7 +191,7 @@
         <div v-if="currentStep === 3" class="step-panel">
           <div v-if="loading" class="loading-state">
             <div class="loading-spinner"></div>
-            <p>AI 正在生成健康度诊断...</p>
+            <p>正在根据你填写的数据整理经营建议...</p>
           </div>
           <div v-else-if="errorMessage" class="error-state">
             {{ errorMessage }}
@@ -214,7 +214,14 @@
 
             <div class="result-layout">
               <div class="result-main">
-                <div class="diagnosis-summary">
+                <section class="diagnosis-summary"><h3>主要问题</h3><p>{{ result.aiDiagnosis || result.diagnosis }}</p><small>来源边界：根据填写整理</small></section>
+                <section class="diagnosis-basis"><h3>判断依据</h3><ul><li v-for="(basis, i) in result.dataBasis" :key="i">{{ basis }}</li></ul><small>来源边界：根据填写整理</small></section>
+                <section class="dimension-details"><h3>可能原因</h3><p>{{ result.dimensionDetails[0]?.basis || '现有信息不足，原因需要结合家长反馈核对。' }}</p><small>来源边界：模型补充待核对</small></section>
+                <section class="suggestions"><h3>本期先做（最多 2 项）</h3><ul><li v-for="(s, i) in result.suggestions.slice(0, 2)" :key="i">{{ s }}</li></ul></section>
+                <section class="risk-boundary"><h3>暂时不要做</h3><p>不要同时更换主推课程、内容方向和投放方式。</p></section>
+                <section class="diagnosis-basis"><h3>观察指标</h3><p>发布数量、家长主动联系次数、确认课程兴趣人数、到店体验和报名结果。</p></section>
+                <section class="risk-boundary"><h3>停止或求助条件</h3><p>连续执行后仍无有效咨询，或课程宣传口径无法确认时，停止追加投入并请顾问核对。</p><small>来源边界：需要顾问确认</small></section>
+                <div class="diagnosis-summary" hidden>
                   <span class="section-kicker">诊断结论</span>
                   <h3>经营短板判断</h3>
                   <p>{{ result.aiDiagnosis || result.diagnosis }}</p>
@@ -255,7 +262,7 @@
 
               <aside class="result-side">
                 <div class="radar-container">
-                  <h3 class="radar-title">五维健康度雷达</h3>
+                  <h3 class="radar-title">内部评分参考</h3>
                   <div class="radar-chart">
                     <div v-for="dim in result.radar" :key="dim.name" class="radar-item">
                       <div class="radar-label">{{ dim.name }}</div>
@@ -572,7 +579,7 @@ const generate = async () => {
     }
   } catch (error) {
     console.error('诊断失败:', error)
-    errorMessage.value = error.message || '诊断失败，请稍后重试'
+    errorMessage.value = '暂时无法完成体检，请稍后重试；如多次失败，请联系顾问。'
     currentStep.value = 3
   } finally {
     loading.value = false

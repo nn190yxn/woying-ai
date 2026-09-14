@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/private')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/private')">← 返回经营工作台</button>
       <h1 class="agent-title">私域运营体检表</h1>
       <p class="agent-desc">勾选痛点，生成五维健康度雷达图与诊断结论</p>
     </div>

@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回经营工作台</button>
       <h1 class="agent-title">🗺️ 90 天周期战略</h1>
       <p class="agent-desc">阶段骨架展示，详情引导 1v1 定制</p>
     </div>

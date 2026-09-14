@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/xhs')">返回经营工作台</button>
       <h1 class="agent-title">账号复盘助手</h1>
       <p class="agent-desc">按周期复盘发布频率、互动和粉丝增长状态</p>
     </div>

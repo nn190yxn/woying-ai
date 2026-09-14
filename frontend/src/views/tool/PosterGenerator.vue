@@ -2,7 +2,7 @@
   <div class="agent-page">
     <div class="agent-header container">
       <button class="back-btn" :disabled="loading" @click="$router.back()">← 返回</button>
-      <h1 class="agent-title">海报生成器</h1>
+      <h1 class="agent-title">招生海报制作</h1>
       <p class="agent-desc">8 大场景海报一键生成，智能匹配行业设计规范</p>
     </div>
 

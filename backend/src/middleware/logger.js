@@ -47,36 +47,47 @@ function rotateLogs() {
 // Rotate logs at midnight
 const now = new Date()
 const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now
-setTimeout(() => {
+const rotationTimer = setTimeout(() => {
   rotateLogs()
-  setInterval(rotateLogs, 24 * 60 * 60 * 1000)
+  const interval = setInterval(rotateLogs, 24 * 60 * 60 * 1000)
+  interval.unref?.()
 }, msUntilMidnight)
+rotationTimer.unref?.()
 
-// Format log entry
+const SENSITIVE_LOG_KEY = /(authorization|cookie|token|api.?key|secret|password|credential|phone|mobile|input|prompt|body|payload|params|query|content|data)/i
+const PHONE_PATTERN = /(?<!\d)1[3-9]\d{9}(?!\d)/g
+const BEARER_PATTERN = /Bearer\s+[A-Za-z0-9._~+/=-]+/gi
+const CREDENTIAL_PATTERN = /\b(api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|password|secret|token)\s*[:=]\s*[^\s,&]+/gi
+export function redactLogValue(v, seen = new WeakSet()) {
+  if (typeof v === 'string') return v.replace(PHONE_PATTERN, '[手机号已脱敏]').replace(BEARER_PATTERN, 'Bearer [凭据已脱敏]').replace(CREDENTIAL_PATTERN, '$1=[凭据已脱敏]')
+  if (Array.isArray(v)) return v.map(x => redactLogValue(x, seen))
+  if (!v || typeof v !== 'object') return v
+  if (seen.has(v)) return '[循环引用已省略]'
+  seen.add(v); const out = {}
+  for (const [k, x] of Object.entries(v)) if (!SENSITIVE_LOG_KEY.test(k)) out[k] = redactLogValue(x, seen)
+  seen.delete(v); return out
+}
+
+// Format log entry. All callers pass through the same redaction boundary.
 function formatLog(level, module, message, meta = {}) {
-  const entry = {
-    ts: new Date().toISOString(),
-    level,
-    module,
-    msg: message,
-    ...meta
-  }
-  return JSON.stringify(entry)
+  return JSON.stringify(redactLogValue({ ts: new Date().toISOString(), level, module, msg: message, ...meta }))
 }
 
 // Write log entry
 function writeLog(type, level, module, message, meta = {}) {
   if (LOG_LEVELS[level] > LOG_LEVELS[LOG_LEVEL]) return
 
-  const line = formatLog(level, module, message, meta)
+  const safeMessage = redactLogValue(message)
+  const safeMeta = redactLogValue(meta)
+  const line = formatLog(level, module, safeMessage, safeMeta)
 
   // Always output to console for development
   if (level === 'error') {
-    console.error(`[${level.toUpperCase()}] [${module}] ${message}`, meta)
+    console.error(`[${level.toUpperCase()}] [${module}] ${safeMessage}`, safeMeta)
   } else if (level === 'warn') {
-    console.warn(`[${level.toUpperCase()}] [${module}] ${message}`, meta)
+    console.warn(`[${level.toUpperCase()}] [${module}] ${safeMessage}`, safeMeta)
   } else {
-    console.log(`[${level.toUpperCase()}] [${module}] ${message}`)
+    console.log(`[${level.toUpperCase()}] [${module}] ${safeMessage}`)
   }
 
   // Write to file

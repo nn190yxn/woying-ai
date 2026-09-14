@@ -9,7 +9,7 @@
         <span class="badge" :class="plan.badgeClass">{{ plan.badge }}</span>
       </div>
       <p class="price">{{ plan.price }}</p>
-      <p class="coverage">覆盖 {{ plan.pillarCoverage }} 大模块</p>
+      <p class="coverage">适合解决 {{ plan.pillarCoverage }} 阶段的经营问题</p>
       <router-link to="/membership" class="btn btn-block" :class="plan.recommended || plan.featured ? 'btn-primary' : 'btn-secondary'">{{ plan.cta }}</router-link>
     </div>
   </div>
@@ -19,10 +19,10 @@
 import { pricingPlans } from '@/constants/toolCatalog'
 
 const membershipPlans = pricingPlans.map(plan => {
-  const coverageMap = { free: '3/8', starter: '5/8', pro: '7/8', annual: '8/8' }
+  const coverageMap = { free: '看清问题', starter: '照着执行', pro: '持续复盘', annual: '真人陪跑' }
   return {
     ...plan,
-    pillarCoverage: coverageMap[plan.code] || '4/8'
+    pillarCoverage: coverageMap[plan.code] || '经营记录'
   }
 })
 </script>

@@ -22,7 +22,7 @@
               class="btn btn-secondary"
               @click="menuOpen = false"
             >
-              运营后台
+              机构管理
             </router-link>
             <button class="btn btn-ghost" @click="handleLogout">退出登录</button>
           </template>
@@ -50,7 +50,7 @@
                 class="dropdown-item"
                 @click="userMenuOpen = false"
               >
-                运营后台
+                机构管理
               </router-link>
               <button class="dropdown-item" @click="handleLogout">
                 退出登录
@@ -82,12 +82,12 @@ const menuOpen = ref(false)
 const userMenuOpen = ref(false)
 
 const navLinks = [
-  { label: '经营体检', path: '/douyin/diagnosis' },
-  { label: '作战计划', path: '/douyin/quick-plan' },
-  { label: '内容成交', path: '/douyin/script-generator' },
-  { label: '数据复盘', path: '/douyin/video-diagnoser' },
-  { label: '经营数据表', path: '/tools' },
-  { label: '会员服务', path: '/membership' }
+  { label: '本周经营', path: '/growth' },
+  { label: '招生行动', path: '/douyin/quick-plan' },
+  { label: '家长跟进', path: '/private' },
+  { label: '经营复盘', path: '/douyin/video-diagnoser' },
+  { label: '经营记录', path: '/tools' },
+  { label: '陪跑服务', path: '/membership' }
 ]
 
 function handleLogout() {

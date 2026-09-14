@@ -1,0 +1,12 @@
+{
+  "name": "我赢AI儿童素质培训增长平台",
+  "short_name": "我赢AI",
+  "description": "面向儿童素质培训机构老板的AI获客与销售教练",
+  "start_url": "/growth",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f3ec",
+  "theme_color": "#173d2c",
+  "lang": "zh-CN",
+  "icons": []
+}

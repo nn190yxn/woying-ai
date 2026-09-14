@@ -3,10 +3,10 @@
     <div class="battle-plan-table">
       <div class="battle-plan-row header">
         <span>天数</span>
-        <span>今日目标</span>
-        <span>内容任务</span>
-        <span>执行工具</span>
-        <span>复盘指标</span>
+        <span>本日重点</span>
+        <span>招生动作</span>
+        <span>记录入口</span>
+        <span>要登记的结果</span>
       </div>
       <div v-for="day in battlePlanPreview" :key="day.day" class="battle-plan-row">
         <span class="day-pill">第 {{ day.day }} 天</span>
@@ -21,11 +21,11 @@
 
 <script setup>
 const battlePlanPreview = [
-  { day: 1, goal: '找出账号主短板', contentTask: '拍一条老板出镜的门店现状诊断视频', tool: '经营体检', toolPath: '/douyin/diagnosis', metrics: '播放、完播、评论' },
-  { day: 2, goal: '测试信任内容', contentTask: '拍服务过程和真实顾客反馈', tool: '脚本生成', toolPath: '/douyin/script-generator', metrics: '完播、收藏、私信' },
-  { day: 3, goal: '放大爆点选题', contentTask: '围绕高互动问题拍干货答疑', tool: '标题优化', toolPath: '/douyin/title-optimizer', metrics: '点击率、评论率' },
-  { day: 4, goal: '推动团购咨询', contentTask: '拍套餐利益点和到店场景', tool: '组品定价', toolPath: '/douyin/product-pricing', metrics: '私信、咨询、核销' },
-  { day: 5, goal: '复盘有效内容', contentTask: '整理前 4 天数据，确定下一轮方向', tool: '数据复盘', toolPath: '/douyin/video-diagnoser', metrics: '成交、ROI、有效类型' }
+  { day: 1, goal: '找出招生主要问题', contentTask: '整理本周咨询、预约和到店记录', tool: '经营体检', toolPath: '/diagnosis', metrics: '有效咨询、预约体验' },
+  { day: 2, goal: '明确家长关心的问题', contentTask: '准备一条课程体验或教练专业度内容', tool: '内容安排', toolPath: '/douyin/script-generator', metrics: '咨询、预约体验' },
+  { day: 3, goal: '提高有效咨询', contentTask: '围绕家长常问问题发布一条内容', tool: '内容复盘', toolPath: '/douyin/title-optimizer', metrics: '有效咨询、家长问题' },
+  { day: 4, goal: '提高体验课到店', contentTask: '逐一确认已预约家长的到店时间', tool: '家长跟进', toolPath: '/private', metrics: '预约体验、实际到店' },
+  { day: 5, goal: '登记本周经营结果', contentTask: '整理咨询、到店、报名和续费，确定下周动作', tool: '招生数据复盘', toolPath: '/douyin/video-diagnoser', metrics: '到店、报名、续费' }
 ]
 </script>
 

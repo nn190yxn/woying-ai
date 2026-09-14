@@ -89,8 +89,8 @@
       <section class="panel card workbench-section">
         <div class="section-head compact workbench-section-header">
           <div>
-            <h2>专项模块入口</h2>
-            <p>按抖音、小红书、私域进入专项体检、计划、执行和复盘链路。</p>
+            <h2>专项经营入口</h2>
+            <p>按抖音、小红书和家长跟进进入对应的招生、内容与服务安排。</p>
           </div>
         </div>
         <div class="special-grid">
@@ -113,10 +113,10 @@
       <section class="templates-section workbench-section">
         <div class="section-head workbench-section-header">
           <div>
-            <h2>全部能力索引</h2>
+            <h2>全部经营工具</h2>
             <p>{{ sectionTitle }} · {{ filteredTemplates.length }} 张数据表可直接进入使用</p>
           </div>
-          <router-link to="/membership" class="section-link">查看会员权限</router-link>
+          <router-link to="/membership" class="section-link">查看服务方案</router-link>
         </div>
 
         <div class="index-filters card">

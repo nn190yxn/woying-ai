@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/private')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/private')">← 返回经营工作台</button>
       <h1 class="agent-title">社群活跃度提升</h1>
       <p class="agent-desc">诊断社群沉默原因，给出激活策略</p>
     </div>

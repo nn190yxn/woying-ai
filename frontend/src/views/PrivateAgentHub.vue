@@ -1,19 +1,20 @@
 <template>
   <div class="private-agent-hub">
     <div class="hub-header container-wide workbench-page-header">
-      <p class="section-eyebrow">私域经营工作台</p>
-      <h1 class="hub-title">私域运营智能体矩阵</h1>
-      <p class="hub-desc">围绕客户沉淀、会员体系、复购留存和社群运营，把私域动作沉淀成可复盘的增长链路。</p>
+      <p class="section-eyebrow">家长跟进工作台</p>
+      <h1 class="hub-title">家长跟进与在读服务</h1>
+      <p class="hub-desc">按家长当前状态安排联系、邀约、体验回访、报名和续费动作。</p>
     </div>
 
     <section class="mainline-section container-wide workbench-section">
       <div class="mainline-head workbench-section-header">
         <div>
-          <p class="section-eyebrow">主线作战路径</p>
-          <h2>先体检，再搭会员，执行后复盘</h2>
+          <p class="section-eyebrow">家长跟进顺序</p>
+          <h2>新咨询 → 联系邀约 → 体验回访 → 报名与在读服务</h2>
         </div>
-        <p>私域经营先把客户资产和复购链路跑顺，再按具体问题调用动作库。</p>
+        <p>按顺序推进并记录：新咨询、待联系、待邀约、已约体验、体验后回访、已报名、暂未报名。</p>
       </div>
+      <div class="parent-status-flow" aria-label="家长跟进状态顺序"><span v-for="status in parentStatuses" :key="status">{{ status }}</span></div>
       <div class="mainline-grid">
         <button
           v-for="agent in mainlineAgents"
@@ -62,9 +63,9 @@
       <div class="library-header workbench-section-header">
         <div>
           <p class="library-kicker">诊断后推荐进入</p>
-          <h2 class="library-title">私域动作库</h2>
+          <h2 class="library-title">家长服务动作库</h2>
         </div>
-        <p class="library-desc">主线先解决体检、会员、复购和社群运营，低频动作按具体问题再调用。</p>
+        <p class="library-desc">先做好家长跟进、在读服务和续费，再按实际问题选择动作。</p>
       </div>
       <div class="library-groups">
         <div v-for="group in actionLibraryGroups" :key="group.id" class="library-group">
@@ -88,9 +89,9 @@
 
     <div class="hub-cta container-wide">
       <div class="cta-card card workbench-action-panel">
-        <h3>需要完整私域运营方案？</h3>
-        <p>AI 生成 80% 底稿 + 专家沟通润色 = 您的专属私域全案</p>
-        <button class="cta-btn" @click="bookConsultation">预约专家 1v1 咨询</button>
+        <h3>需要完整家长跟进方案？</h3>
+        <p>系统整理沟通底稿，真人顾问结合机构情况确认重点和纠偏。</p>
+        <button class="cta-btn" @click="bookConsultation">预约真人顾问沟通</button>
       </div>
     </div>
 
@@ -106,27 +107,29 @@ import { canAccessLevel, getMemberLevelLabel } from '@/constants/membership'
 const router = useRouter()
 const userStore = useUserStore()
 
+const parentStatuses = ['新咨询', '待联系', '待邀约', '已约体验', '体验后回访', '已报名', '暂未报名']
+
 const mainlineAgents = [
-  { step: '01', code: 'diagnosis', name: '私域体检', desc: '先判断客户沉淀、社群活跃、复购和转化短板', level: 'free', levelText: '免费体验', levelClass: 'level-free' },
-  { step: '02', code: 'member-design', name: '会员体系', desc: '设计储值、等级权益、会员日和复购机制', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-  { step: '03', code: 'retention-plan', name: '复购留存', desc: '按客户生命周期安排复购节奏和召回动作', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-  { step: '04', code: 'community-sop', name: '社群 SOP', desc: '沉淀每日运营日历、互动动作和风险边界', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' },
-  { step: '05', code: 'private-dashboard', name: '私域看板', desc: '把客户、社群、复购和裂变数据放进复盘入口', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-  { step: '06', code: 'full-strategy', name: '90 天战略', desc: '从单点动作升级为季度私域增长节奏', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
+  { step: '01', code: 'diagnosis', name: '家长跟进检查', desc: '先判断家长跟进、在读服务、续费和报名短板', level: 'free', levelText: '免费体验', levelClass: 'level-free' },
+  { step: '02', code: 'member-design', name: '在读家长服务', desc: '设计储值、等级权益、会员日和复购机制', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '03', code: 'retention-plan', name: '续费跟进', desc: '按咨询到续费过程安排跟进和重新联系', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '04', code: 'community-sop', name: '家长群服务安排', desc: '沉淀每日运营日历、互动动作和风险边界', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' },
+  { step: '05', code: 'private-dashboard', name: '家长跟进看板', desc: '把家长联系、在读服务、续费和老带新记录放进复盘入口', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '06', code: 'full-strategy', name: '90 天战略', desc: '从单点动作升级为季度家长服务节奏', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
 ]
 
 const agentGroups = [
   {
     id: 'core',
     icon: '📊',
-    name: '私域核心入口',
+    name: '家长服务核心入口',
     agents: [
-      { code: 'diagnosis', name: '私域运营体检', emoji: '🩺', desc: '先诊断客户沉淀、社群活跃、复购和私域转化短板', level: 'free', levelText: '免费体验', levelClass: 'level-free', usageHint: '限 2 次/天' },
-      { code: 'member-design', name: '会员体系', emoji: '💳', desc: '设计储值方案、等级权益、会员日和复购机制', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'retention-plan', name: '复购留存', emoji: '📈', desc: '按客户生命周期设计复购节奏和留存动作', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'community-sop', name: '社群 SOP', emoji: '📋', desc: '生成每日社群运营日历、互动动作和风险红线', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter', usageHint: '每日可用' },
+      { code: 'diagnosis', name: '家长跟进检查', emoji: '🩺', desc: '先检查家长信息记录、社群互动、续费和报名跟进短板', level: 'free', levelText: '免费体验', levelClass: 'level-free', usageHint: '限 2 次/天' },
+      { code: 'member-design', name: '在读家长服务', emoji: '💳', desc: '设计在读服务、家长沟通、续费提醒和老带新安排', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+      { code: 'retention-plan', name: '续费跟进', emoji: '📈', desc: '按咨询到续费过程安排沟通节奏', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+      { code: 'community-sop', name: '家长群服务安排', emoji: '📋', desc: '生成每日家长群服务安排、互动动作和注意事项', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter', usageHint: '每日可用' },
       { code: 'cac-ltv', name: 'CAC vs LTV', emoji: '📐', desc: '对比获客成本和客户终身价值，判断增长是否健康', level: 'free', levelText: '免费体验', levelClass: 'level-free', usageHint: '限 3 次/天' },
-      { code: 'full-strategy', name: '90 天私域战略', emoji: '🗺️', desc: '把私域体检结果拆成季度阶段目标和执行节奏', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
+      { code: 'full-strategy', name: '90 天家长服务计划', emoji: '🗺️', desc: '把家长跟进检查结果拆成季度阶段目标和执行节奏', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
     ]
   }
 ]
@@ -151,20 +154,20 @@ const actionLibraryGroups = [
   },
   {
     id: 'retention-actions',
-    name: '留存召回动作',
+    name: '续费与重新联系',
     agents: [
-      { code: 'churn-prevention', name: '客户流失预警', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'reactivation', name: '沉睡客户激活', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' }
+      { code: 'churn-prevention', name: '家长续费预警', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+      { code: 'reactivation', name: '暂未报名家长再联系', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' }
     ]
   },
   {
     id: 'growth-actions',
-    name: '增长与看板动作',
+    name: '老带新与跟进记录',
     agents: [
-      { code: 'fission-design', name: '裂变方案设计', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' },
-      { code: 'referral-system', name: '转介绍系统', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'viral-campaign', name: '病毒式活动策划', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'private-dashboard', name: '私域数据看板', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' }
+      { code: 'fission-design', name: '老带新方案设计', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' },
+      { code: 'referral-system', name: '老带新安排', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+      { code: 'viral-campaign', name: '家长推荐活动策划', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+      { code: 'private-dashboard', name: '家长跟进看板', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' }
     ]
   }
 ]
@@ -252,6 +255,8 @@ const bookConsultation = () => {
   color: var(--text-secondary);
   line-height: 1.6;
 }
+
+.parent-status-flow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.parent-status-flow span{padding:8px 12px;border-radius:9999px;background:var(--bg-card);border:1px solid var(--line-soft);font-weight:600}
 
 .mainline-grid {
   display: grid;
@@ -602,7 +607,9 @@ const bookConsultation = () => {
 }
 
 @media (max-width: 1180px) {
-  .mainline-grid {
+  .parent-status-flow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.parent-status-flow span{padding:8px 12px;border-radius:9999px;background:var(--bg-card);border:1px solid var(--line-soft);font-weight:600}
+
+.mainline-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

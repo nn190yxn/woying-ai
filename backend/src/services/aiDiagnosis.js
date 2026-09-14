@@ -5,10 +5,10 @@ import { generateStructured } from './ai.js'
 
 // 构建 AI 诊断的系统提示词
 function buildSystemPrompt() {
-  return `你是企业增长全景顾问，精准识别增长瓶颈，输出可落地方案。
+  return `你是儿童素质培训机构经营顾问，精准识别校区招生、到店体验、报名、续费和转介绍的经营瓶颈，输出可落地方案。
 
 ## 目标用户
-二三线城市中小企业主（1-200人）
+二三线城市儿童素质培训机构校长、校区负责人和运营团队
 
 ## 风格要求
 - 精准、锋利、围绕增长、平实易懂
@@ -150,12 +150,12 @@ export async function generateAIDiagnosis(diagnosisData) {
     } catch (parseError) {
       // 如果解析失败，返回原始文本
       return {
-        rawText: result,
-        parseError: parseError.message
+        summary: '报告正在整理中，请稍后重试',
+        status: 'needs_review'
       }
     }
   } catch (error) {
-    throw new Error(`AI 诊断生成失败：${error.message}`)
+    throw Object.assign(new Error('诊断服务暂时不可用，请稍后重试'), { code: 'AI_DIAGNOSIS_FAILED', cause: error })
   }
 }
 
@@ -186,12 +186,12 @@ export async function generateQuickDiagnosis(diagnosisData) {
 
   try {
     return await generateStructured({
-      systemPrompt: '你是企业增长全景顾问，语言平实锋利，直接指出问题和解决方向。',
+      systemPrompt: '你是儿童素质培训机构经营顾问，语言平实锋利，直接指出问题和解决方向。',
       userPrompt: prompt,
       temperature: 0.8,
       max_tokens: 500
     })
   } catch (error) {
-    throw new Error(`快速诊断生成失败：${error.message}`)
+    throw Object.assign(new Error('快速诊断暂时不可用，请稍后重试'), { code: 'AI_QUICK_DIAGNOSIS_FAILED', cause: error })
   }
 }

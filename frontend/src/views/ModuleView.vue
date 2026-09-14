@@ -5,7 +5,8 @@
         <router-link to="/" class="back-link">← 返回首页</router-link>
         <h1>{{ module.name }}</h1>
         <p class="module-desc">{{ module.description }}</p>
-        <p class="module-count">共 {{ module.tools.length }} 个工具</p>
+        <p v-if="module.isMissing" class="module-next-step">当前动作：打开经营模块；影响：暂时没有可用工具；下一步：请返回工作台重新选择。</p>
+        <p v-else class="module-count">共 {{ module.tools.length }} 个工具</p>
       </div>
     </section>
 
@@ -28,7 +29,12 @@ import { homeToolCategories, allTools } from '@/constants/toolCatalog'
 const route = useRoute()
 
 const module = computed(() => {
-  return homeToolCategories.find(m => m.id === route.params.id) || { name: '未知模块', description: '', tools: [] }
+  return homeToolCategories.find(m => m.id === route.params.id) || {
+    name: '暂时找不到这个经营模块',
+    description: '当前模块没有可用内容。',
+    tools: [],
+    isMissing: true
+  }
 })
 
 const fullTools = computed(() => {

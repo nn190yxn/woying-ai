@@ -134,7 +134,7 @@ const result = ref(null)
 
 async function handleSubmit() {
   if (!leadsCount.value || !enrolledCount.value || !channelSpend.value) {
-    result.value = { error: '请填写完整必填字段' }
+    result.value = { error: '请先把带必填项的经营情况填好' }
     return
   }
   result.value = null
@@ -151,7 +151,7 @@ async function handleSubmit() {
     })
     result.value = res
   } catch (err) {
-    result.value = { error: err.message || '计算失败' }
+    result.value = { error: '计算未完成：请检查填写内容后重试；如仍失败，请联系管理员' }
   }
 }
 </script>

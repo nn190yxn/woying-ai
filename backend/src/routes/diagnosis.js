@@ -286,7 +286,7 @@ router.post('/v3/generate', authMiddleware, async (req, res) => {
     res.json({ success: true, analysis: finalReport, aiUsed })
   } catch (error) {
     logger.error('diagnosis', `Generate diagnosis error: ${error.message}`)
-    res.status(500).json({ message: error.message || '诊断生成失败' })
+    res.status(500).json({ message: '处理未完成，请稍后重试' })
   }
 })
 
@@ -310,7 +310,7 @@ router.post('/v3/quick-diagnosis', authMiddleware, async (req, res) => {
     res.json({ success: true, result })
   } catch (error) {
     logger.error('diagnosis', `Quick diagnosis error: ${error.message}`)
-    res.status(500).json({ message: error.message || '快速诊断失败' })
+    res.status(500).json({ message: '处理未完成，请稍后重试' })
   }
 })
 
@@ -382,7 +382,7 @@ router.post('/analyze', authMiddleware, async (req, res) => {
     res.json({ success: true, analysis: result })
   } catch (error) {
     logger.error('diagnosis', `Diagnosis analyze error: ${error.message}`)
-    res.status(500).json({ message: error.message || '分析失败' })
+    res.status(500).json({ message: '处理未完成，请稍后重试' })
   }
 })
 

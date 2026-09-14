@@ -72,7 +72,7 @@ test('global navigation preserves task links and responsive shell anchors', () =
   assert.match(navBar, /class="navbar-links"/)
   assert.match(navBar, /class="mobile-actions"/)
   assert.match(navBar, /class="menu-toggle"/)
-  assert.match(navBar, /数据复盘', path: '\/douyin\/video-diagnoser'/)
+  assert.match(navBar, /经营复盘', path: '\/douyin\/video-diagnoser'/)
   assert.match(navBar, /@media \(max-width: 768px\)/)
 })
 

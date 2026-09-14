@@ -67,7 +67,7 @@ const result = ref(null)
 
 function handleSubmit() {
   if (!form.monthlyIncome || !form.monthlyExpense || form.balance == null || !form.predictMonths) {
-    result.value = { error: '请填写所有字段' }; return
+    result.value = { error: '请把这次经营情况填完整' }; return
   }
 
   const netFlow = form.monthlyIncome - form.monthlyExpense

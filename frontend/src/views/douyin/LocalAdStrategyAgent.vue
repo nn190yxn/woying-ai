@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回经营工作台</button>
       <h1 class="agent-title">📍 本地推策略生成</h1>
       <p class="agent-desc">选行业 + 目标，定向与素材建议</p>
     </div>

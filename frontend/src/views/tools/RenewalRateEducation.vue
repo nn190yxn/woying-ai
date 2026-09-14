@@ -103,24 +103,24 @@ function handleSubmit() {
   let status = 'warning'
   let statusText = '及格'
   let suggestion = ''
-  let reference = '素质教育70-80%为健康线，K12学科类80-90%，早教/托育85%+'
+  let reference = '少儿体育机构可结合课程周期、出勤和剩余课时持续观察'
 
   if (rate >= 85) {
     status = 'success'
     statusText = '优秀'
-    suggestion = '续费率优秀，说明教学质量和学员满意度很高。建议：1）利用高续费率做口碑营销；2）适当调整价格；3）关注扩科转化。'
+    suggestion = '续费率优秀，说明在读服务获得家长认可。建议：1）整理训练表现和教练反馈；2）关注剩余课时；3）邀请满意家长参与老带新。'
   } else if (rate >= 70) {
     status = 'success'
     statusText = '达标'
-    suggestion = '续费率在合理范围内。建议：1）加强学员跟进和关怀；2）关注即将到期学员的续费意向；3）提升教学质量。'
+    suggestion = '续费率在合理范围内。建议：1）结合出勤和训练表现跟进家长；2）关注剩余课时并提前沟通续费；3）持续提供教练反馈。'
   } else if (rate >= 50) {
     status = 'warning'
     statusText = '偏低'
-    suggestion = '续费率偏低，学员流失较明显。建议：1）分析流失原因（师资/课程效果/服务）；2）提前3个月开始续费沟通；3）推出续费优惠。'
+    suggestion = '续费率偏低，学员流失较明显。建议：1）结合出勤、训练表现和教练反馈分析原因；2）按剩余课时提前沟通续费；3）确认家长当前顾虑。'
   } else {
     status = 'danger'
     statusText = '严重'
-    suggestion = '续费率过低，大量学员流失！需要紧急排查：1）教学质量是否下滑；2）师资是否变动；3）竞品是否有价格优势。'
+    suggestion = '续费率过低，大量学员流失！需要紧急排查：1）出勤是否异常；2）训练表现和教练反馈是否清楚；3）续费沟通是否及时。'
   }
 
   let revenueLoss = null

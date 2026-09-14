@@ -2,32 +2,33 @@
   <div class="diagnosis-center">
     <div class="container">
       <div class="diagnosis-header">
-        <h1>企业增长全景顾问</h1>
-        <p>通过行业画像 → 创始人能力 → 快速扫描 → 深度诊断的完整流程，精准识别增长瓶颈，输出可落地方案</p>
+        <h1>校区招生经营诊断</h1>
+        <p>根据校区和主推课程、本周招生数据，找出咨询、体验课、到店和报名中最影响结果的一环</p>
       </div>
 
       <!-- 核心模块：企业增长全景顾问 -->
       <div class="primary-diagnosis card" @click="startGrowthDiagnosis">
         <div class="primary-icon"><IconPillarDiagnosis /></div>
         <div class="primary-body">
-          <div class="primary-badge">增长顾问</div>
-          <h3>企业增长全景顾问</h3>
-          <p class="primary-desc">通过阶段0行业与城市画像、模块F创始人能力诊断、阶段1快速扫描、模块G IP诊断等完整流程，识别增长瓶颈，输出结构化诊断报告。</p>
+          <div class="primary-badge">校长经营入口</div>
+          <h3>看看本周招生问题出在哪</h3>
+          <p class="primary-desc">填写校区、课程和家长招生情况，梳理体验课、到店与报名数据，确定本周最多两个优先动作，七天后回来复盘。</p>
           <div class="primary-meta">
             <span class="badge badge-free">免费版</span>
             <span>~15-30分钟</span>
-            <span>多模块组合</span>
+            <span>五步完成</span>
           </div>
           <div class="flow-preview">
-            <span class="flow-step">阶段0: 行业与城市画像</span>
+            <span class="flow-step">了解校区和主推课程</span>
             <span class="flow-arrow">→</span>
-            <span class="flow-step">模块F: 创始人能力</span>
+            <span class="flow-step">填写本周招生数据</span>
             <span class="flow-arrow">→</span>
-            <span class="flow-step">阶段1: 快速扫描</span>
+            <span class="flow-step">找出最影响结果的一环</span>
             <span class="flow-arrow">→</span>
-            <span class="flow-step">阶段3: 综合报告</span>
+            <span class="flow-step">确定本周优先动作 → 七天后回来复盘</span>
           </div>
         </div>
+        <button class="btn btn-primary" type="button">看看问题出在哪</button>
         <div class="card-arrow">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -36,7 +37,7 @@
       </div>
 
       <div class="section-divider">
-        <span>诊断模块说明</span>
+        <span>五步经营诊断</span>
       </div>
 
       <!-- 诊断流程卡片 -->
@@ -44,8 +45,8 @@
         <div class="module-card card">
           <div class="module-icon stage0"><span>0</span></div>
           <div class="module-body">
-            <h3>阶段0：行业与城市画像</h3>
-            <p class="module-desc">2问开场（城市+行业）自动识别城市线级，结合市场环境预判，快速定位企业基本盘。</p>
+            <h3>了解校区和主推课程</h3>
+            <p class="module-desc">填写校区所在城市、主推课程、目标家长和课程价格，先统一本周招生口径。</p>
             <div class="module-tags">
               <span class="tag">城市线级</span>
               <span class="tag">市场环境</span>
@@ -57,8 +58,8 @@
         <div class="module-card card">
           <div class="module-icon founder"><span>F</span></div>
           <div class="module-body">
-            <h3>模块F：创始人能力诊断</h3>
-            <p class="module-desc">评估6项核心能力（商业洞察/获客/领导/财务/学习/角色定位），判断创始人角色进化阶段。</p>
+            <h3>填写本周招生数据</h3>
+            <p class="module-desc">如实填写本周咨询、邀约、体验课、到店和报名情况；暂时没有数据也可以继续。</p>
             <div class="module-tags">
               <span class="tag">角色进化</span>
               <span class="tag">能力雷达</span>
@@ -70,8 +71,8 @@
         <div class="module-card card">
           <div class="module-icon rent"><span>I</span></div>
           <div class="module-body">
-            <h3>模块I：企业租评估</h3>
-            <p class="module-desc">评估企业有多少是"租"（离开创始人还能转）vs"劳动"（创始人在才能转），识别系统性风险。</p>
+            <h3>找出最影响结果的一环</h3>
+            <p class="module-desc">对照咨询到报名过程，判断主要问题在咨询不足、邀约不到店，还是体验后未报名。</p>
             <div class="module-tags">
               <span class="tag">劳动占比</span>
               <span class="tag">租占比</span>
@@ -83,12 +84,12 @@
         <div class="module-card card">
           <div class="module-icon scan"><span>1</span></div>
           <div class="module-body">
-            <h3>阶段1：快速扫描</h3>
-            <p class="module-desc">6维度评分（获客/盈利/复购/复制/组织/战略），区分增强回路与调节回路，找到飞轮卡点和天花板瓶颈。</p>
+            <h3>确定本周优先动作</h3>
+            <p class="module-desc">根据主要问题只选最多两个已有动作，明确负责人、完成时间和需要登记的结果。</p>
             <div class="module-tags">
-              <span class="tag">增强回路</span>
-              <span class="tag">调节回路</span>
-              <span class="tag">飞轮分析</span>
+              <span class="tag">优先动作</span>
+              <span class="tag">执行条件</span>
+              <span class="tag">结果登记</span>
             </div>
           </div>
         </div>
@@ -97,12 +98,12 @@
           <div class="module-icon ip"><span>G</span></div>
           <div class="module-body">
             <div class="optional-badge">按需触发</div>
-            <h3>模块G：创始人IP诊断</h3>
-            <p class="module-desc">5维度评估（表达意愿/能力/出镜/专业/时间），推荐最适合的IP形式和落地方案。</p>
+            <h3>七天后回来复盘</h3>
+            <p class="module-desc">带着七天内的咨询、邀约、体验课、到店和报名记录回来，决定继续、调整或找顾问。</p>
             <div class="module-tags">
-              <span class="tag">IP适配</span>
-              <span class="tag">形式推荐</span>
-              <span class="tag">避坑指南</span>
+              <span class="tag">七天记录</span>
+              <span class="tag">前后对比</span>
+              <span class="tag">顾问确认</span>
             </div>
           </div>
         </div>
@@ -111,8 +112,8 @@
           <div class="module-icon sop"><span>H</span></div>
           <div class="module-body">
             <div class="optional-badge">按需触发</div>
-            <h3>模块H：SOP建设诊断</h3>
-            <p class="module-desc">评估企业标准化运营成熟度（4阶段），输出最紧迫的 SOP 建设清单。</p>
+            <h3>校长需要准备什么</h3>
+            <p class="module-desc">准备校区和课程基本信息，以及本周家长咨询、体验课、到店和报名的汇总数据。</p>
             <div class="module-tags">
               <span class="tag">成熟度</span>
               <span class="tag">覆盖率</span>
@@ -124,45 +125,45 @@
 
       <!-- 诊断输出说明 -->
       <div class="output-section card">
-        <h2>诊断输出包含</h2>
+        <h2>完成后你会看到</h2>
         <div class="output-grid">
           <div class="output-item">
             <span class="output-icon">📊</span>
-            <h4>行业画像摘要</h4>
-            <p>城市线级+市场环境预判+行业特征</p>
+            <h4>主要问题</h4>
+            <p>咨询、到店或报名中最影响结果的一环</p>
           </div>
           <div class="output-item">
             <span class="output-icon">👤</span>
-            <h4>创始人能力画像</h4>
-            <p>能力雷达+角色进化评估+企业租占比</p>
+            <h4>判断依据</h4>
+            <p>根据校区、课程和本周招生记录说明判断理由</p>
           </div>
           <div class="output-item">
             <span class="output-icon">🔄</span>
-            <h4>系统回路图</h4>
-            <p>飞轮卡点+天花板瓶颈+因果闭环分析</p>
+            <h4>本周先做</h4>
+            <p>最多两个优先动作，避免同时铺开太多事情</p>
           </div>
           <div class="output-item">
             <span class="output-icon">⏰</span>
-            <h4>滞后预警</h4>
-            <p>每个改进建议标注效果显现时间，管理预期</p>
+            <h4>观察指标</h4>
+            <p>连续登记咨询、体验课、到店和报名变化</p>
           </div>
           <div class="output-item">
             <span class="output-icon">🚀</span>
-            <h4>增长杠杆</h4>
-            <p>短/中/长期改进路径，按优先级排序</p>
+            <h4>停止或求助条件</h4>
+            <p>七天没有改善或反馈变差时，停止加量并找顾问</p>
           </div>
           <div class="output-item">
             <span class="output-icon">📋</span>
-            <h4>问题清单</h4>
-            <p>紧急/重要/长期分类，直击要害</p>
+            <h4>需要顾问确认</h4>
+            <p>数据不足或相互矛盾时，不直接下结论</p>
           </div>
         </div>
       </div>
 
       <div v-if="!isAuthenticated" class="upgrade-card card">
-        <h3>解锁完整诊断能力</h3>
-        <p>登录后即可使用企业增长全景顾问，获取 AI 驱动的专属诊断报告</p>
-        <router-link to="/login?redirect=/diagnosis" class="btn btn-primary">立即登录</router-link>
+        <h3>登录后开始经营诊断</h3>
+        <p>登录后填写校区和本周招生情况，查看本周应该先做什么</p>
+        <router-link to="/login?redirect=/diagnosis" class="btn btn-primary">登录后看看问题出在哪</router-link>
       </div>
     </div>
   </div>

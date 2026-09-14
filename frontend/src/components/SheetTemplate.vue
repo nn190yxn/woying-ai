@@ -13,44 +13,44 @@
 
     <div class="sheet-meta">
       <div class="meta-item">
-        <span class="meta-label">分组</span>
+        <span class="meta-label">经营场景</span>
         <span class="meta-value">{{ templateData.group }}</span>
       </div>
       <div class="meta-item">
-        <span class="meta-label">类型</span>
+        <span class="meta-label">怎么记录</span>
         <span class="meta-value">{{ templateData.templateLabel }}</span>
       </div>
       <div class="meta-item">
-        <span class="meta-label">字段数</span>
+        <span class="meta-label">需要填写几项</span>
         <span class="meta-value">{{ templateData.keyFields.length }} 个</span>
       </div>
     </div>
 
     <div class="sheet-toolbar">
-      <button class="btn btn-primary" @click="addRow">+ 新增一行</button>
+      <button class="btn btn-primary" @click="addRow">+ 新增一行，记一条经营情况</button>
       <button class="btn btn-outline" @click="loadExampleData" :disabled="loadingExample">
-        {{ loadingExample ? '加载中...' : '加载示例数据' }}
+        {{ loadingExample ? '正在准备...' : '先看一份示例' }}
       </button>
-      <button class="btn btn-outline" @click="exportCSV">导出 CSV</button>
+      <button class="btn btn-outline" @click="exportCSV">下载经营记录</button>
       <label class="btn btn-outline import-label">
-        导入 CSV
+        导入已有记录
         <input type="file" accept=".csv" class="import-input" @change="importCSV" />
       </label>
       <button class="btn btn-outline btn-save" @click="saveSheet" :disabled="saving">
-        {{ saving ? '保存中...' : '保存' }}
+        {{ saving ? '正在保存...' : '保存本次记录' }}
       </button>
       <button class="btn btn-outline" @click="showHistory = !showHistory">
-        加载历史
+        查看以前的记录
       </button>
     </div>
 
     <div class="sheet-history" v-if="showHistory">
-      <div v-if="historyLoading" class="history-loading">加载中...</div>
-      <div v-else-if="historyList.length === 0" class="history-empty">暂无保存记录</div>
+      <div v-if="historyLoading" class="history-loading">正在读取历史填写...</div>
+      <div v-else-if="historyList.length === 0" class="history-empty">还没有以前的记录，先保存本次填写内容。</div>
       <div v-else>
         <div class="history-item" v-for="h in historyList" :key="h.id">
           <span class="history-time">{{ h.created_at }}</span>
-          <button class="btn btn-sm btn-outline" @click="loadSheet(h.id)">加载</button>
+          <button class="btn btn-sm btn-outline" @click="loadSheet(h.id)">打开这次填写</button>
         </div>
       </div>
     </div>
@@ -73,18 +73,18 @@
               <input v-else v-model="row[f.key]" type="text" class="cell-input" :placeholder="f.label" />
             </td>
             <td class="col-action">
-              <button class="btn-delete" @click="removeRow(idx)">删除</button>
+              <button class="btn-delete" @click="removeRow(idx)">删除这条记录</button>
             </td>
           </tr>
           <tr v-if="rows.length === 0">
-            <td :colspan="allFields.length + 2" class="empty-row">暂无数据，点击「新增一行」开始记录</td>
+            <td :colspan="allFields.length + 2" class="empty-row">还没有填写内容，点击“新增一行”开始记录本周经营情况</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <div class="sheet-stats" v-if="statsFields.length > 0 && rows.length > 0">
-      <h3>数据统计</h3>
+      <h3>这批经营情况小结</h3>
       <div class="stats-grid">
         <div v-for="sf in statsFields" :key="sf.key" class="stat-card">
           <span class="stat-label">{{ sf.label }}</span>
@@ -94,7 +94,7 @@
     </div>
 
     <div class="sheet-outputs" v-if="templateData.outputs && templateData.outputs.length">
-      <h3>可生成的分析</h3>
+      <h3>填完后能帮你判断什么</h3>
       <div class="output-tags">
         <span v-for="o in templateData.outputs" :key="o" class="output-tag">{{ o }}</span>
       </div>
@@ -235,9 +235,9 @@ async function saveSheet() {
       sheetCode: props.templateCode,
       data: rows.value
     })
-    alert('保存成功')
+    alert('本次经营记录已保存')
   } catch (e) {
-    alert('保存失败: ' + (e.message || '未知错误'))
+    alert('暂时不能保存本次经营记录，请检查网络后再试')
   } finally {
     saving.value = false
   }
@@ -264,7 +264,7 @@ async function loadSheet(id) {
     }
     showHistory.value = false
   } catch (e) {
-    alert('加载失败')
+    alert('暂时不能打开这次经营记录，请稍后再试')
   }
 }
 

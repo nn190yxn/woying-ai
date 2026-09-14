@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/private')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/private')">← 返回经营工作台</button>
       <h1 class="agent-title">复购留存方案</h1>
       <p class="agent-desc">行业分轨复购策略 + 客户生命周期 SOP</p>
     </div>

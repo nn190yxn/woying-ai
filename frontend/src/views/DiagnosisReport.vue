@@ -3,15 +3,15 @@
     <div class="container">
       <div class="report-header">
         <h1>{{ reportTitle }}</h1>
-        <p v-if="aiUsed" class="ai-badge">AI 生成诊断报告</p>
-        <p v-else>基于规则引擎生成的诊断报告</p>
+        <p v-if="aiUsed" class="ai-badge">根据你填写的信息整理，关键判断需要顾问确认</p>
+        <p v-else>需要顾问确认</p>
       </div>
 
       <template v-if="isUnifiedResult">
         <div class="report-content">
-          <!-- 一、行业画像 -->
+          <!-- 判断依据 -->
           <section v-if="result.stage0" class="report-section card">
-            <h2>一、行业画像</h2>
+            <h2>判断依据</h2>
             <div class="profile-grid">
               <div class="profile-item">
                 <span class="profile-label">城市</span>
@@ -96,26 +96,27 @@
             </div>
           </section>
 
-          <!-- 二、创始人能力画像 -->
+          <!-- 可能原因 -->
           <section v-if="result.founder" class="report-section card">
-            <h2>二、创始人能力画像</h2>
+            <h2>可能原因</h2>
             <div class="founder-stage">
               <div class="stage-info">
-                <span class="stage-label">当前阶段</span>
-                <span class="stage-value">阶段{{ result.founder.stage?.stage }}（{{ result.founder.stage?.name }}）</span>
+                <span class="stage-label">当前经营状态</span>
+                <span class="stage-value">{{ result.founder.stage?.name || '需要顾问确认' }}</span>
               </div>
               <div class="stage-info">
-                <span class="stage-label">当前角色</span>
+                <span class="stage-label">校长当前主要精力</span>
                 <span class="stage-value current">{{ result.founder.stage?.role }}</span>
               </div>
               <div class="stage-arrow">↓</div>
               <div class="stage-info">
-                <span class="stage-label">应进化为</span>
+                <span class="stage-label">下一步应调整为</span>
                 <span class="stage-value target">{{ result.founder.stage?.targetRole }}</span>
               </div>
             </div>
 
-            <!-- 能力雷达 -->
+            <!-- 校长经营能力 -->
+            <h3 v-if="result.founder.scores">校长经营能力参考</h3>
             <div v-if="result.founder.scores" class="radar-grid">
               <div v-for="(val, key) in result.founder.scores" :key="key" class="radar-item">
                 <span class="radar-name">{{ val.name || key }}</span>
@@ -127,44 +128,44 @@
             </div>
 
             <div v-if="result.founder.average != null" class="founder-summary">
-              <span>能力平均分：</span>
+              <span>经营能力参考分：</span>
               <span class="avg-score" :class="getScoreClass(result.founder.average, 5)">{{ result.founder.average }}/5</span>
             </div>
           </section>
 
-          <!-- 三、企业租评估 -->
+          <!-- 主要问题 -->
           <section v-if="result.rent" class="report-section card">
-            <h2>三、企业租评估</h2>
+            <h2>主要问题</h2>
             <div class="rent-chart">
               <div class="rent-bar-wrap">
                 <div class="rent-bar">
                   <div class="rent-labor" :style="{ width: `${result.rent.laborPercent}%` }">
-                    <span v-if="result.rent.laborPercent > 15">劳动 {{ result.rent.laborPercent }}%</span>
+                    <span v-if="result.rent.laborPercent > 15">依赖校长 {{ result.rent.laborPercent }}%</span>
                   </div>
                   <div class="rent-rent" :style="{ width: `${result.rent.rentPercent}%` }">
-                    <span v-if="result.rent.rentPercent > 15">租 {{ result.rent.rentPercent }}%</span>
+                    <span v-if="result.rent.rentPercent > 15">团队可执行 {{ result.rent.rentPercent }}%</span>
                   </div>
                 </div>
               </div>
               <div class="rent-legend">
-                <span class="legend-labor">■ 劳动（依赖你个人的部分）</span>
-                <span class="legend-rent">■ 租（离开你还能转的部分）</span>
+                <span class="legend-labor">■ 目前依赖校长亲自推进</span>
+                <span class="legend-rent">■ 课程顾问和教练可按安排执行</span>
               </div>
             </div>
             <div class="rent-warning" v-if="result.rent.laborPercent > 60">
               <span class="warning-icon">风险</span>
-              <span>企业高度依赖创始人个人，建议优先建设"租"的部分</span>
+              <span>招生和交付较依赖校长个人，建议先明确课程顾问、教练的负责人和完成标准</span>
             </div>
           </section>
 
           <!-- 四、快速扫描结果 -->
           <section v-if="result.scan" class="report-section card">
-            <h2>四、快速扫描（6维度）</h2>
+            <h2>观察指标</h2>
             <div class="scan-list">
               <div v-for="(val, key) in result.scan.scores" :key="key" class="scan-item">
                 <span class="scan-name">{{ val.label || key }}</span>
                 <span class="scan-loop-type" :class="val.loopType === '增强回路' ? 'loop-enhancing' : 'loop-regulating'">
-                  {{ val.loopType || '' }}
+                  {{ formatLoopType(val.loopType) }}
                 </span>
                 <span class="scan-score" :class="getScoreClass(val.score, 5)">{{ val.score }}/5</span>
                 <div class="scan-bar">
@@ -176,30 +177,30 @@
             <!-- 回路分析 -->
             <div v-if="result.scan.loops" class="loop-analysis">
               <div class="loop-block">
-                <h3>飞轮卡点（增强回路）</h3>
+                <h3>当前较弱的招生环节</h3>
                 <div class="loop-item weakest">
                   <span class="loop-label">{{ result.scan.loops.flywheel?.weakest?.label }}</span>
                   <span class="loop-score">{{ result.scan.loops.flywheel?.weakest?.score }}/5</span>
                 </div>
-                <p class="loop-desc">这个飞轮没转起来，是增长的瓶颈</p>
+                <p class="loop-desc">连续记录七天，确认这一环是否持续影响咨询、到店或报名</p>
               </div>
               <div class="loop-block">
-                <h3>天花板瓶颈（调节回路）</h3>
+                <h3>限制执行的主要问题</h3>
                 <div class="loop-item weakest">
                   <span class="loop-label">{{ result.scan.loops.ceiling?.weakest?.label }}</span>
                   <span class="loop-score">{{ result.scan.loops.ceiling?.weakest?.score }}/5</span>
                 </div>
-                <p class="loop-desc">这个天花板太低，限制了企业扩张</p>
+                <p class="loop-desc">如果七天后仍没有改善，联系顾问复核原因</p>
               </div>
             </div>
           </section>
 
-          <!-- 五、创始人IP诊断（如触发） -->
+          <!-- 暂时不要做（如触发） -->
           <section v-if="result.ip" class="report-section card">
-            <h2>五、创始人IP诊断</h2>
+            <h2>暂时不要做：盲目安排校长出镜</h2>
             <div class="ip-summary">
               <div class="ip-score">
-                <span class="ip-label">IP适配度总分</span>
+                <span class="ip-label">校长出镜适合程度</span>
                 <span class="ip-value">{{ result.ip.totalScore }}/25</span>
               </div>
               <div class="ip-judgment">
@@ -210,7 +211,7 @@
               </div>
             </div>
             <div v-if="result.ip.recommendedForm" class="ip-recommendation">
-              <h3>推荐IP形式</h3>
+              <h3>可参考的出镜方式</h3>
               <div class="ip-form-card">
                 <span class="ip-form-name">{{ result.ip.recommendedForm.form }}</span>
                 <p class="ip-form-desc">平台：{{ result.ip.recommendedForm.platforms }}</p>
@@ -222,11 +223,11 @@
 
           <!-- 六、AI 诊断详情 -->
           <section v-if="result.industryProfile || result.loopAnalysis || result.growthLevers" class="report-section card">
-            <h2>六、AI 深度分析</h2>
+            <h2>补充判断说明</h2>
 
-            <!-- 系统回路图 -->
+            <!-- 需要复核的经营关系 -->
             <div v-if="result.loopAnalysis" class="loop-diagram">
-              <h3>系统回路图</h3>
+              <h3>需要复核的经营关系</h3>
               <div class="diagram-box">
                 <pre class="diagram-text">{{ formatLoopDiagram(result.loopAnalysis) }}</pre>
               </div>
@@ -234,13 +235,13 @@
 
             <!-- 增长杠杆 -->
             <div v-if="result.growthLevers && result.growthLevers.length" class="growth-levers">
-              <h3>增长杠杆 + 改进路径</h3>
+              <h3>执行中需要留意</h3>
               <div v-for="(lever, i) in result.growthLevers" :key="i" class="lever-item" :class="`priority-${lever.priority || 'medium'}`">
                 <h4>{{ lever.title || lever.phase || `第${i + 1}步` }}</h4>
                 <p>{{ lever.description || lever.action || '' }}</p>
                 <div v-if="lever.lagWarning || lever.timeRange" class="lag-warning">
                   <span class="lag-icon">提示</span>
-                  <span>滞后预警：{{ lever.lagWarning?.timeRange || lever.timeRange }}后显现效果，前期可能看不到明显变化，不要急。</span>
+                  <span>观察提醒：请在 {{ lever.lagWarning?.timeRange || lever.timeRange }} 后结合真实咨询、到店和报名记录再判断。</span>
                 </div>
               </div>
             </div>
@@ -255,22 +256,23 @@
           </section>
 
           <!-- 七、推荐下一步 -->
-          <section v-if="result.nextSteps && result.nextSteps.length" class="report-section card">
-            <h2>推荐下一步行动</h2>
-            <div v-for="(step, i) in result.nextSteps" :key="i" class="next-step" :class="`priority-${step.priority || 'medium'}`">
+          <section class="report-section card">
+            <h2>本周先做</h2>
+            <p v-if="!result.nextSteps?.length">现有数据不足，优先动作需要顾问确认。</p>
+            <div v-for="(step, i) in result.nextSteps.slice(0, 2)" :key="i" class="next-step" :class="`priority-${step.priority || 'medium'}`">
               <span class="step-priority">{{ getPriorityLabel(step.priority) }}</span>
               <h4>{{ step.title }}</h4>
                 <p>{{ step.description }}</p>
                 <div v-if="step.lagWarning" class="lag-warning">
                   <span class="lag-icon">提示</span>
-                  <span>滞后预警：效果在 {{ step.lagWarning.timeRange }} 后显现，{{ step.lagWarning.desc }}</span>
+                  <span>观察提醒：请在 {{ step.lagWarning.timeRange }} 后结合真实经营记录再判断，{{ step.lagWarning.desc }}</span>
                 </div>
               </div>
           </section>
 
           <!-- 八、推荐工具 -->
           <section v-if="result.recommendedTools && result.recommendedTools.length" class="report-section card">
-            <h2>推荐下一步工具</h2>
+            <h2>本周可用的辅助工具</h2>
             <div class="tool-chips">
               <router-link
                 v-for="toolCode in result.recommendedTools"
@@ -285,15 +287,28 @@
         </div>
       </template>
 
+      <template v-if="isUnifiedResult">
+        <div class="report-content">
+          <section class="report-section card">
+            <h2>暂时不要做</h2>
+            <p>不要同时铺开多个新渠道，也不要在没有连续七天记录前频繁更换主推课程、价格或招生话术。</p>
+          </section>
+          <section class="report-section card">
+            <h2>停止或求助条件</h2>
+            <p>连续七天执行后咨询、到店或报名没有改善，家长负面反馈增加，或数据相互矛盾时，先停止加量并联系顾问复核。</p>
+          </section>
+        </div>
+      </template>
+
       <div class="report-actions">
         <button class="btn btn-secondary" @click="handleShare">
-          分享报告
+          分享本周建议
         </button>
         <router-link to="/diagnosis/history" class="btn btn-secondary">
-          查看历史记录
+          查看以前的记录
         </router-link>
         <router-link to="/diagnosis" class="btn btn-primary">
-          返回诊断中心
+          返回经营体检
         </router-link>
       </div>
     </div>
@@ -309,7 +324,7 @@ const router = useRouter()
 
 const result = ref({})
 const isUnifiedResult = ref(false)
-const reportTitle = ref('企业增长全景顾问报告')
+const reportTitle = ref('本周招生经营建议')
 const aiUsed = ref(false)
 
 function getScoreClass(score, maxScore) {
@@ -357,16 +372,20 @@ function formatKey(key) {
   return map[key] || key
 }
 
-function formatLoopDiagram(loopAnalysis) {
-  if (typeof loopAnalysis === 'string') return loopAnalysis
-  if (loopAnalysis.flywheel && loopAnalysis.ceiling) {
-    return `增长飞轮（增强回路）：
-${loopAnalysis.flywheel.weakest?.label || '未知'}（${loopAnalysis.flywheel.weakest?.score}分）←—— 飞轮卡点
+function formatLoopType(loopType) {
+  return loopType === '增强回路' ? '影响招生增长' : loopType === '调节回路' ? '限制团队执行' : '需要顾问确认'
+}
 
-天花板（调节回路）：
-${loopAnalysis.ceiling.weakest?.label || '未知'}（${loopAnalysis.ceiling.weakest?.score}分）←—— 天花板瓶颈`
+function formatLoopDiagram(loopAnalysis) {
+  if (typeof loopAnalysis === 'string') return '这部分经营关系需要顾问结合七天记录确认'
+  if (loopAnalysis.flywheel && loopAnalysis.ceiling) {
+    return `较弱的招生环节：
+${loopAnalysis.flywheel.weakest?.label || '未知'}（${loopAnalysis.flywheel.weakest?.score}分）←—— 当前需要先观察
+
+限制执行的环节：
+${loopAnalysis.ceiling.weakest?.label || '未知'}（${loopAnalysis.ceiling.weakest?.score}分）←—— 七天后决定继续或求助`
   }
-  return ''
+  return '现有数据不足，需要顾问确认'
 }
 
 function getToolDisplayName(toolCode) {
@@ -376,7 +395,7 @@ function getToolDisplayName(toolCode) {
 async function handleShare() {
   const shareData = {
     title: reportTitle.value,
-    text: '企业增长全景顾问诊断报告',
+    text: '本周招生经营建议',
     url: window.location.href
   }
 
@@ -396,7 +415,7 @@ onMounted(() => {
   if (state?.result) {
     result.value = state.result
     isUnifiedResult.value = true
-    reportTitle.value = state.title || '企业增长全景顾问报告'
+    reportTitle.value = state.title || '本周招生经营建议'
     aiUsed.value = state.aiUsed || false
     return
   }

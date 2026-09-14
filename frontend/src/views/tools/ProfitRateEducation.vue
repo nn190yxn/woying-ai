@@ -51,7 +51,7 @@ const result = ref(null)
 
 function handleSubmit() {
   if (!form.revenue || !form.coachSalary || !form.rent || !form.utilities || !form.marketing) {
-    result.value = { error: '请填写所有字段' }; return
+    result.value = { error: '请把这次经营情况填完整' }; return
   }
   if (form.revenue <= 0) { result.value = { error: '请输入有效的月营业额' }; return }
 

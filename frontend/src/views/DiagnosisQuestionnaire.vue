@@ -5,7 +5,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <path d="M19 12H5M12 19l-7-7 7-7"/>
         </svg>
-        返回诊断中心
+        返回经营体检
       </button>
 
       <!-- 加载状态 -->
@@ -17,7 +17,7 @@
       <!-- 错误状态 -->
       <div v-else-if="error" class="error-card card">
         <p class="error-text">{{ error }}</p>
-        <button class="btn btn-primary" @click="handleRetry">重试</button>
+        <button class="btn btn-primary" @click="handleRetry">重新打开</button>
       </div>
 
       <!-- 正常流程 -->
@@ -188,8 +188,8 @@
               :disabled="!allAnswered || generating"
               @click="submit"
             >
-              <span v-if="generating" class="btn-loading">生成中...</span>
-              <span v-else>生成诊断报告</span>
+              <span v-if="generating" class="btn-loading">正在整理建议...</span>
+              <span v-else>查看本周经营建议</span>
             </button>
           </div>
         </div>
@@ -220,7 +220,7 @@ const route = useRoute()
 const router = useRouter()
 
 const loading = ref(false)
-const loadingText = ref('加载诊断问题...')
+const loadingText = ref('正在打开经营体检...')
 const error = ref(null)
 const generating = ref(false)
 
@@ -329,11 +329,11 @@ const isGrowthDiagnosis = computed(() => true)
 
 const currentStageData = computed(() => {
   switch (currentStage.value) {
-    case 'stage0': return { label: '阶段0', title: '行业与城市画像', desc: '2问开场（城市+行业）自动识别城市线级，预判市场环境' }
-    case 'founder': return { label: '模块F', title: '创始人能力诊断', desc: founderVersion.value === 'direct' ? '评估6项核心能力（1-5分）' : '通过企业症状反推能力缺口' }
-    case 'rent': return { label: '模块I', title: '企业租评估', desc: '评估"劳动"vs"租"的比例，识别系统性风险' }
-    case 'scan': return { label: '阶段1', title: '快速扫描', desc: '6维度评分，区分增强回路与调节回路' }
-    case 'ip': return { label: '模块G', title: '创始人IP诊断', desc: '5维度评估，推荐最适合的IP形式' }
+    case 'stage0': return { label: '第1步', title: '了解校区和主推课程', desc: '先说明校区、课程和家长从咨询到报名的大致情况' }
+    case 'founder': return { label: '第2步', title: '填写本周招生数据', desc: '根据本周真实执行情况评分；暂时没有数据也可以继续，结果会标记为需要顾问确认' }
+    case 'rent': return { label: '第3步', title: '找主要问题', desc: '看看招生工作是否过度依赖校长个人，找出最影响结果的一环' }
+    case 'scan': return { label: '第4步', title: '确定本周行动', desc: '从咨询、到店、报名和团队执行中确定本周优先改进项' }
+    case 'ip': return { label: '第5步', title: '七天后复盘', desc: '连续记录七天结果，再决定继续、调整或找顾问' }
     default: return { label: '', title: '', desc: '' }
   }
 })
@@ -556,8 +556,8 @@ function completeStage() {
       currentStage.value = 'founder'
       currentQuestionIndex.value = 0
       stageCompleteMessage.value = {
-        title: '行业画像完成！',
-        desc: '接下来评估创始人能力。选择直接版（6项能力评分）或间接版（症状反推）。'
+        title: '校区和主推课程已了解',
+        desc: '下一步填写本周招生与团队执行情况。没有把握的项目按实际感受选择即可。'
       }
       break
     case 'founder':
@@ -577,21 +577,21 @@ function completeStage() {
         currentStage.value = 'ip'
         currentQuestionIndex.value = 0
         stageCompleteMessage.value = {
-          title: '快速扫描完成！',
-          desc: '检测到获客和复制能力较弱，建议进行创始人IP诊断。'
+          title: '主要问题已初步找到',
+          desc: '咨询和团队执行还需要进一步核实。完成最后一步后，七天后回来对照结果。'
         }
       } else {
         // 直接进入报告生成
         stageCompleteMessage.value = {
-          title: '诊断数据收集完成！',
-          desc: '点击生成诊断报告按钮，AI 将为您生成专属诊断报告。'
+          title: '本周情况已填写完成',
+          desc: '查看根据你填写的信息整理的本周行动建议；关键判断仍需要顾问确认。'
         }
       }
       break
     case 'ip':
       stageCompleteMessage.value = {
-        title: '所有诊断完成！',
-        desc: '点击生成诊断报告按钮，AI 将为您生成专属诊断报告。'
+        title: '五步经营体检已完成',
+        desc: '查看根据你填写的信息整理的本周行动建议；关键判断仍需要顾问确认。'
       }
       break
   }
@@ -608,7 +608,7 @@ function continueToNext() {
 async function submit() {
   if (!allAnswered.value || generating.value) return
   generating.value = true
-  loadingText.value = 'AI 正在生成诊断报告...'
+  loadingText.value = '正在整理本周问题和行动建议...'
 
   try {
     const diagnosisData = {
@@ -626,10 +626,10 @@ async function submit() {
     const data = await request.post('/diagnosis/v3/generate', diagnosisData)
     router.push({
       name: 'DiagnosisReport',
-      state: { result: data.analysis, title: '企业增长全景顾问报告', aiUsed: data.aiUsed }
+      state: { result: data.analysis, title: '本周招生经营建议', aiUsed: data.aiUsed }
     })
   } catch (e) {
-    error.value = e.message || '诊断报告生成失败，请稍后重试'
+    error.value = '暂时没能整理本周建议，请稍后再试'
   } finally {
     generating.value = false
     loading.value = false

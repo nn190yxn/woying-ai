@@ -13,3 +13,12 @@ audit-freeze/
 **/.env
 !.env.example
 !**/.env.example
+
+# Local-only test and browser acceptance artifacts
+backend/storage/private/
+frontend/audit-output.txt
+frontend/build-final.txt
+.monkeycode/tmp-task10-browser.js
+.monkeycode/tmp-task10-screenshots.js
+.superpowers/**/state/
+.ohmyagent/settings.json

@@ -14,6 +14,13 @@ import {
 
 const router = express.Router()
 
+const buildSourceMeta = ({ resultSource, modelInvoked = false, modelSucceeded = false }) => ({
+  resultSource,
+  modelInvoked,
+  modelSucceeded,
+  advisorConfirmed: false
+})
+
 // 中间件：验证会员等级
 const checkAccess = async (req, res, next) => {
   const authHeader = req.headers.authorization
@@ -982,6 +989,7 @@ ${JSON.stringify({
         kbEnhanced: Boolean(kbResult.context),
         kbFilesUsed: kbResult.meta?.kbFilesUsed || []
       },
+      ...buildSourceMeta({ resultSource: parsed ? 'model_assisted' : 'rule_fallback', modelInvoked: true, modelSucceeded: Boolean(parsed) }),
       isRuleFallback: !parsed
     })
   } catch (error) {
@@ -1205,6 +1213,8 @@ router.post('/data-diagnoser', checkAccess, requireLevel('pro'), async (req, res
 
   res.json({
     agent: 'data-diagnoser',
+    status: 'success',
+    ...buildSourceMeta({ resultSource: 'system_rule' }),
     analysis: {
       viewRate,
       completeRate,
@@ -1230,7 +1240,8 @@ router.get('/review-records/latest', checkAccess, requireLevel('pro'), async (re
     res.json({
       agent: 'data-diagnoser',
       status: rows.length ? 'success' : 'empty',
-      reviewRecord: rows.length ? formatReviewRecord(rows[0]) : null
+      reviewRecord: rows.length ? formatReviewRecord(rows[0]) : null,
+      ...buildSourceMeta({ resultSource: 'system_rule' })
     })
   } catch (error) {
     res.status(500).json({ message: '读取最近复盘记录失败' })
@@ -1252,7 +1263,8 @@ router.get('/review-records', checkAccess, requireLevel('pro'), async (req, res)
     res.json({
       agent: 'data-diagnoser',
       status: 'success',
-      reviewRecords: rows.map(formatReviewRecord)
+      reviewRecords: rows.map(formatReviewRecord),
+      ...buildSourceMeta({ resultSource: 'system_rule' })
     })
   } catch (error) {
     res.status(500).json({ message: '读取复盘记录失败' })
@@ -1275,7 +1287,8 @@ router.get('/review-records/insights', checkAccess, requireLevel('pro'), async (
     res.json({
       agent: 'data-diagnoser',
       status: records.length ? 'success' : 'empty',
-      insights: buildReviewInsights(records)
+      insights: buildReviewInsights(records),
+      ...buildSourceMeta({ resultSource: 'system_rule' })
     })
   } catch (error) {
     res.status(500).json({ message: '生成复盘洞察失败' })
@@ -1326,7 +1339,8 @@ router.post('/review-records', checkAccess, requireLevel('pro'), async (req, res
     res.json({
       agent: 'data-diagnoser',
       status: 'success',
-      reviewRecord: rows.length ? formatReviewRecord(rows[0]) : null
+      reviewRecord: rows.length ? formatReviewRecord(rows[0]) : null,
+      ...buildSourceMeta({ resultSource: 'system_rule' })
     })
   } catch (error) {
     res.status(500).json({ message: '保存复盘记录失败' })
@@ -1366,7 +1380,7 @@ router.post('/full-strategy-legacy', checkAccess, requireLevel('annual'), async 
     upgradePath: {
       type: '1v1_consultation',
       title: '预约专家定制全案',
-      description: 'AI 生成草稿 + 运营专家沟通润色 = 尊享定制报告',
+      description: '系统方案 + 模型补充；提交后由运营顾问另行确认',
       contactHint: '提交需求后，专属顾问将在 24 小时内联系您'
     }
   })
@@ -1382,14 +1396,15 @@ router.post('/quick-plan', checkAccess, requireLevel('pro'), async (req, res) =>
       agent: 'quick-plan',
       status: 'success',
       plan: rulePlan,
+      ...buildSourceMeta({ resultSource: 'system_rule' }),
       isRuleFallback: true,
-      upgradeHint: '升级高阶会员可获得 30 天长期赛马表和投流复盘模板。'
+      upgradeHint: '升级高阶会员可获得 30 天长期内容测试表和投流复盘模板。'
     })
   }
 
   try {
     const content = await generateStructured({
-      systemPrompt: '你是抖音本地生活 15 天速胜计划专家。你必须输出 JSON，不输出 Markdown。',
+      systemPrompt: '你是抖音本地生活 15 天行动计划专家。你必须输出 JSON，不输出 Markdown。',
       userPrompt: `行业：${industryNameMap[quickPlanInput.industryCode] || quickPlanInput.industryCode || '本地生活'}
 目标：${quickPlanInput.goalCode}
 每日更新频率：${quickPlanInput.frequency || 1}
@@ -1415,7 +1430,7 @@ riskBoundary 必须为 3 条字符串数组，覆盖数据复盘边界、投流�
 phases 必须为三个阶段数组，每个阶段包含 name、days。
 days 的每一项必须包含以下字段：
 - day: 1-15 的数字
-- phase: 测试期、放大期或收割期
+- phase: 测试期、优化期或转化期
 - goal: 今日目标，老板能直接执行
 - action: 与 goal 保持一致，用于兼容旧版前端
 - workType: 作品类型，例如测试内容、赛马内容、转化内容、案例内容、复盘记录
@@ -1442,15 +1457,17 @@ days 的每一项必须包含以下字段：
       agent: 'quick-plan',
       status: 'success',
       plan,
-      upgradeHint: '升级高阶会员可获得 30 天长期赛马表和投流复盘模板。'
+      ...buildSourceMeta({ resultSource: parsed ? 'model_generated' : 'rule_fallback', modelInvoked: true, modelSucceeded: Boolean(parsed) }),
+      upgradeHint: '升级高阶会员可获得 30 天长期内容测试表和投流复盘模板。'
     })
   } catch (error) {
     res.json({
       agent: 'quick-plan',
       status: 'success',
       plan: validateQuickPlanResult(null, quickPlanInput, { generationMode: 'ruleFallback' }),
+      ...buildSourceMeta({ resultSource: 'rule_fallback', modelInvoked: true, modelSucceeded: false }),
       isRuleFallback: true,
-      upgradeHint: '升级高阶会员可获得 30 天长期赛马表和投流复盘模板。'
+      upgradeHint: '升级高阶会员可获得 30 天长期内容测试表和投流复盘模板。'
     })
   }
 })
@@ -1719,7 +1736,7 @@ router.post('/full-strategy', checkAccess, requireLevel('annual'), async (req, r
       upgradePath: {
         type: '1v1_consultation',
         title: '预约专家定制全案',
-        description: 'AI 生成草稿 + 运营专家沟通润色 = 尊享定制报告',
+        description: '系统方案 + 模型补充；提交后由运营顾问另行确认',
         contactHint: '提交需求后，专属顾问将在 24 小时内联系您'
       },
       title: parsed?.title || fallbackStrategy.title,
@@ -1734,7 +1751,7 @@ router.post('/full-strategy', checkAccess, requireLevel('annual'), async (req, r
       upgradePath: {
         type: '1v1_consultation',
         title: '预约专家定制全案',
-        description: 'AI 生成草稿 + 运营专家沟通润色 = 尊享定制报告',
+        description: '系统方案 + 模型补充；提交后由运营顾问另行确认',
         contactHint: '提交需求后，专属顾问将在 24 小时内联系您'
       },
       title: fallbackStrategy.title,

@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/xhs')">← 返回经营工作台</button>
       <h1 class="agent-title">🍟 薯条投放计算器</h1>
       <p class="agent-desc">判断笔记是否值得投薯条，预估曝光量与 ROI</p>
     </div>

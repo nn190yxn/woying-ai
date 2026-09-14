@@ -1,0 +1,6 @@
+export const CHILD_TRAINING_LOOP_FIXTURES = [
+  { code: 'leads_low', name: '获客不足', input: { problem_code: 'leads_low', course_name: '少儿篮球体验课', age_range: '6-12岁', views: 12000, valid_leads: 4, appointments: 2, arrivals: 1, trial_completed: 1, new_sales: 0, spend: 1500 }, expectedIssue: '曝光未形成有效咨询', expectedBasis: ['funnel-traffic', 'content-action-card'] },
+  { code: 'arrival_low', name: '预约到店不足', input: { problem_code: 'arrival_low', course_name: '少儿足球体验课', age_range: '7-13岁', views: 8000, valid_leads: 30, appointments: 12, arrivals: 2, trial_completed: 2, new_sales: 1, spend: 600 }, expectedIssue: '预约未形成到店', expectedBasis: ['funnel-traffic', 'trial-offer'] },
+  { code: 'sale_low', name: '到店不成交', input: { problem_code: 'sale_low', course_name: '少儿篮球体验课', age_range: '6-12岁', views: 12000, valid_leads: 28, appointments: 12, arrivals: 3, trial_completed: 3, new_sales: 0, spend: 1800 }, expectedIssue: '到店未形成正价成交', expectedBasis: ['funnel-sale', 'trial-offer'] },
+  { code: 'renewal_low', name: '成交后续费不足', input: { problem_code: 'renewal_low', course_name: '少儿体能长期班', age_range: '5-10岁', views: 6000, valid_leads: 20, appointments: 10, arrivals: 8, trial_completed: 8, new_sales: 6, renewals: 1, eligible_renewals: 6, spend: 300 }, expectedIssue: '成交后续费承接不足', expectedBasis: ['funnel-renewal'] }
+]

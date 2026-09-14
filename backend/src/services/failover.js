@@ -124,7 +124,7 @@ export async function createRagFallbackResult(toolConfig = {}, formData = {}, er
       ...(fallback.meta || {}),
       ...(fallback.extra || {}),
       fallbackType: isAiAvailabilityError(error) ? 'ai_unavailable' : 'rag_fallback',
-      fallbackReason: error?.message || 'RAG fallback generated'
+      fallbackReason: '智能生成暂时不可用，已返回基础结果；如需完整结果，请稍后重试。'
     }
   }
 }

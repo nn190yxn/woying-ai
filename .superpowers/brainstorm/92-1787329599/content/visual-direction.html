@@ -1,0 +1,38 @@
+<style>
+.direction-grid{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:18px;margin-top:22px}.direction{border:1px solid #d9dee7;border-radius:18px;overflow:hidden;background:#fff;cursor:pointer;transition:.2s;box-shadow:0 10px 30px rgba(17,24,39,.06)}.direction:hover{transform:translateY(-3px);box-shadow:0 16px 36px rgba(17,24,39,.12)}.direction.selected{outline:3px solid #2563eb}.mini{min-height:430px;padding:0}.mini-nav{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 15px;font-size:11px}.mini-body{padding:17px}.hero-title{font-size:22px;font-weight:750;line-height:1.25;margin:9px 0}.hero-sub{font-size:11px;line-height:1.6;opacity:.72}.engine{padding:14px;border-radius:13px;margin-top:10px}.engine b{font-size:13px}.engine p{font-size:10px;margin:5px 0 0;line-height:1.5}.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}.metric{border-radius:10px;padding:9px;font-size:9px}.metric strong{display:block;font-size:16px;margin-top:3px}.badge{display:inline-block;border-radius:99px;padding:4px 8px;font-size:9px}.direction-copy{padding:15px 16px 18px}.direction-copy h3{margin:0 0 6px}.direction-copy p{font-size:12px;line-height:1.55;margin:0;color:#667085}.a{background:#f6f7f3;color:#17231c}.a .mini-nav{background:#173d2c;color:#fff}.a .engine{background:#fff;border:1px solid #dfe5de}.a .engine:first-of-type{background:#dff4e7;border-color:#b7ddc4}.a .metric{background:#ecefe9}.a .badge{background:#f3b94e;color:#3a2910}.b{background:#f7f9fc;color:#14213d}.b .mini-nav{background:#fff;border-bottom:1px solid #e7ebf2}.b .engine{background:#fff;border:1px solid #e5eaf1}.b .engine:first-of-type{background:linear-gradient(135deg,#1e4ed8,#3c7df0);color:#fff;border:none}.b .metric{background:#fff;border:1px solid #e5eaf1}.b .badge{background:#e7efff;color:#1d4ed8}.c{background:#10131a;color:#f7f7f5}.c .mini-nav{background:#171b24;border-bottom:1px solid #2b303b}.c .engine{background:#1a1f29;border:1px solid #2d3441}.c .engine:first-of-type{background:linear-gradient(135deg,#6d4aff,#b15cff);border:none}.c .metric{background:#171b24;border:1px solid #2d3441}.c .badge{background:#f2c94c;color:#111}.pick-note{text-align:center;margin-top:18px;font-size:12px;color:#667085}@media(max-width:900px){.direction-grid{grid-template-columns:1fr}}
+</style>
+<h2>选择产品的视觉方向</h2>
+<p class="subtitle">三种方案都面向体培老板，区别在于品牌气质和信息表达。点击选择一个方向。</p>
+<div class="direction-grid">
+  <div class="direction" data-choice="a" onclick="toggleSelect(this)">
+    <div class="mini a">
+      <div class="mini-nav"><b>我赢AI</b><span>获客引擎　销售教练　成果</span></div>
+      <div class="mini-body"><span class="badge">本周增长建议</span><div class="hero-title">先解决获客，<br>再提高成交。</div><div class="hero-sub">为儿童素质培训老板提供清晰、可信的增长行动。</div>
+        <div class="engine"><b>AI 获客引擎</b><p>抖音 · 小红书 · 直播 · 活动策划</p></div><div class="engine"><b>AI 销售教练</b><p>上传录音，找到丢单原因和替换话术</p></div>
+        <div class="metric-row"><div class="metric">获客方案<strong>12</strong></div><div class="metric">录音复盘<strong>8</strong></div><div class="metric">待行动<strong>3</strong></div></div>
+      </div>
+    </div>
+    <div class="direction-copy"><h3>A｜温暖专业</h3><p>教育品牌感更强，墨绿、米白和暖金。可信、有人情味，适合“软件＋陪跑服务”。</p></div>
+  </div>
+  <div class="direction" data-choice="b" onclick="toggleSelect(this)">
+    <div class="mini b">
+      <div class="mini-nav"><b>我赢AI</b><span>工作台　帮助　账户</span></div>
+      <div class="mini-body"><span class="badge">增长工作台</span><div class="hero-title">今天最值得做的<br>增长动作</div><div class="hero-sub">基于机构现状，AI已为你排好优先级。</div>
+        <div class="engine"><b>开启 AI 获客诊断 →</b><p>分析渠道、内容和平台数据</p></div><div class="engine"><b>复盘一段销售录音</b><p>获得评分、证据和训练任务</p></div>
+        <div class="metric-row"><div class="metric">诊断进度<strong>80%</strong></div><div class="metric">销售评分<strong>72</strong></div><div class="metric">成果资产<strong>20</strong></div></div>
+      </div>
+    </div>
+    <div class="direction-copy"><h3>B｜现代SaaS</h3><p>蓝白、数据清晰、效率优先。老板容易理解，但品牌辨识度较常规。</p></div>
+  </div>
+  <div class="direction" data-choice="c" onclick="toggleSelect(this)">
+    <div class="mini c">
+      <div class="mini-nav"><b>WOYING / AI</b><span>GROWTH OS</span></div>
+      <div class="mini-body"><span class="badge">AI GROWTH SYSTEM</span><div class="hero-title">增长，不靠猜。</div><div class="hero-sub">把内容策略和销售对话，转化为可验证的机构增长能力。</div>
+        <div class="engine"><b>ACQUISITION ENGINE</b><p>渠道诊断 / 内容策略 / 增长实验</p></div><div class="engine"><b>SALES COACH</b><p>录音质检 / 成交洞察 / 能力趋势</p></div>
+        <div class="metric-row"><div class="metric">ACTIVE PLAN<strong>04</strong></div><div class="metric">SCORE<strong>72</strong></div><div class="metric">ALERT<strong>03</strong></div></div>
+      </div>
+    </div>
+    <div class="direction-copy"><h3>C｜高端智能</h3><p>深色、高对比、AI科技感。更有冲击力，但可能离传统体培老板稍远。</p></div>
+  </div>
+</div>
+<p class="pick-note">推荐 A：既有专业度，又能承接你的真人陪跑服务。</p>

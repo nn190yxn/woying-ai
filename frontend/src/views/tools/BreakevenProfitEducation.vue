@@ -50,7 +50,7 @@
       </div>
 
       <div class="section-card">
-        <h3 class="section-title">可选参数</h3>
+        <h3 class="section-title">如果有数据，也可以补充</h3>
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">实际月营收（元）</label>
@@ -162,7 +162,7 @@ const result = ref(null)
 
 async function handleSubmit() {
   if (!rent.value || !salaries.value || !avgPricePerSession.value) {
-    result.value = { error: '请填写完整必填字段' }
+    result.value = { error: '请先把带必填项的经营情况填好' }
     return
   }
   result.value = null
@@ -182,7 +182,7 @@ async function handleSubmit() {
     })
     result.value = res
   } catch (err) {
-    result.value = { error: err.message || '计算失败' }
+    result.value = { error: '计算未完成：请检查填写内容后重试；如仍失败，请联系管理员' }
   }
 }
 </script>

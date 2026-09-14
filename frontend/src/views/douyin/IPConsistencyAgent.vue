@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回经营工作台</button>
       <h1 class="agent-title">🔎 人设一致性检查</h1>
       <p class="agent-desc">输入近期内容，评估人设是否跑偏</p>
     </div>

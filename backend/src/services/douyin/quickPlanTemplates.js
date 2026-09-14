@@ -1,7 +1,7 @@
 export const quickPlanPhaseTemplates = [
-  { key: 'test', name: '第 1-5 天：测试期（验证内容模型）', phase: '测试期', dayRange: [1, 5] },
-  { key: 'scale', name: '第 6-10 天：放大期（赛马放量）', phase: '放大期', dayRange: [6, 10] },
-  { key: 'convert', name: '第 11-15 天：收割期（转化变现）', phase: '收割期', dayRange: [11, 15] }
+  { key: 'test', name: '第 1-5 天：测试期（确认内容方向）', phase: '测试期', dayRange: [1, 5] },
+  { key: 'scale', name: '第 6-10 天：优化期（放大有效内容）', phase: '优化期', dayRange: [6, 10] },
+  { key: 'convert', name: '第 11-15 天：转化期（承接到店报名）', phase: '转化期', dayRange: [11, 15] }
 ]
 
 export const quickPlanDayTemplates = [
@@ -51,7 +51,7 @@ export const quickPlanDayTemplates = [
     day: 4,
     phaseKey: 'test',
     status: '未开始',
-    workType: '赛马内容',
+    workType: '对比测试内容',
     videoFunction: '同城拉新',
     shootingMethod: '口播 + 门店画面',
     goalIntent: '发布用户顾虑深化视频',
@@ -79,13 +79,13 @@ export const quickPlanDayTemplates = [
     day: 6,
     phaseKey: 'scale',
     status: '未开始',
-    workType: '赛马内容',
+    workType: '对比测试内容',
     videoFunction: '同城拉新',
     shootingMethod: '口播 + 门店画面',
     goalIntent: '把主推产品拆成 3 条变体',
-    topicIntent: '用顾虑、证明素材和价格权益三个角度赛马',
+    topicIntent: '用顾虑、证明素材和价格权益三个角度对比测试',
     executionTool: '脚本生成器 / 标题优化器',
-    adIntent: '对跑量素材开启小预算赛马或集中发布高潜力方向',
+    adIntent: '对跑量素材开启小预算测试或集中发布高潜力方向',
     nurtureIntent: '把评论问题沉淀成私信回复模板',
     metricIntent: '至少 1 条进入下一级流量池'
   },
@@ -93,7 +93,7 @@ export const quickPlanDayTemplates = [
     day: 7,
     phaseKey: 'scale',
     status: '未开始',
-    workType: '赛马内容',
+    workType: '对比测试内容',
     videoFunction: '信任建立',
     shootingMethod: '老板口播',
     goalIntent: '复制高数据钩子继续讲主推产品',

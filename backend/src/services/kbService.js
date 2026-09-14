@@ -5,6 +5,7 @@ import { readFileSync, existsSync } from 'fs'
 import { join, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { logger } from '../middleware/logger.js'
+import { CHILD_TRAINING_KNOWLEDGE } from '../data/childTrainingKnowledge.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -21,6 +22,13 @@ const fileCache = new Map()
 const CACHE_TTL = 5 * 60 * 1000
 const MAX_CONTEXT_CHARS = parseInt(process.env.KB_MAX_CONTEXT_CHARS || '4500', 10)
 const MAX_FILE_CHARS = parseInt(process.env.KB_MAX_FILE_CHARS || '1800', 10)
+const LAYERED_MAX_SNIPPETS = Math.max(1, Math.min(8, parseInt(process.env.KB_LAYERED_MAX_SNIPPETS || '4', 10)))
+const LAYERED_MAX_CHARS = Math.max(500, Math.min(MAX_CONTEXT_CHARS, parseInt(process.env.KB_LAYERED_MAX_CHARS || '3200', 10)))
+const LAYERED_KNOWLEDGE = [
+  { path: '01_业务场景库/引流获客/教培引流方案案例.md', industry: '儿童素质培训', productDomain: 'acquisition', channels: ['douyin', 'xhs', 'local'], scenes: ['diagnosis', 'content', 'growth', 'plan', 'douyin', 'xhs'], skillVersions: ['1.0.0'] },
+  { path: '01_业务场景库/选题策划/教培内容日历模板.md', industry: '儿童素质培训', productDomain: 'acquisition', channels: ['douyin', 'xhs'], scenes: ['content', 'plan'], skillVersions: ['1.0.0'] },
+  { path: '01_业务场景库/话术转化/教培促单话术案例.md', industry: '儿童素质培训', productDomain: 'sales', channels: ['offline', 'wechat'], scenes: ['new_sale', 'renewal'], skillVersions: ['1.0.0'] }
+]
 
 /**
  * Validate that a requested KB path doesn't escape the KB_ROOT directory.
@@ -285,6 +293,60 @@ function trimByChars(text, maxChars) {
  * @param {string} [options.retrievalMode] - 'mapping_only' or 'mapping_plus_vector'
  * @returns {{ context: string, meta: { kbFilesUsed: string[], retrievalMode: string, contextChars: number } }}
  */
+const BLOCKED_KNOWLEDGE_STATUSES = new Set(['conflicted', 'expired', 'revoked', 'archived', 'raw', 'pending_review'])
+const EVIDENCE_SCORE = { institution_baseline: 600, multi_institution_verified: 500, fused_rule: 400, source_summary: 300, single_source_experience: 200, cross_industry_analogy: 100 }
+const matchesDimension = (actual, expected) => expected == null || expected === '' || (Array.isArray(expected) ? expected : [expected]).some(value => (Array.isArray(actual) ? actual : [actual]).includes(value))
+
+export function retrieveStructuredKnowledge(options = {}, knowledgeIndex = CHILD_TRAINING_KNOWLEDGE) {
+  const { industry = '儿童素质培训', productDomain, channel, scene, knowledgeType, evidenceLevel, volatility, status, skillVersion, organizationId, maxSnippets = LAYERED_MAX_SNIPPETS, maxChars = LAYERED_MAX_CHARS, now = new Date() } = options
+  const limit = Math.max(1, Math.min(20, Number(maxSnippets) || LAYERED_MAX_SNIPPETS))
+  const budget = Math.max(100, Math.min(MAX_CONTEXT_CHARS, Number(maxChars) || LAYERED_MAX_CHARS))
+  const nowTime = new Date(now).getTime()
+  const candidates = knowledgeIndex.filter(item => {
+    if (status ? item.status !== status : BLOCKED_KNOWLEDGE_STATUSES.has(item.status)) return false
+    if (item.next_review && new Date(item.next_review).getTime() < nowTime) return false
+    if (['restricted', 'high'].includes(item.privacy_level)) return false
+    if (!matchesDimension(item.industry, industry) || !matchesDimension(item.product_domain, productDomain)) return false
+    if (!matchesDimension(item.channel, channel) || !matchesDimension(item.scene, scene)) return false
+    if (!matchesDimension(item.knowledge_type, knowledgeType) || !matchesDimension(item.evidence_level, evidenceLevel)) return false
+    if (!matchesDimension(item.volatility, volatility) || !matchesDimension(item.skill_versions, skillVersion)) return false
+    return item.organization_id == null || (organizationId != null && String(item.organization_id) === String(organizationId))
+  }).map(item => ({ ...item, _score: (item.organization_id != null && String(item.organization_id) === String(organizationId) ? 1000 : 0) + (EVIDENCE_SCORE[item.evidence_level] || 0) }))
+    .sort((a, b) => b._score - a._score || new Date(b.last_verified) - new Date(a.last_verified) || a.knowledge_id.localeCompare(b.knowledge_id))
+  const chains = new Set(); const snippets = []
+  for (const item of candidates) {
+    const chain = item.derived_from?.[0] || item.canonical_topic || item.knowledge_id
+    if (chains.has(chain)) continue
+    chains.add(chain)
+    snippets.push({ knowledgeId: item.knowledge_id, text: `${item.title}：${item.statement}`, evidenceLevel: item.evidence_level, sourceCategory: item.source_category, lastVerified: item.last_verified, requiresVerification: Boolean(item.requires_verification), analogyOnly: Boolean(item.analogy_only), organizationId: item.organization_id, layers: { industry: item.industry, productDomain: item.product_domain, channel: item.channel, scene: item.scene, skillVersion } })
+    if (snippets.length >= limit) break
+  }
+  const context = trimByChars(snippets.map(item => `【知识：${item.knowledgeId}｜依据：${item.sourceCategory}｜核验：${item.lastVerified}】\n${item.text}`).join('\n\n'), budget)
+  return { context, snippets, meta: { filtersApplied: true, structured: true, contextChars: context.length, snippetCount: snippets.length, maxSnippets: limit, maxChars: budget } }
+}
+
+export function retrieveLayeredKnowledge({ industry = '儿童素质培训', productDomain, channel, scene, skillVersion, maxSnippets = LAYERED_MAX_SNIPPETS, maxChars = LAYERED_MAX_CHARS } = {}) {
+  if (!productDomain || !scene || !skillVersion) return { context: '', snippets: [], meta: { filtersApplied: true, contextChars: 0, snippetCount: 0 } }
+  const structured = retrieveStructuredKnowledge({ industry, productDomain, channel, scene, skillVersion, maxSnippets, maxChars })
+  if (structured.snippets.length) return structured
+  const limit = Math.max(1, Math.min(LAYERED_MAX_SNIPPETS, Number(maxSnippets) || LAYERED_MAX_SNIPPETS))
+  const budget = Math.max(500, Math.min(LAYERED_MAX_CHARS, Number(maxChars) || LAYERED_MAX_CHARS))
+  const snippets = []
+  for (const item of LAYERED_KNOWLEDGE) {
+    if (item.industry !== industry || item.productDomain !== productDomain) continue
+    if (channel && !item.channels.includes(channel)) continue
+    if (!item.scenes.includes(scene) || !item.skillVersions.includes(skillVersion)) continue
+    const filePath = validateKBPath(item.path)
+    const content = filePath ? readFileWithCache(filePath) : ''
+    if (!content) continue
+    const text = trimByChars(content, Math.min(MAX_FILE_CHARS, Math.ceil(budget / limit)))
+    snippets.push({ path: item.path, text, layers: { industry, productDomain, channel: channel || null, scene, skillVersion } })
+    if (snippets.length >= limit) break
+  }
+  const context = trimByChars(snippets.map(item => `【知识库：${item.path}】\n${item.text}`).join('\n\n'), budget)
+  return { context, snippets, meta: { filtersApplied: true, contextChars: context.length, snippetCount: snippets.length, maxSnippets: limit, maxChars: budget } }
+}
+
 export function getKBContextWithMeta(toolCode, memberLevel = 'free', formData = {}, options = {}) {
   const retrievalMode = options.retrievalMode || 'mapping_only'
   const rawFallback = Boolean(options.rawFallback)

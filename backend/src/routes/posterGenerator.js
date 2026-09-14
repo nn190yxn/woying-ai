@@ -449,7 +449,7 @@ router.post('/prompt', authMiddleware, async (req, res, next) => {
     })
   } catch (error) {
     logger.toolFailure(req.user?.userId || 'unknown', 'poster-prompt', error)
-    next(error)
+    res.status(500).json({ success: false, error: '提示词或海报生成未完成：系统暂时无法处理本次请求。影响：当前结果不可用。下一步：请稍后重试；如仍失败，请联系管理员。' })
   }
 })
 
@@ -547,7 +547,7 @@ router.post('/generate', authMiddleware, async (req, res, next) => {
   } catch (error) {
     logger.toolFailure(req.user?.userId || 'unknown', 'poster-generate', error, Date.now() - startTime)
     await trackEvent(req.user?.userId, EVENT_TYPES.TOOL_FAILURE, { toolCode: 'poster', error: error.message })
-    next(error)
+    res.status(500).json({ success: false, error: '提示词或海报生成未完成：系统暂时无法处理本次请求。影响：当前结果不可用。下一步：请稍后重试；如仍失败，请联系管理员。' })
   }
 })
 

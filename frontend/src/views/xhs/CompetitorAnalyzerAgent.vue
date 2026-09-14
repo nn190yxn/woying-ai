@@ -1,8 +1,8 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">返回智能体矩阵</button>
-      <h1 class="agent-title">竞对分析器</h1>
+      <button class="back-btn" @click="$router.push('/xhs')">返回经营工作台</button>
+      <h1 class="agent-title">同行内容参考</h1>
       <p class="agent-desc">拆解对标账号优势、短板、机会点和威胁项</p>
     </div>
 

@@ -2,7 +2,7 @@
   <div class="xhs-agent-hub">
     <div class="hub-header container-wide workbench-page-header">
       <p class="section-eyebrow">小红书经营工作台</p>
-      <h1 class="hub-title">小红书增长智能体矩阵</h1>
+      <h1 class="hub-title">小红书招生内容工作台</h1>
       <p class="hub-desc">按账号体检、起号计划、内容执行、数据复盘推进，从种草到变现形成闭环。</p>
     </div>
 
@@ -59,8 +59,8 @@
 
     <div class="hub-cta container-wide">
       <div class="cta-card card workbench-action-panel">
-        <h3>17 个智能体还不够？</h3>
-        <p>资深小红书运营专家 1 对 1 指导，为您量身定制完整增长方案</p>
+        <h3>想把招生内容做得更稳？</h3>
+        <p>顾问结合课程、家长问题和咨询结果，帮你安排内容与跟进重点</p>
         <button class="cta-btn" @click="$router.push('/membership')">升级会员，预约专家咨询</button>
       </div>
     </div>
@@ -97,7 +97,7 @@ const agentGroups = [
     id: 'planning', icon: '📅', name: '作战计划',
     agents: [
       { code: 'quick-start-plan', name: '15 天起号计划', emoji: '📅', desc: '新号冷启动节奏表，快速建立标签', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'growth-strategy', name: '90 天增长战略', emoji: '🗺️', desc: '阶段骨架展示，详情引导 1v1', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
+      { code: 'growth-strategy', name: '90 天增长战略', emoji: '🗺️', desc: '季度目标与执行节奏，详情可预约顾问', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
     ]
   },
   {
@@ -105,7 +105,7 @@ const agentGroups = [
     agents: [
       { code: 'topic-generator', name: '爆款选题库', emoji: '💡', desc: '5 大公式 + 搜索意图，精准选题', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter', usageHint: '每日 10 个' },
       { code: 'script-generator', name: '正文脚本生成', emoji: '📝', desc: '6 大结构模板，图文/视频全覆盖', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' },
-      { code: 'title-generator', name: '标题生成器', emoji: '✍️', desc: '12 种公式 + 行业案例库', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' },
+      { code: 'title-generator', name: '标题创作助手', emoji: '✍️', desc: '12 种公式 + 行业案例库', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' },
       { code: 'cover-helper', name: '封面文案助手', emoji: '🎨', desc: '3:4 规范 + 高点击钩子词', level: 'starter', levelText: '初阶会员', levelClass: 'level-starter' }
     ]
   },
@@ -113,7 +113,7 @@ const agentGroups = [
     id: 'conversion', icon: '💰', name: '转化经营',
     agents: [
       { code: 'conversion-optimizer', name: '转化链路优化', emoji: '🔗', desc: '合规 SOP 检查，安全引流', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'competitor-analyzer', name: '竞对分析器', emoji: '🎯', desc: '对标拆解 + 差异化定位', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' },
+      { code: 'competitor-analyzer', name: '同行内容参考', emoji: '🎯', desc: '对标拆解 + 差异化定位', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' },
       { code: 'grass-converter', name: '种草转化计算器', emoji: '🧮', desc: '阅读→成交漏斗 ROI 计算', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' }
     ]
   },

@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回经营工作台</button>
       <h1 class="agent-title">💵 DOU+ 投放计算器</h1>
       <p class="agent-desc">输入预算与目标，计算预期播放与转化</p>
     </div>

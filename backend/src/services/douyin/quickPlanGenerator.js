@@ -65,7 +65,7 @@ const buildResearchContext = ({ normalizedInput, industryStrategy, goalStrategy 
     proofAssets: normalizeText(diagnosisContext.proofAssets, industryStrategy.proofAssets),
     conversionPath: normalizeText(diagnosisContext.conversionPath, industryStrategy.conversionPath),
     painSummary: normalizeText(diagnosisContext.painSummary, weaknessLabel),
-    metrics: normalizeText(diagnosisContext.metrics, '当前数据样本较少，先用播放、完播、评论和私信做快速校准'),
+    metrics: normalizeText(diagnosisContext.metrics, '当前数据样本较少，先用播放、完播、评论和私信做阶段校准'),
     frequency: Number(normalizedInput.frequency) || 1,
     hasAd,
     adLabel,
@@ -207,7 +207,7 @@ export const buildQuickPlanFromTemplates = (input = {}) => {
   }))
 
   return normalizeQuickPlanResultCompat({
-    title: `${research.industryName}行业 15 天${research.goalName}速胜计划`,
+    title: `${research.industryName}行业 15 天${research.goalName}行动计划`,
     summary: `围绕${research.coreOffer}，先验证内容方向，再放大有效视频，最后承接到${research.conversionMetric || research.goalName}。`,
     researchBrief: buildResearchBrief({ normalizedInput, research }),
     riskBoundary: buildRiskBoundary({ research, industryStrategy }),

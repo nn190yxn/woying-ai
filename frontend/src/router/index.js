@@ -6,25 +6,25 @@ const routes = [
     path: '/',
     name: 'Home',
     component: () => import('@/views/Home.vue'),
-    meta: { title: '首页' }
+    meta: { title: '校区经营工作台' }
   },
   {
     path: '/tools',
     name: 'Tools',
     component: () => import('@/views/Tools.vue'),
-    meta: { title: '所有工具' }
+    meta: { title: '经营记录与工具' }
   },
   {
     path: '/industries/:slug',
     name: 'IndustryView',
     component: () => import('@/views/IndustryView.vue'),
-    meta: { title: '行业专版' }
+    meta: { title: '儿童培训经营场景' }
   },
   {
     path: '/modules/:id',
     name: 'ModuleView',
     component: () => import('@/views/ModuleView.vue'),
-    meta: { title: '工具模块' }
+    meta: { title: '经营工作模块' }
   },
   {
     path: '/modules/douyin',
@@ -98,31 +98,31 @@ const routes = [
     path: '/diagnosis',
     name: 'Diagnosis',
     component: () => import('@/views/Diagnosis.vue'),
-    meta: { title: '企业增长' }
+    meta: { title: '校区经营体检' }
   },
   {
     path: '/diagnosis/questionnaire/:code',
     name: 'DiagnosisQuestionnaire',
     component: () => import('@/views/DiagnosisQuestionnaire.vue'),
-    meta: { title: '诊断问卷' }
+    meta: { title: '校区经营情况填写' }
   },
   {
     path: '/diagnosis/report',
     name: 'DiagnosisReport',
     component: () => import('@/views/DiagnosisReport.vue'),
-    meta: { title: '诊断报告' }
+    meta: { title: '经营问题与行动建议' }
   },
   {
     path: '/diagnosis/history',
     name: 'DiagnosisHistory',
     component: () => import('@/views/DiagnosisHistory.vue'),
-    meta: { title: '历史诊断', requiresAuth: true }
+    meta: { title: '以前的经营记录', requiresAuth: true }
   },
   {
     path: '/membership',
     name: 'Membership',
     component: () => import('@/views/Membership.vue'),
-    meta: { title: '会员中心' }
+    meta: { title: '陪跑服务方案' }
   },
   {
     path: '/login',
@@ -158,7 +158,7 @@ const routes = [
     path: '/private',
     name: 'PrivateAgentHub',
     component: () => import('@/views/PrivateAgentHub.vue'),
-    meta: { title: '私域运营智能体' }
+    meta: { title: '家长跟进与续费' }
   },
   { path: '/private/diagnosis', name: 'PrivateDiagnosis', component: () => import('@/views/private/PrivateDiagnosis.vue'), meta: { title: '私域运营体检表' } },
   { path: '/private/member-design', name: 'PrivateMemberDesign', component: () => import('@/views/private/MemberDesign.vue'), meta: { title: '会员体系设计器' } },
@@ -193,7 +193,7 @@ const routes = [
     path: '/douyin',
     name: 'DouyinAgentHub',
     component: () => import('@/views/DouyinAgentHub.vue'),
-    meta: { title: '抖音增长智能体' }
+    meta: { title: '抖音招生工作台' }
   },
   {
     path: '/douyin/product-pricing',
@@ -205,13 +205,13 @@ const routes = [
     path: '/douyin/diagnosis',
     name: 'DiagnosisAgent',
     component: () => import('@/views/douyin/DiagnosisAgent.vue'),
-    meta: { title: '行业体检表' }
+    meta: { title: '招生情况填写' }
   },
   {
     path: '/douyin/quick-plan',
     name: 'QuickPlanAgent',
     component: () => import('@/views/douyin/QuickPlanAgent.vue'),
-    meta: { title: '15 天速胜计划' }
+    meta: { title: '7天招生行动' }
   },
   {
     path: '/douyin/full-strategy',
@@ -247,7 +247,7 @@ const routes = [
     path: '/douyin/video-diagnoser',
     name: 'VideoDiagnoserAgent',
     component: () => import('@/views/douyin/VideoDiagnoserAgent.vue'),
-    meta: { title: '视频数据诊断' }
+    meta: { title: '招生数据复盘' }
   },
   {
     path: '/douyin/live-review',
@@ -302,7 +302,7 @@ const routes = [
     path: '/xhs',
     name: 'XhsAgentHub',
     component: () => import('@/views/XhsAgentHub.vue'),
-    meta: { title: '小红书增长智能体' }
+    meta: { title: '小红书招生工作台' }
   },
   { path: '/xhs/account-diagnosis', name: 'XhsAccountDiagnosis', component: () => import('@/views/xhs/AccountDiagnosisAgent.vue'), meta: { title: '账号体检表' } },
   { path: '/xhs/quick-start-plan', name: 'XhsQuickStartPlan', component: () => import('@/views/xhs/QuickStartPlanAgent.vue'), meta: { title: '15 天起号计划' } },
@@ -320,7 +320,13 @@ const routes = [
   { path: '/xhs/shutiao-calculator', name: 'XhsShutiaoCalculator', component: () => import('@/views/xhs/ShutiaoCalculatorAgent.vue'), meta: { title: '薯条投放计算器' } },
   { path: '/xhs/juguang-strategy', name: 'XhsJuguangStrategy', component: () => import('@/views/xhs/JuguangStrategyAgent.vue'), meta: { title: '聚光投放策略' } },
   { path: '/xhs/ip-positioning', name: 'XhsIPPositioning', component: () => import('@/views/xhs/IPPositioningAgent.vue'), meta: { title: '博主 IP 定位' } },
-  { path: '/xhs/ip-consistency', name: 'XhsIPConsistency', component: () => import('@/views/xhs/IPConsistencyAgent.vue'), meta: { title: '人设一致性检查' } }
+  { path: '/xhs/ip-consistency', name: 'XhsIPConsistency', component: () => import('@/views/xhs/IPConsistencyAgent.vue'), meta: { title: '人设一致性检查' } },
+  { path: '/growth', name: 'GrowthWorkbench', component: () => import('@/views/growth/OwnerWorkbench.vue'), meta: { title: '本周经营工作台' } },
+  { path: '/growth/acquisition', name: 'AcquisitionEngine', component: () => import('@/views/growth/AcquisitionEngine.vue'), meta: { title: '招生动作安排' } },
+  { path: '/growth/sales-coach', name: 'SalesCoach', component: () => import('@/views/growth/SalesCoach.vue'), meta: { title: '家长沟通练习' } },
+  { path: '/growth/results', name: 'GrowthResults', component: () => import('@/views/growth/Results.vue'), meta: { title: '经营结果记录' } },
+  { path: '/growth/services', name: 'GrowthServices', component: () => import('@/views/growth/ServiceCenter.vue'), meta: { title: '陪跑服务' } },
+  { path: '/advisor', name: 'AdvisorWorkbench', component: () => import('@/views/growth/AdvisorWorkbench.vue'), meta: { title: '顾问复盘工作台', requiresAuth: true, requiresAdvisor: true } }
 ]
 
 const router = createRouter({
@@ -345,9 +351,11 @@ router.beforeEach((to, from, next) => {
     if (!token) {
       return next({ name: 'Login', query: { redirect: to.fullPath } })
     }
+    const platformRole = localStorage.getItem('platformRole')
+    if (to.meta.requiresAdvisor && !['platform_admin', 'advisor'].includes(platformRole)) return next({ name: 'Home' })
     if (to.meta.requiresAdmin) {
-      const memberLevel = normalizeMemberLevel(localStorage.getItem('memberLevel'))
-      if (!canAccessLevel(memberLevel, 'annual')) {
+      const platformRole = localStorage.getItem('platformRole')
+      if (platformRole !== 'platform_admin') {
         return next({ name: 'Home' })
       }
     }

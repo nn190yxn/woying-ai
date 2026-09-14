@@ -2,17 +2,17 @@
   <div class="douyin-agent-hub">
     <div class="hub-header container-wide workbench-page-header">
       <p class="section-eyebrow">抖音经营工作台</p>
-      <h1 class="hub-title">抖音增长智能体矩阵</h1>
-      <p class="hub-desc">每个智能体专注一个环节，按体检、计划、执行、复盘的顺序推进。</p>
+      <h1 class="hub-title">校长的抖音经营工作台</h1>
+      <p class="hub-desc">围绕主推课程和家长问题，落实拍摄安排、发布检查，并登记咨询结果、到店与报名。</p>
     </div>
 
     <section class="mainline-section container-wide workbench-section">
       <div class="mainline-head workbench-section-header">
         <div>
-          <p class="section-eyebrow">主线作战路径</p>
-          <h2>先体检，再计划，执行后复盘</h2>
+          <p class="section-eyebrow">本期经营安排</p>
+          <h2>从主推课程到咨询结果，一项项落实</h2>
         </div>
-        <p>围绕本地生活老板最常用的抖音经营链路，优先使用这 7 个入口。</p>
+        <p>面向儿童素质培训校长，先完成本期最关键的经营动作。</p>
       </div>
       <div class="mainline-grid">
         <button
@@ -32,7 +32,7 @@
     </section>
 
     <div class="hub-grid container-wide workbench-stack">
-      <div v-for="group in agentGroups" :key="group.id" class="agent-group card workbench-section">
+      <div v-for="group in operationGroups" :key="group.id" class="agent-group card workbench-section">
         <h2 class="group-title">
           <span class="group-icon">{{ group.icon }}</span>
           {{ group.name }}
@@ -60,7 +60,7 @@
     <div class="hub-cta container-wide">
       <div class="cta-card card workbench-action-panel">
         <h3>需要完整运营方案？</h3>
-        <p>AI 生成 80% 底稿 + 专家沟通润色 = 您的专属定制报告</p>
+        <p>顾问可结合课程、家长反馈和实际执行记录一起核对。</p>
         <button class="cta-btn" @click="bookConsultation">预约专家 1v1 咨询</button>
       </div>
     </div>
@@ -79,7 +79,7 @@ const userStore = useUserStore()
 
 const mainlineAgents = [
   { step: '01', code: 'diagnosis', name: '经营体检', desc: '先判断账号、内容、转化和复盘短板', level: 'free', levelText: '免费体验', levelClass: 'level-free' },
-  { step: '02', code: 'quick-plan', name: '15 天速胜计划', desc: '把诊断结论拆成每天能做的动作', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+  { step: '02', code: 'quick-plan', name: '15 天行动计划', desc: '把诊断结论拆成每天能做的动作', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
   { step: '03', code: 'video-diagnoser', name: '数据复盘', desc: '记录播放、互动、咨询和成交，校准下一步动作', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
   { step: '04', code: 'product-pricing', name: '组品定价', desc: '优化团购品、利润品和引流品结构', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
   { step: '05', code: 'conversion-path', name: '转化链路', desc: '检查团购、私信、企微和到店承接', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
@@ -87,13 +87,13 @@ const mainlineAgents = [
   { step: '07', code: 'full-strategy', name: '90 天战略', desc: '从短期执行进入季度增长节奏', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
 ]
 
-const agentGroups = [
+const operationGroups = [
   {
     id: 'diagnosis',
     icon: '📊',
     name: '经营体检',
     agents: [
-      { code: 'diagnosis', name: '行业体检表', emoji: '🩺', desc: '勾选痛点，生成五维健康度雷达图', level: 'free', levelText: '免费体验', levelClass: 'level-free', usageHint: '限 2 次/天' }
+      { code: 'diagnosis', name: '行业体检表', emoji: '🩺', desc: '填写经营信息，整理主要问题与本期动作', level: 'free', levelText: '免费体验', levelClass: 'level-free', usageHint: '限 2 次/天' }
     ]
   },
   {
@@ -101,8 +101,8 @@ const agentGroups = [
     icon: '📅',
     name: '作战计划',
     agents: [
-      { code: 'quick-plan', name: '15 天速胜计划', emoji: '📅', desc: '生成短期打法节奏表，快速见效', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
-      { code: 'full-strategy', name: '90 天周期战略', emoji: '🗺️', desc: '阶段骨架展示，详情引导 1v1', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
+      { code: 'quick-plan', name: '15 天行动计划', emoji: '📅', desc: '明确每天的负责人、时间、完成标准和结果登记', level: 'pro', levelText: '进阶会员', levelClass: 'level-pro' },
+      { code: 'full-strategy', name: '90 天周期战略', emoji: '🗺️', desc: '季度安排详情需与顾问共同确认', level: 'annual', levelText: '高阶专享', levelClass: 'level-annual' }
     ]
   },
   {

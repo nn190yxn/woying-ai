@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { operationError } from '@/constants/operationsLanguage'
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -25,15 +26,9 @@ request.interceptors.response.use(
         window.location.assign('/login')
       }
     }
-    // 错误规范化处理
-    const data = error.response?.data || {}
-    const normalizedMessage = data.message || data.error || error.message || '请求失败'
-    error.normalized = {
-      code: data.code || `HTTP_${error.response?.status || 'UNKNOWN'}`,
-      message: normalizedMessage,
-      details: data.details || null
-    }
-    error.message = normalizedMessage
+    const normalized = operationError(error)
+    error.normalized = { ...normalized, details: null }
+    error.message = normalized.message
     return Promise.reject(error)
   }
 )

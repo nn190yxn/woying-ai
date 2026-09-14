@@ -78,11 +78,11 @@ const result = ref(null)
 
 function handleSubmit() {
   if (!form.remainingClasses || !form.weeklyFrequency || !form.classDuration || !form.validityWeeks) {
-    result.value = { error: '请填写所有字段' }
+    result.value = { error: '请把这次经营情况填完整' }
     return
   }
   if (form.remainingClasses < 0 || form.weeklyFrequency < 1 || form.classDuration < 0.5 || form.validityWeeks < 1) {
-    result.value = { error: '请输入有效的数值' }
+    result.value = { error: '请检查填写的数字是否合理' }
     return
   }
 
@@ -99,14 +99,14 @@ function handleSubmit() {
 
   if (consumptionRatio > 1) {
     warning = { status: 'danger', text: '无法在有效期内耗完！剩余课时在到期前上不完' }
-    suggestion = '紧急建议：1）立即联系学员增加上课频次；2）提供补课/加课方案；3）考虑延期处理避免退费纠纷。'
+    suggestion = '紧急建议：1）立即联系家长确认出勤安排；2）结合训练表现调整排课；3）说明剩余课时和有效期，避免信息遗漏。'
   } else if (consumptionRatio > 0.7) {
     const remainingPct = ((validityDays - daysToFinish) / validityDays * 100).toFixed(0)
     warning = { status: 'warning', text: `有效期仅剩 ${remainingPct}%，但课时还能上 ${weeksToFinish.toFixed(0)} 周` }
-    suggestion = '需要加快消耗：1）主动联系学员调整排课频率；2）推出加课优惠活动；3）检查学员是否有长期缺勤情况。'
+    suggestion = '需要加快消耗：1）主动联系家长调整排课频率；2）同步剩余课时；3）请教练反馈训练表现并确认缺勤原因。'
   } else {
     warning = { status: 'healthy', text: '消耗进度正常，可在有效期内完成' }
-    suggestion = '保持当前排课节奏，关注学员出勤率，提前3-4周开始续费沟通。'
+    suggestion = '保持当前排课节奏，关注出勤和训练表现，结合剩余课时提前3-4周开始续费沟通。'
   }
 
   result.value = {

@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/private')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/private')">← 返回经营工作台</button>
       <h1 class="agent-title">社群活动策划</h1>
       <p class="agent-desc">团购/秒杀/互动活动方案生成</p>
     </div>

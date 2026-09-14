@@ -2,8 +2,8 @@
   <div class="admin-page">
     <div class="container">
       <div class="page-header">
-        <h1>运营后台</h1>
-        <p>管理用户、订单、返利和反馈数据</p>
+        <h1>后台工作台</h1>
+        <p>按机构运营、陪跑交付、客户服务、财务管理和技术设置分工协作</p>
       </div>
 
       <div class="admin-stats">
@@ -240,7 +240,7 @@
           <!-- 错误日志 -->
           <div v-if="activeTab === 'logs'" class="logs-panel">
             <div class="panel-header">
-              <h3>错误日志</h3>
+              <h3>排障日志（已脱敏，仅授权技术管理员）</h3>
               <div class="filter-group">
                 <select v-model="logLevel" @change="loadErrorLogs" class="form-select">
                   <option value="error">仅错误</option>
@@ -310,7 +310,7 @@
           <!-- 系统配置 -->
           <div v-if="activeTab === 'config'" class="config-panel">
             <div class="panel-header">
-              <h3>系统配置</h3>
+              <h3>运行配置（仅授权技术管理员）</h3>
               <button class="btn-sm" @click="loadConfig">刷新</button>
             </div>
             <div class="config-grid">
@@ -353,7 +353,7 @@
                   <span class="config-value">{{ config.llm?.model || '-' }}</span>
                 </div>
                 <div class="config-item">
-                  <label>API Key</label>
+                  <label>接口密钥</label>
                   <span class="config-value">{{ config.llm?.apiKey || '-' }}</span>
                 </div>
               </div>
@@ -385,8 +385,8 @@
                   <span class="config-value">{{ config.system?.port || '-' }}</span>
                 </div>
                 <div class="config-item">
-                  <label>Redis</label>
-                  <span class="config-value" :class="config.system?.useRealRedis === 'true' ? 'text-success' : 'text-warning'">{{ config.system?.useRealRedis === 'true' ? '已连接' : 'Mock 模式' }}</span>
+                  <label>缓存服务</label>
+                  <span class="config-value" :class="config.system?.useRealRedis === 'true' ? 'text-success' : 'text-warning'">{{ config.system?.useRealRedis === 'true' ? '已连接' : '测试数据模式' }}</span>
                 </div>
                 <div class="config-item">
                   <label>日志目录</label>
@@ -480,14 +480,14 @@ function exportData(type) {
 }
 
 const tabs = [
-  { key: 'users', label: '用户管理' },
-  { key: 'orders', label: '订单管理' },
-  { key: 'tools', label: '工具管理' },
-  { key: 'commissions', label: '返利管理' },
-  { key: 'feedbacks', label: '用户反馈' },
-  { key: 'logs', label: '错误日志' },
-  { key: 'config', label: '系统配置' },
-  { key: 'export', label: '数据导出' }
+  { key: 'users', label: '机构运营｜用户管理' },
+  { key: 'tools', label: '陪跑交付｜工具使用' },
+  { key: 'feedbacks', label: '客户服务｜用户反馈' },
+  { key: 'orders', label: '财务管理｜订单管理' },
+  { key: 'commissions', label: '财务管理｜返利记录' },
+  { key: 'export', label: '财务管理｜数据导出' },
+  { key: 'config', label: '技术设置｜运行配置' },
+  { key: 'logs', label: '技术设置｜排障日志' }
 ]
 
 const memberLabels = {

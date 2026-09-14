@@ -50,9 +50,13 @@ before(async () => {
   await waitForServer()
 })
 
-after(() => {
-  if (serverProcess && !serverProcess.killed) serverProcess.kill()
-  setImmediate(() => process.exit(process.exitCode || 0))
+after(async () => {
+  if (!serverProcess || serverProcess.exitCode !== null) return
+
+  await new Promise((resolve) => {
+    serverProcess.once('exit', resolve)
+    serverProcess.kill()
+  })
 })
 
 const diagnosisContext = {

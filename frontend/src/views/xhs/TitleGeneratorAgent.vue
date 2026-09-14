@@ -1,8 +1,8 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">← 返回智能体矩阵</button>
-      <h1 class="agent-title">✍️ 标题生成器</h1>
+      <button class="back-btn" @click="$router.push('/xhs')">← 返回经营工作台</button>
+      <h1 class="agent-title">✍️ 标题创作助手</h1>
       <p class="agent-desc">12 种爆款公式 + 行业案例库，一键生成高点击标题</p>
     </div>
 

@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/xhs')">返回经营工作台</button>
       <h1 class="agent-title">正文脚本生成</h1>
       <p class="agent-desc">按行业、选题和内容风格生成小红书图文或视频脚本</p>
     </div>

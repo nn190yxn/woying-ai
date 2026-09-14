@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/xhs')">返回经营工作台</button>
       <h1 class="agent-title">SEO 关键词优化</h1>
       <p class="agent-desc">生成标题关键词、长尾词、标签组合和正文埋词建议</p>
     </div>

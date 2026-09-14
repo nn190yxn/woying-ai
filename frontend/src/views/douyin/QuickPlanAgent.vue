@@ -1,11 +1,11 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container-wide quick-plan-hero">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
-      <h1 class="agent-title">15 天速胜计划</h1>
-      <p class="agent-desc">生成短期打法节奏表，快速见效</p>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回抖音经营工作台</button>
+      <h1 class="agent-title">15 天行动计划</h1>
+      <p class="agent-desc">明确今天做什么、谁负责、什么时候完成、完成标准和登记结果</p>
       <div class="task-flow-nav" aria-label="抖音经营链路">
-        <router-link to="/douyin" class="task-flow-link">智能体矩阵</router-link>
+        <router-link to="/douyin" class="task-flow-link">经营工作台</router-link>
         <router-link to="/douyin/diagnosis" class="task-flow-link">经营体检</router-link>
         <span class="task-flow-link current">15 天计划</span>
         <router-link to="/douyin/video-diagnoser" class="task-flow-link">数据复盘</router-link>
@@ -120,16 +120,16 @@
                 </div>
                 <div class="day-meta-grid">
                   <div>
-                    <span>拍摄方式</span>
+                    <span>今天做什么</span>
                     <strong>{{ row.shootingMethod }}</strong>
                   </div>
                   <div>
-                    <span>内容方向</span>
-                    <strong>{{ row.content }}</strong>
+                    <span>谁负责</span>
+                    <strong>{{ row.owner }}</strong>
                   </div>
                   <div>
-                    <span>投流安排</span>
-                    <strong>{{ row.ad }}</strong>
+                    <span>什么时候完成</span>
+                    <strong>{{ row.deadline }}</strong>
                   </div>
                 </div>
                 <section class="script-panel">
@@ -162,7 +162,7 @@
                   <p>{{ row.customerNurture }}</p>
                 </div>
                 <div class="action-panel review-panel">
-                  <span class="action-label">复盘指标</span>
+                  <span class="action-label">完成标准与登记结果</span>
                   <p>{{ row.kpi }}</p>
                   <button class="review-link" type="button" :aria-label="`记录 Day ${row.day} 复盘`" @click="openReview(row)">记录复盘</button>
                 </div>
@@ -327,10 +327,10 @@ const getDefaultShootingMethod = (content = '') => {
 
 const getDefaultTool = (day, goal) => {
   if (day % 5 === 0) return '视频数据诊断'
-  if (goal === 'conversion' || goal === 'leads') return '脚本生成器 / 转化链路'
+  if (goal === 'conversion' || goal === 'leads') return '脚本创作助手 / 转化链路'
   if (goal === 'traffic') return '爆款选题库 / 标题优化器'
-  if (goal === 'live') return '脚本生成器 / 直播复盘'
-  return '脚本生成器'
+  if (goal === 'live') return '脚本创作助手 / 直播复盘'
+  return '脚本创作助手'
 }
 
 const getDefaultNurture = (day, goal) => {
@@ -387,6 +387,8 @@ const normalizeDisplayDay = ({ day, phase, phaseIndex, dayIndex }) => {
     workType: firstDisplayValue(day.workType, getDefaultWorkType(rowDay, topicDirection || goalText)),
     videoFunction: firstDisplayValue(day.videoFunction, getDefaultVideoFunction(planGoalCode, topicDirection || goalText)),
     shootingMethod: firstDisplayValue(day.shootingMethod, getDefaultShootingMethod(topicDirection || goalText)),
+    owner: firstDisplayValue(day.owner, day.assignee, '校长指定负责人'),
+    deadline: firstDisplayValue(day.deadline, day.dueTime, `第 ${rowDay} 天营业结束前`),
     content: firstDisplayValue(topicDirection, '待补充内容方向'),
     executionTool: firstDisplayValue(day.executionTool, day.tool, getDefaultTool(rowDay, planGoalCode)),
     ad: adPlan,
@@ -503,7 +505,7 @@ const loadSavedPlan = async () => {
     }
     saveMessage.value = '暂无已保存计划，生成后可保存并跨设备继续执行。'
   } catch (error) {
-    errorMessage.value = error.message || '读取已保存计划失败'
+    errorMessage.value = '暂时无法读取已保存计划，请稍后重试。'
   } finally {
     loadLoading.value = false
   }
@@ -525,7 +527,7 @@ const savePlan = async () => {
       saveMessage.value = `计划已保存，更新时间：${new Date(response.savedPlan.updatedAt).toLocaleString()}`
     }
   } catch (error) {
-    errorMessage.value = error.message || '保存计划失败'
+    errorMessage.value = '暂时无法保存计划，请稍后重试。'
   } finally {
     saveLoading.value = false
   }
@@ -553,7 +555,7 @@ const updateRowStatus = async (day, status) => {
       saveMessage.value = `任务状态已同步，更新时间：${new Date(response.savedPlan.updatedAt).toLocaleString()}`
     }
   } catch (error) {
-    errorMessage.value = error.message || '同步任务状态失败'
+    errorMessage.value = '暂时无法同步进度，请稍后重试。'
   }
 }
 
@@ -573,7 +575,7 @@ const generate = async () => {
     syncFormFromPlanMeta(plan.value)
     upgradeHint.value = response.upgradeHint || ''
   } catch (error) {
-    errorMessage.value = error.message || '计划生成失败，请稍后重试'
+    errorMessage.value = '暂时无法生成行动计划，请稍后重试。'
   }
 }
 

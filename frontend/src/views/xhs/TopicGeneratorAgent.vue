@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/xhs')">← 返回经营工作台</button>
       <h1 class="agent-title">💡 爆款选题库</h1>
       <p class="agent-desc">搜索意图 + 爆款公式，每日生成精准选题</p>
     </div>

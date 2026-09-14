@@ -3,8 +3,8 @@
     <div class="container-wide workbench-stack">
       <div class="page-header text-center workbench-page-header">
         <p class="page-eyebrow">会员服务</p>
-        <h1>按你要拿到的经营结果选择会员</h1>
-        <p class="page-desc">从看清问题、开始执行、持续复盘到季度增长，把每一档会员对应到老板能落地的经营结果。</p>
+        <h1>按经营阶段选择会员服务</h1>
+        <p class="page-desc">按看清问题、照着执行、持续复盘和真人陪跑选择；系统提供整理、提醒和复盘参考，不承诺固定结果。</p>
       </div>
 
       <div class="plans-grid workbench-section">
@@ -26,13 +26,13 @@
       <div class="privilege-section card workbench-section">
         <div class="section-head workbench-section-header">
           <div>
-            <h2>权限说明</h2>
-            <p>当前按前端已上线能力整理，可帮助你快速判断该开通哪一层。</p>
+            <h2>服务内容说明</h2>
+            <p>系统负责整理信息、提醒节点和提供复盘参考；真人顾问负责确认目标、复杂判断和执行纠偏。</p>
           </div>
         </div>
         <div class="privilege-table">
           <div class="privilege-row header">
-            <div>能力</div>
+            <div>服务内容</div>
             <div>免费版</div>
             <div>初阶版</div>
             <div>进阶版</div>
@@ -62,11 +62,11 @@
         <div>
           <p class="section-kicker">反馈协作</p>
           <h2>我要反馈</h2>
-          <p class="feedback-desc">有任何需求建议或 Bug 报错，请告诉我们，我们会及时处理</p>
+          <p class="feedback-desc">如有需求建议或使用问题，请告诉我们，我们会跟进处理</p>
         </div>
         <div class="feedback-actions">
           <button class="btn btn-primary" @click="openFeedback('feature')">提交需求建议</button>
-          <button class="btn btn-secondary" @click="openFeedback('bug')">提交 Bug 报错</button>
+          <button class="btn btn-secondary" @click="openFeedback('bug')">反馈使用问题</button>
         </div>
       </div>
 
@@ -79,7 +79,7 @@
         </div>
         <div class="feedback-list">
           <div v-for="fb in myFeedbacks" :key="fb.id" class="feedback-item">
-            <span class="fb-type" :class="fb.type">{{ fb.type === 'feature' ? '需求' : 'Bug' }}</span>
+            <span class="fb-type" :class="fb.type">{{ fb.type === 'feature' ? '需求' : '使用问题' }}</span>
             <span class="fb-title">{{ fb.title }}</span>
             <span class="fb-status" :class="fb.status">{{ statusText(fb.status) }}</span>
             <span class="fb-date">{{ formatDate(fb.created_at) }}</span>
@@ -91,7 +91,7 @@
     <!-- 反馈弹窗 -->
     <div class="modal-overlay" v-if="showModal" @click.self="showModal = false">
       <div class="modal">
-        <h3>{{ feedbackForm.type === 'feature' ? '提交需求建议' : '提交 Bug 报错' }}</h3>
+        <h3>{{ feedbackForm.type === 'feature' ? '提交需求建议' : '反馈使用问题' }}</h3>
         <div class="form-group">
           <label>标题 *</label>
           <input v-model="feedbackForm.title" class="form-input" placeholder="简要描述你的反馈" maxlength="200" />
@@ -137,19 +137,19 @@ const creatingPlanCode = ref('')
 
 const planOutcomeMap = {
   [MEMBER_LEVEL_FREE]: {
-    outcome: '免费版：先看清经营卡点，知道今天该从哪里动手。',
+    outcome: '免费版：看清问题，确认今天先做什么。',
     features: ['基础经营体检，找到获客、内容、转化或复购短板', '常用内容、话术和经营计算工具限量体验', '适合先验证问题方向和工具匹配度']
   },
   [MEMBER_LEVEL_STARTER]: {
-    outcome: '初阶版：把每天该做的基础动作固定下来。',
+    outcome: '初阶版：照着执行，建立每周行动节奏。',
     features: ['经营记录表、行业模板和基础执行工具', 'SOP、薪酬、排班、活动等门店基础管理能力', '适合建立每周固定执行节奏']
   },
   [MEMBER_LEVEL_PRO]: {
-    outcome: '进阶版：从诊断进入 15 天作战表，持续提升获客和成交。',
+    outcome: '进阶版：进入 15 天陪跑节奏，持续复盘并纠偏。',
     features: ['行业深度诊断和诊断后推荐动作', '15 天作战计划、专项执行工具和数据复盘', '适合系统提升抖音、小红书、私域和门店转化效率']
   },
   [MEMBER_LEVEL_ANNUAL]: {
-    outcome: '高阶版：把短期执行升级成 90 天增长系统和专家校准。',
+    outcome: '高阶版：由真人顾问参与目标确认、复杂判断和阶段纠偏。',
     features: ['包含进阶版全部诊断、计划、执行和复盘能力', '老板 IP、90 天战略、投流评估和高阶专项工具', '适合做长期品牌、增长节奏和关键动作校准']
   }
 }
@@ -178,7 +178,7 @@ const faqs = [
   { q: '高阶版为什么更贵？', a: '高阶版包含老板 IP 打造、深度策略工具和更完整的长期经营支持能力。' },
   { q: '企业增长在哪一层？', a: '当前归在进阶版能力层，对应独立的企业增长全景顾问，适合已经想系统梳理经营问题的用户。' },
   { q: '升级后权限会自动叠加吗？', a: '会。高阶版包含前面所有层级能力，进阶版包含免费版和初阶版能力。' },
-  { q: '现在显示的价格是最终版吗？', a: '不是最终合同价，而是当前 v4 页面方案中的公开定价展示。' }
+  { q: '现在显示的价格是最终版吗？', a: '不是最终合同价，而是页面当前展示的参考价格，具体以订单与服务确认信息为准。' }
 ]
 
 async function handleSelect(plan) {
@@ -201,7 +201,7 @@ async function handleSelect(plan) {
     }
     alert(order?.orderId ? `订单已创建，订单号：${order.orderId}` : '订单已创建，请按页面提示完成支付')
   } catch (error) {
-    alert(error.message || '创建订单失败，请稍后重试')
+    alert('创建订单失败，请稍后重试')
   } finally {
     creatingPlanCode.value = ''
   }
@@ -234,7 +234,7 @@ async function submitFeedback() {
     showModal.value = false
     await loadMyFeedbacks()
   } catch (error) {
-    alert(error.message || '网络异常，请重试')
+    alert('提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }

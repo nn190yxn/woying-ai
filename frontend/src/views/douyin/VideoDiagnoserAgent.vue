@@ -1,11 +1,11 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container-wide video-review-hero">
-      <button class="back-btn" @click="$router.push('/douyin')">← 返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/douyin')">← 返回抖音经营工作台</button>
       <h1 class="agent-title">视频数据复盘</h1>
-      <p class="agent-desc">记录执行、内容、互动、咨询、成交和投流 ROI，判断下一步动作</p>
+      <p class="agent-desc">复盘本期做了什么、带来多少家长咨询与到店或报名，以及下期继续还是调整</p>
       <div class="task-flow-nav" aria-label="抖音经营链路">
-        <router-link to="/douyin" class="task-flow-link">智能体矩阵</router-link>
+        <router-link to="/douyin" class="task-flow-link">经营工作台</router-link>
         <router-link to="/douyin/diagnosis" class="task-flow-link">经营体检</router-link>
         <router-link to="/douyin/quick-plan" class="task-flow-link">15 天计划</router-link>
         <span class="task-flow-link current">数据复盘</span>
@@ -28,7 +28,7 @@
             <input v-model.number="form.contentCount" class="data-input" type="number" placeholder="0" />
           </div>
           <div class="data-input-card">
-            <label class="data-label">播放量</label>
+            <label class="data-label">被看到次数</label>
             <input v-model.number="form.views" class="data-input" type="number" placeholder="0" />
           </div>
           <div class="data-input-card">
@@ -52,19 +52,19 @@
             <input v-model.number="form.comments" class="data-input" type="number" placeholder="0" />
           </div>
           <div class="data-input-card">
-            <label class="data-label">私信数</label>
+            <label class="data-label">主动联系次数</label>
             <input v-model.number="form.messages" class="data-input" type="number" placeholder="0" />
           </div>
           <div class="data-input-card">
-            <label class="data-label">咨询数</label>
+            <label class="data-label">确认课程兴趣人数</label>
             <input v-model.number="form.inquiries" class="data-input" type="number" placeholder="0" />
           </div>
           <div class="data-input-card">
-            <label class="data-label">核销数</label>
+            <label class="data-label">到店/体验人数</label>
             <input v-model.number="form.redemptions" class="data-input" type="number" placeholder="0" />
           </div>
           <div class="data-input-card">
-            <label class="data-label">成交额</label>
+            <label class="data-label">报名金额</label>
             <input v-model.number="form.revenue" class="data-input" type="number" placeholder="0" />
           </div>
           <div class="data-input-card">
@@ -97,7 +97,7 @@
         </div>
 
         <button class="generate-btn" @click="diagnose" :disabled="!form.views">
-          开始诊断
+          生成本期复盘
         </button>
         <div class="review-actions">
           <button class="secondary-btn" type="button" :disabled="loadLoading" @click="loadLatestReview">
@@ -122,7 +122,7 @@
           <div class="review-result-layout">
             <div class="review-analysis-column">
               <div class="traffic-level">
-                <h3>当前流量池等级</h3>
+                <h3>本期内容触达情况</h3>
                 <div class="level-badge" :class="result.levelClass">{{ result.levelText }}</div>
                 <p class="level-desc">{{ result.levelDesc }}</p>
               </div>
@@ -141,13 +141,13 @@
 
             <div class="review-action-column">
               <div class="diagnosis-conclusion">
-                <h3>诊断结论</h3>
+                <h3>本期做了什么</h3>
                 <p>{{ result.conclusion }}</p>
               </div>
 
               <div class="next-step-panel">
                 <div>
-                  <span class="next-step-label">下一步建议</span>
+                  <span class="next-step-label">下期继续或调整什么</span>
                   <h3>{{ result.nextStep.title }}</h3>
                   <p>{{ result.nextStep.reason }}</p>
                 </div>
@@ -178,7 +178,7 @@
           </div>
 
           <div class="action-plan">
-            <h3>优化行动清单</h3>
+            <h3>下期行动清单</h3>
             <ol>
               <li v-for="(action, i) in result.actions" :key="i">{{ action }}</li>
             </ol>
@@ -343,7 +343,7 @@ const loadLatestReview = async () => {
     }
     saveMessage.value = '暂无已保存复盘，诊断后会自动保存。'
   } catch (error) {
-    errorMessage.value = error.message || '读取最近复盘失败'
+    errorMessage.value = '暂时无法读取最近复盘，请稍后重试。'
   } finally {
     loadLoading.value = false
   }
@@ -369,7 +369,7 @@ const saveReviewRecord = async ({ silent = false } = {}) => {
       await loadReviewInsights()
     }
   } catch (error) {
-    errorMessage.value = error.message || '保存复盘记录失败'
+    errorMessage.value = '暂时无法保存复盘，请稍后重试。'
   } finally {
     saveLoading.value = false
   }
@@ -414,9 +414,9 @@ const diagnose = () => {
       { name: '点赞率', value: likeRate.toFixed(1) + '%', percent: Math.min(likeRate * 10, 100), color: likeRate >= 3 ? '#10b981' : '#ef4444', benchmark: '3-5%', status: likeRate >= 3 ? 'pass' : 'fail' },
       { name: '完播率', value: completeRate.toFixed(1) + '%', percent: Math.min(completeRate * 2.5, 100), color: completeRate >= 25 ? '#10b981' : '#ef4444', benchmark: '25-40%', status: completeRate >= 25 ? 'pass' : 'fail' },
       { name: '评论率', value: commentRate.toFixed(1) + '%', percent: Math.min(commentRate * 25, 100), color: commentRate >= 1 ? '#10b981' : '#ef4444', benchmark: '1-3%', status: commentRate >= 1 ? 'pass' : 'fail' },
-      { name: '私信率', value: messageRate.toFixed(1) + '%', percent: Math.min(messageRate * 50, 100), color: messageRate >= 0.5 ? '#10b981' : '#ef4444', benchmark: '0.5-1%', status: messageRate >= 0.5 ? 'pass' : 'fail' },
-      { name: '咨询率', value: inquiryRate.toFixed(1) + '%', percent: Math.min(inquiryRate, 100), color: inquiryRate >= 60 ? '#10b981' : '#ef4444', benchmark: '60%+', status: inquiryRate >= 60 ? 'pass' : 'fail' },
-      { name: '核销率', value: redemptionRate.toFixed(1) + '%', percent: Math.min(redemptionRate * 2, 100), color: redemptionRate >= 30 ? '#10b981' : '#ef4444', benchmark: '30%+', status: redemptionRate >= 30 ? 'pass' : 'fail' },
+      { name: '主动联系率', value: messageRate.toFixed(1) + '%', percent: Math.min(messageRate * 50, 100), color: messageRate >= 0.5 ? '#10b981' : '#ef4444', benchmark: '0.5-1%', status: messageRate >= 0.5 ? 'pass' : 'fail' },
+      { name: '课程兴趣确认率', value: inquiryRate.toFixed(1) + '%', percent: Math.min(inquiryRate, 100), color: inquiryRate >= 60 ? '#10b981' : '#ef4444', benchmark: '60%+', status: inquiryRate >= 60 ? 'pass' : 'fail' },
+      { name: '到店/体验率', value: redemptionRate.toFixed(1) + '%', percent: Math.min(redemptionRate * 2, 100), color: redemptionRate >= 30 ? '#10b981' : '#ef4444', benchmark: '30%+', status: redemptionRate >= 30 ? 'pass' : 'fail' },
       { name: '投流 ROI', value: form.adSpend > 0 ? roi.toFixed(2) : '未投流', percent: form.adSpend > 0 ? Math.min(roi * 30, 100) : 0, color: roi >= 1.5 || form.adSpend === 0 ? '#10b981' : '#ef4444', benchmark: '1.5+', status: roi >= 1.5 || form.adSpend === 0 ? 'pass' : 'fail' },
       { name: '收藏率', value: saveRate.toFixed(1) + '%', percent: Math.min(saveRate * 12, 100), color: saveRate >= 5 ? '#10b981' : '#ef4444', benchmark: '5-8%', status: saveRate >= 5 ? 'pass' : 'fail' },
       { name: '转发率', value: shareRate.toFixed(1) + '%', percent: Math.min(shareRate * 50, 100), color: shareRate >= 1 ? '#10b981' : '#ef4444', benchmark: '1-2%', status: shareRate >= 1 ? 'pass' : 'fail' }
@@ -424,8 +424,8 @@ const diagnose = () => {
     summary: [
       { name: '执行天数', value: `${form.executionDays || 0} 天`, desc: `${form.contentCount || 0} 条内容产出` },
       { name: '播放与完播', value: `${v.toLocaleString()} / ${completeRate.toFixed(1)}%`, desc: '播放总量 / 完播率' },
-      { name: '互动反馈', value: `${form.comments || 0} 评论`, desc: `${form.messages || 0} 私信` },
-      { name: '成交结果', value: `${form.redemptions || 0} 核销`, desc: `${form.inquiries || 0} 咨询，成交额 ${Number(form.revenue || 0).toLocaleString()} 元` },
+      { name: '家长反馈', value: `${form.comments || 0} 条评论`, desc: `${form.messages || 0} 次主动联系` },
+      { name: '到店与报名', value: `${form.redemptions || 0} 人到店/体验`, desc: `${form.inquiries || 0} 人确认课程兴趣，报名金额 ${Number(form.revenue || 0).toLocaleString()} 元` },
       { name: '投流 ROI', value: form.adSpend > 0 ? roi.toFixed(2) : '未投流', desc: `投流消耗 ${Number(form.adSpend || 0).toLocaleString()} 元` }
     ],
     nextStep: buildNextStep({ completeRate, messageRate, inquiryRate, redemptionRate, roi, adSpend: form.adSpend, avgViews }),

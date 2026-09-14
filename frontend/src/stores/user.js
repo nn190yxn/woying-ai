@@ -16,13 +16,18 @@ export const useUserStore = defineStore('user', () => {
     return name.slice(0, 1).toUpperCase()
   })
   const memberLevel = computed(() => normalizeMemberLevel(userInfo.value?.memberLevel || 'free'))
-  const isAdmin = computed(() => canAccessLevel(memberLevel.value, 'annual'))
+  const isAdmin = computed(() => userInfo.value?.role === 'platform_admin' || userInfo.value?.platformRole === 'platform_admin')
   const memberLabel = computed(() => getMemberLevelLabel(userInfo.value?.memberLevel || 'free'))
   const memberExpireAt = computed(() => userInfo.value?.memberExpireAt || null)
   const phone = computed(() => userInfo.value?.phone || '')
 
   function syncMemberLevelStorage(level) {
     localStorage.setItem('memberLevel', normalizeMemberLevel(level || 'free'))
+  }
+
+  function syncPlatformRole(role) {
+    if (role) localStorage.setItem('platformRole', role)
+    else localStorage.removeItem('platformRole')
   }
 
   async function login(phone, code) {
@@ -33,6 +38,7 @@ export const useUserStore = defineStore('user', () => {
       userInfo.value = res.user
       localStorage.setItem('token', res.token)
       syncMemberLevelStorage(res.user?.memberLevel)
+      syncPlatformRole(res.user?.platformRole)
       return res
     } finally {
       loading.value = false
@@ -51,6 +57,7 @@ export const useUserStore = defineStore('user', () => {
       userInfo.value = res.user
       localStorage.setItem('token', res.token)
       syncMemberLevelStorage(res.user?.memberLevel)
+      syncPlatformRole(res.user?.platformRole)
       return res
     } finally {
       loading.value = false
@@ -64,6 +71,7 @@ export const useUserStore = defineStore('user', () => {
       const res = await getUserInfo()
       userInfo.value = res
       syncMemberLevelStorage(res.memberLevel)
+      syncPlatformRole(res.platformRole)
     } catch (e) {
       logout()
     } finally {
@@ -81,6 +89,7 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('memberLevel')
+    localStorage.removeItem('platformRole')
   }
 
   return {

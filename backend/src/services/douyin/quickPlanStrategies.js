@@ -43,19 +43,19 @@ export const industryStrategies = {
   education: {
     code: 'education',
     name: '教培',
-    customerType: '正在给孩子选课的家长',
-    defaultProduct: '试听课或测评课',
-    defaultOfferPrice: '试听名额、测评内容、适合年级和课后反馈方式',
-    defaultObjection: '怕老师不负责、怕孩子不适应、怕花钱没效果',
-    proofAssets: '老师资质、课堂互动、学习成果、测评过程和家长反馈',
-    sceneAssets: '课堂片段、老师讲解、学员练习和课后反馈画面',
-    conversionMetric: '试听/留资数',
-    actionEntry: '试听、留资或私信路径',
-    conversionPath: '私信发送年级和学习问题，预约试听或测评课',
+    customerType: '正在为孩子选择运动成长课程的家长',
+    defaultProduct: '主推课程的试听或体验课',
+    defaultOfferPrice: '试听/体验名额、课程内容、适合年龄和课后反馈方式',
+    defaultObjection: '担心教练是否负责、孩子是否适应、课程是否匹配成长需要',
+    proofAssets: '教练资质、课堂互动、孩子参与过程、体验反馈和家长反馈',
+    sceneAssets: '课堂片段、教练讲解、孩子练习和课后反馈画面',
+    conversionMetric: '试听/体验预约数',
+    actionEntry: '试听/体验、留资或私信路径',
+    conversionPath: '私信发送孩子年龄和家长问题，预约试听或体验课',
     riskBoundary: [
-      '升学、提分和学习效果表达需要基于真实案例和测评边界。',
-      '试听留资后需要明确老师反馈、适合年级和下一步课程建议。',
-      '避免使用保分、保过、短期必提分等效果承诺。'
+      '课程效果表达应基于真实体验和孩子个体差异。',
+      '试听/体验后需要明确教练反馈、适合年龄和下一步课程建议。',
+      '避免使用保证报名、保证效果等无法兑现的承诺。'
     ],
     forbiddenTerms: ['团购核销', '套餐核销', '医美', '疗程']
   },
@@ -83,7 +83,7 @@ export const industryStrategies = {
 export const goalStrategies = {
   traffic: {
     code: 'traffic',
-    name: '快速起量',
+    name: '内容增长',
     phaseFocus: ['验证高停留选题', '复制高数据钩子', '固化内容 SOP'],
     reviewMetrics: ['播放量', '3 秒留存', '完播率', '互动率', '主页访问'],
     cta: '先收藏，评论区留下你的具体情况。'

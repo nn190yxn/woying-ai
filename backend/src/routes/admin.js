@@ -2,24 +2,29 @@ import express from 'express'
 import { authMiddleware } from '../middleware/auth.js'
 import { query } from '../models/db.js'
 import { getToolUsageStats, getConversionFunnel, getToolSuccessRate } from '../services/analytics.js'
-import { logger } from '../middleware/logger.js'
+import { logger, redactLogValue } from '../middleware/logger.js'
+import { getPlatformRole } from '../services/advisor.js'
 
 const router = express.Router()
 
-async function adminOnly(req, res, next) {
+export async function adminOnly(req, res, next) {
   try {
-    const users = await query('SELECT member_level FROM users WHERE id = ?', [req.user.userId])
-    const memberLevel = users[0]?.member_level || 'free'
-
-    if (memberLevel !== 'annual') {
-      return res.status(403).json({ message: '无运营后台访问权限' })
-    }
-
+    const role = await getPlatformRole(req.user?.userId)
+    if (role !== 'platform_admin') return res.status(403).json({ message: '无平台管理后台访问权限' })
+    req.platformRole = role
     next()
   } catch (error) {
-    logger.error('admin', 'Admin permission check failed', { error: error.message, userId: req.user?.userId })
+    logger.error('admin', 'Admin permission check failed', { error: error.message })
     res.status(500).json({ message: '权限校验失败' })
   }
+}
+
+// 技术设置和排障日志属于平台运维权限；默认平台管理员保留原有能力。
+export function technicalAdminOnly(req, res, next) {
+  const configured = String(process.env.TECHNICAL_ADMIN_USER_IDS || '').split(',').map(v => v.trim()).filter(Boolean)
+  const allowed = req.platformRole === 'platform_admin' || configured.includes(String(req.user?.userId || ''))
+  if (!allowed) return res.status(403).json({ message: '仅授权技术管理员可访问技术设置或排障日志' })
+  next()
 }
 
 router.use(authMiddleware, adminOnly)
@@ -242,7 +247,7 @@ router.post('/users/:id/extend-expire', async (req, res) => {
 })
 
 // === 错误日志 ===
-router.get('/error-logs', async (req, res) => {
+router.get('/error-logs', technicalAdminOnly, async (req, res) => {
   const { level = 'error', lines = 100 } = req.query
   const maxLines = Math.min(500, Math.max(1, parseInt(lines) || 100))
 
@@ -251,9 +256,11 @@ router.get('/error-logs', async (req, res) => {
     const fs = await import('fs')
     const path = await import('path')
     const readline = await import('readline')
-    const errorLogFile = path.resolve(logDir, 'backend-error.log')
+    const errorLogFile = ['error.log', 'backend-error.log']
+      .map(file => path.resolve(logDir, file))
+      .find(file => fs.existsSync(file))
 
-    if (!fs.existsSync(errorLogFile)) {
+    if (!errorLogFile) {
       return res.json({ logs: [] })
     }
 
@@ -275,11 +282,11 @@ router.get('/error-logs', async (req, res) => {
       try {
         const entry = JSON.parse(line)
         if (!level || entry.level === level || level === 'all') {
-          logs.push(entry)
+          logs.push(redactLogValue(entry))
         }
       } catch {
         if (!level || level === 'all') {
-          logs.push({ raw: line, timestamp: new Date().toISOString() })
+          logs.push(redactLogValue({ raw: line, timestamp: new Date().toISOString() }))
         }
       }
     }
@@ -368,7 +375,7 @@ router.put('/user-feedbacks/:id', async (req, res) => {
 })
 
 // === 系统配置 ===
-router.get('/config', async (req, res) => {
+router.get('/config', technicalAdminOnly, async (req, res) => {
   try {
     const config = {
       referral: {

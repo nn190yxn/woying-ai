@@ -8,7 +8,14 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:quick-plan-structure": "node --test scripts/quick-plan-structure.test.js",
-    "test:layout-structure": "node --test scripts/layout-system-structure.test.js"
+    "test:layout-structure": "node --test scripts/layout-system-structure.test.js",
+    "test:operations-language": "node --test scripts/operations-language.test.js",
+    "test:navigation-operations-language": "node --test scripts/navigation-operations-language.test.js",
+    "test:shared-operations-copy": "node --test scripts/shared-operations-copy.test.js",
+    "test:core-diagnosis-operations-copy": "node --test scripts/core-diagnosis-operations-copy.test.js",
+    "test:douyin-operations-copy": "node --test scripts/douyin-operations-copy.test.js",
+    "test:parent-renewal-service-copy": "node --test scripts/parent-renewal-service-copy.test.js",
+    "audit:operations-copy": "node scripts/operations-copy-scan.js"
   },
   "dependencies": {
     "axios": "^1.6.7",

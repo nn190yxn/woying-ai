@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/xhs')">返回经营工作台</button>
       <h1 class="agent-title">转化链路优化</h1>
       <p class="agent-desc">按转化率、流量来源和行业场景生成小红书引流优化建议</p>
     </div>

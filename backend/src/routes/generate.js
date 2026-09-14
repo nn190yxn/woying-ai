@@ -3719,7 +3719,7 @@ router.post('/:toolCode', authMiddleware, async (req, res, next) => {
       toolCode,
       error: error.message
     })
-    next(error)
+    res.status(500).json({ error: '生成未完成：系统暂时无法处理本次请求。影响：当前结果不可用。下一步：请稍后重试；如仍失败，请联系管理员。' })
   }
 })
 

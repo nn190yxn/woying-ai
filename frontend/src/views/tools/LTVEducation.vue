@@ -71,7 +71,7 @@ const result = ref(null)
 
 function handleSubmit() {
   if (!form.hourlyFee || !form.monthlyHours || !form.retentionMonths || form.extraIncomePct === null || !form.cac) {
-    result.value = { error: '请填写所有字段' }; return
+    result.value = { error: '请把这次经营情况填完整' }; return
   }
   const monthlyFee = form.hourlyFee * form.monthlyHours
   const monthlyExtra = Math.round(monthlyFee * (form.extraIncomePct / 100))

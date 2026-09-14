@@ -249,7 +249,7 @@ async function handleSubmit() {
       result.value = data
     }
   } catch (error) {
-    result.value = { error: error.message || '生成失败，请稍后重试' }
+    result.value = { error: '生成未完成：请稍后重试；如仍失败，请联系管理员' }
   }
 }
 </script>

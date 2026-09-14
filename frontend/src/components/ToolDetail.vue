@@ -8,9 +8,9 @@
           </svg>
         </div>
         <h2>{{ requiredLevelLabel }}专属</h2>
-        <p>「{{ resolvedToolInfo.name }}」为{{ requiredLevelLabel }}专属功能</p>
-        <p class="sub-text">升级后可解锁更多经营工具、更高额度和完整诊断能力</p>
-        <router-link to="/membership" class="btn btn-primary">立即升级</router-link>
+        <p>「{{ resolvedToolInfo.name }}」需要{{ requiredLevelLabel }}服务方案</p>
+        <p class="sub-text">升级后可使用更多经营记录、行动安排和顾问复盘服务</p>
+        <router-link to="/membership" class="btn btn-primary">查看服务方案</router-link>
       </div>
 
       <template v-else>
@@ -19,21 +19,21 @@
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
           </svg>
-          返回表格中心
+          返回经营记录
         </router-link>
          <h1>{{ resolvedToolInfo.name }}</h1>
          <p class="tool-desc">{{ resolvedToolInfo.description }}</p>
          <div class="tool-meta">
            <span class="badge" :class="resolvedToolInfo.badgeClass">{{ resolvedToolInfo.badge }}</span>
            <span class="tool-quota" v-if="displayQuota">
-             今日剩余：{{ displayQuota.remain }} / {{ displayQuota.total }}
+             今日可用：{{ displayQuota.remain }} / {{ displayQuota.total }}
            </span>
         </div>
       </div>
 
       <div class="tool-content">
         <div class="input-section card">
-          <h3>输入信息</h3>
+          <h3>填写这次经营情况</h3>
           <slot name="inputs"></slot>
         </div>
 
@@ -43,30 +43,30 @@
             :disabled="loading || !canSubmit"
             @click="handleSubmit"
           >
-            {{ loading ? '处理中...' : '立即生成' }}
+            {{ loading ? '正在整理...' : '整理经营建议' }}
           </button>
           <p v-if="!quotaStore.isUnlimited && quotaStore.globalRemain !== null && quotaStore.globalRemain <= 0" class="quota-tip">
-            今日额度已用完，
+            今天的可用次数已用完，
             <router-link to="/membership">升级会员</router-link>
-            解锁无限次
+            了解更多可用次数
           </p>
           <p v-else-if="!quotaStore.isUnlimited && quotaStore.globalRemain === null && quotaStore.remain === null" class="quota-tip">
-            正在加载额度信息，请稍后再试
+            正在读取今天的可用次数，请稍后再试
           </p>
         </div>
 
           <div v-if="hasResult" class="result-section card-soft">
           <div class="result-header">
-            <h3>生成结果</h3>
+            <h3>本次经营建议</h3>
             <div class="result-actions">
               <button v-if="isSpreadsheetResult" class="btn btn-secondary btn-sm" @click="handleExportCSV">
-                导出 CSV
+                下载经营记录
               </button>
               <button class="btn btn-secondary btn-sm" @click="handleCopy">
-                {{ copied ? '已复制' : '复制' }}
+                {{ copied ? '已复制' : '复制这份建议' }}
               </button>
               <button class="btn btn-secondary btn-sm" @click="handleSave">
-                保存到历史
+                保存到以前的记录
               </button>
             </div>
           </div>
@@ -101,13 +101,13 @@
             </div>
 
             <div v-if="structuredResult.benchmarks && structuredResult.benchmarks.length" class="result-benchmarks">
-              <h4>行业对标</h4>
+              <h4>参考范围</h4>
               <div class="benchmark-list">
                 <div v-for="(b, i) in structuredResult.benchmarks" :key="i" class="benchmark-item">
                   <span class="benchmark-metric">{{ b.metric }}</span>
                   <span class="benchmark-value">{{ b.value }}</span>
                   <span class="benchmark-ref" :class="b.status === 'below' ? 'below' : 'ok'">
-                    基准 {{ b.benchmark }}
+                    参考值 {{ b.benchmark }}
                   </span>
                 </div>
               </div>
@@ -124,27 +124,27 @@
             </div>
 
             <div v-if="structuredResult.actions && structuredResult.actions.length" class="result-actions-list">
-              <h4>行动清单</h4>
+              <h4>本周先做</h4>
               <div v-for="(action, i) in structuredResult.actions" :key="i" class="action-item" :class="action.priority">
                 <span class="action-priority-badge" :class="action.priority">
                   {{ priorityLabel(action.priority) }}
                 </span>
                 <span class="action-title">{{ action.title }}</span>
                 <span class="action-desc">{{ action.description }}</span>
-                <span v-if="action.owner" class="action-owner">责任人：{{ action.owner }}</span>
-                <span v-if="action.timeline" class="action-timeline">时限：{{ action.timeline }}</span>
+                <span v-if="action.owner" class="action-owner">由谁负责：{{ action.owner }}</span>
+                <span v-if="action.timeline" class="action-timeline">完成时间：{{ action.timeline }}</span>
               </div>
             </div>
 
             <div v-if="structuredResult.riskNotes && structuredResult.riskNotes.length" class="result-risks">
-              <h4>风险提示</h4>
+              <h4>需要留意</h4>
               <ul>
                 <li v-for="(note, i) in structuredResult.riskNotes" :key="i">{{ note }}</li>
               </ul>
             </div>
 
             <div v-if="structuredResult.recommendedTools && structuredResult.recommendedTools.length" class="result-recommended-tools">
-              <h4>推荐下一步</h4>
+              <h4>接下来可以做</h4>
               <div class="recommended-tools-grid">
                 <router-link
                   v-for="(toolCode, i) in structuredResult.recommendedTools"
@@ -171,10 +171,10 @@
           <div class="premium-cta-content">
             <div class="premium-icon">PRO</div>
             <div class="premium-text">
-              <h4>高阶会员专享</h4>
-              <p>高阶会员可获得行业专家知识库的针对性经营建议</p>
+              <h4>陪跑服务可进一步帮你复盘</h4>
+              <p>陪跑服务可由顾问结合你的校区情况，进一步确认问题和行动安排</p>
             </div>
-            <router-link to="/membership" class="btn btn-primary">立即升级</router-link>
+            <router-link to="/membership" class="btn btn-primary">查看服务方案</router-link>
           </div>
         </div>
       </div>

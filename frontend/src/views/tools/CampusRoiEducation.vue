@@ -154,7 +154,7 @@ async function handleSubmit() {
     })
     result.value = res
   } catch (err) {
-    result.value = { error: err.message || '计算失败' }
+    result.value = { error: '计算未完成：请检查填写内容后重试；如仍失败，请联系管理员' }
   }
 }
 </script>

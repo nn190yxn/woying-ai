@@ -1,7 +1,7 @@
 <template>
   <div class="agent-page">
     <div class="agent-header container">
-      <button class="back-btn" @click="$router.push('/xhs')">返回智能体矩阵</button>
+      <button class="back-btn" @click="$router.push('/xhs')">返回经营工作台</button>
       <h1 class="agent-title">种草转化计算器</h1>
       <p class="agent-desc">按产品、价格和人群生成小红书种草转化角度</p>
     </div>
