@@ -1,0 +1,24 @@
+{
+  "durationSeconds": 56.77,
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "tts": {
+    "model": "qwen3-tts-flash",
+    "voice": "Cherry",
+    "speed": 1.08,
+    "characters": 257,
+    "estimatedMaxCostRmb": 0.020560000000000002
+  },
+  "sourceImages": [
+    "pivot.jpg",
+    "cover.jpg",
+    "moves-12.jpg",
+    "moves-34.jpg",
+    "moves-56.jpg",
+    "moves-78.jpg",
+    "close.jpg",
+    "brand.jpg"
+  ],
+  "generatedAt": "2026-08-30T09:09:20.717Z"
+}
