@@ -1,0 +1,43 @@
+
+> woai-ai@1.0.0 audit:operations-copy
+> node scripts/operations-copy-scan.js
+
+运营语言扫描发现 38 处待治理内容：
+backend/src/config/mockRedis.js:4 [public-technical-copy] Redis | export function createMockRedis() {
+backend/src/config/mockRedis.js:62 [public-technical-copy] Redis | if (event === 'error') cb(new Error('Mock Redis error handler attached'))
+backend/src/config/redis.js:1 [public-technical-copy] Redis | import { createMockRedis } from './mockRedis.js'
+backend/src/config/redis.js:6 [public-technical-copy] Redis | let redisInstance = createMockRedis()
+backend/src/config/redis.js:12 [public-technical-copy] Redis | const Redis = (await import('ioredis')).default
+backend/src/config/redis.js:13 [public-technical-copy] Redis | const instance = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', {
+backend/src/config/redis.js:36 [public-technical-copy] Redis | logger.warn('redis', `Real Redis unavailable: ${err.message}`)
+backend/src/middleware/logger.js:236 [sensitive-literal] stack-trace | stack: err.stack,
+backend/src/middleware/logger.js:246 [sensitive-literal] stack-trace | ...(isDev && { stack: err.stack })
+backend/src/models/mockDb.js:6 [sensitive-literal] phone-number | phone: '19900000001',
+backend/src/routes/admin.js:403 [public-technical-copy] Redis | useRealRedis: process.env.USE_REAL_REDIS || 'false'
+backend/src/routes/generate.js:3720 [sensitive-literal] raw-error-forwarding | error: error.message
+backend/src/routes/posterGenerator.js:549 [sensitive-literal] raw-error-forwarding | await trackEvent(req.user?.userId, EVENT_TYPES.TOOL_FAILURE, { toolCode: 'poster', error: error.message })
+backend/src/routes/tokenMonitor.js:21 [sensitive-literal] raw-error-forwarding | error: error.message
+backend/src/routes/tokenMonitor.js:44 [sensitive-literal] raw-error-forwarding | error: error.message
+backend/src/routes/tokenMonitor.js:62 [sensitive-literal] raw-error-forwarding | error: error.message
+backend/src/routes/tokenMonitor.js:105 [sensitive-literal] raw-error-forwarding | error: error.message
+backend/src/services/aiDiagnosis.js:101 [public-technical-copy] 增强回路 | prompt += `- 飞轮卡点（最弱增强回路）：${scan.loops.flywheel?.weakest?.label || '未知'}（${scan.loops.flywheel?.weakest?.score}分）\n`
+backend/src/services/aiDiagnosis.js:102 [public-technical-copy] 调节回路 | prompt += `- 天花板瓶颈（最弱调节回路）：${scan.loops.ceiling?.weakest?.label || '未知'}（${scan.loops.ceiling?.weakest?.score}分）\n`
+backend/src/services/diagnosisEngineV3.js:94 [public-technical-copy] 增强回路 | { key: 'acquisition', label: '获客能力', loopType: '增强回路', low: '靠随机，不可控', mid: '有稳定渠道，成本偏高', high: '自增长机制，成本可控' },
+backend/src/services/diagnosisEngineV3.js:95 [public-technical-copy] 增强回路 | { key: 'profit', label: '盈利效率', loopType: '增强回路', low: '亏钱或持平', mid: '能赚钱但不到3倍CAC', high: '利润率健康（3倍CAC以上）' },
+backend/src/services/diagnosisEngineV3.js:96 [public-technical-copy] 增强回路 | { key: 'repurchase', label: '复购与推荐', loopType: '增强回路', low: '很少复购和推荐', mid: '偶尔有复购和推荐', high: '经常推荐，获客重要来源' },
+backend/src/services/diagnosisEngineV3.js:97 [public-technical-copy] 增强回路 | { key: 'replication', label: '复制能力', loopType: '增强回路', low: '完全依赖创始人', mid: '部分可复制', high: '标准流程，可快速复制' },
+backend/src/services/diagnosisEngineV3.js:98 [public-technical-copy] 调节回路 | { key: 'organization', label: '组织能力', loopType: '调节回路', low: '创始人干所有事', mid: '有人但能力不足', high: '体系完善，梯队健全' },
+backend/src/services/diagnosisEngineV3.js:99 [public-technical-copy] 调节回路 | { key: 'strategy', label: '战略清晰', loopType: '调节回路', low: '完全迷茫', mid: '有方向但不聚焦', high: '目标清晰，路径明确' }
+backend/src/services/diagnosisEngineV3.js:225 [public-technical-copy] 增强回路 | const enhancement = [] // 增强回路
+backend/src/services/diagnosisEngineV3.js:226 [public-technical-copy] 调节回路 | const regulation = []  // 调节回路
+backend/src/services/diagnosisEngineV3.js:231 [public-technical-copy] 增强回路 | if (dim.loopType === '增强回路') {
+backend/src/services/failover.js:38 [sensitive-literal] raw-error-forwarding | error: error.message
+backend/src/services/failover.js:150 [sensitive-literal] raw-error-forwarding | error: error.message,
+backend/src/services/spreadsheetEngine.js:11 [sensitive-literal] phone-number | ['张三', '13800138000', '男', '35', '餐饮老板', '抖音', '2026-01-15', '5000', '首次体验'],
+backend/src/services/spreadsheetEngine.js:12 [sensitive-literal] phone-number | ['李四', '13900139000', '女', '28', '白领', '朋友介绍', '2026-01-20', '3000', '复购客户'],
+backend/src/services/spreadsheetEngine.js:13 [sensitive-literal] phone-number | ['王五', '13700137000', '男', '42', '企业高管', '美团', '2026-02-01', '8000', 'VIP客户']
+frontend/src/router/index.js:300 [public-technical-copy] 智能体矩阵 | // 小红书智能体矩阵路由
+frontend/src/views/Admin.vue:389 [public-technical-copy] Redis | <span class="config-value" :class="config.system?.useRealRedis === 'true' ? 'text-success' : 'text-warning'">{{ config.system?.useRealRedis === 'true' ? '已连接' : '测试数据模式' }}</span>
+frontend/src/views/DiagnosisReport.vue:167 [public-technical-copy] 增强回路 | <span class="scan-loop-type" :class="val.loopType === '增强回路' ? 'loop-enhancing' : 'loop-regulating'">
+frontend/src/views/DiagnosisReport.vue:376 [public-technical-copy] 增强回路 | return loopType === '增强回路' ? '影响招生增长' : loopType === '调节回路' ? '限制团队执行' : '需要顾问确认'
+frontend/src/views/DiagnosisReport.vue:376 [public-technical-copy] 调节回路 | return loopType === '增强回路' ? '影响招生增长' : loopType === '调节回路' ? '限制团队执行' : '需要顾问确认'

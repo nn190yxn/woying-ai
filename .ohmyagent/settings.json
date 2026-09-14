@@ -1,0 +1,12 @@
+{
+  "permission_rules": [
+    {
+      "tool": "Cmd(ssh *)",
+      "decision": "allow"
+    },
+    {
+      "tool": "PowerShell($key='E:\\程序开发\\我赢AI\\woying-ai\\.monkeycode\\uploads\\WOYING-2.pem' *)",
+      "decision": "allow"
+    }
+  ]
+}
